@@ -22,8 +22,8 @@ android {
     defaultConfig {
         // Specify your own unique Application ID
         applicationId = "com.unsaid.app" // <-- Update to match your package name
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 23 // ✅ increase to match Firebase library requirement
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
