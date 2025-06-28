@@ -19,7 +19,11 @@ workflows:
           flutter analyze
       - name: Run tests
         script: |
-          flutter test --no-pub
+          flutter test
+      - name: Set working directory
+        script: |
+          cd $CM_BUILD_DIR/Unsaid/my_flutter_app/ios
+          ls  # <-- This will show you your Xcode project or workspace
       - name: Build APK
         script: |
           flutter build apk --release
@@ -37,10 +41,3 @@ workflows:
       email:
         recipients:
           - john.gray@usd286.org
-    files:
-      - my_flutter_app/android/**
-      - my_flutter_app/ios/**
-      - my_flutter_app/lib/**
-      - my_flutter_app/assets/**
-      - my_flutter_app/pubspec.yaml
-      - my_flutter_app/codemagic.yaml
