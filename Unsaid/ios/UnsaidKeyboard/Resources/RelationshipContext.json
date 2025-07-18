@@ -1,0 +1,70 @@
+{
+  "romanticPatterns": [
+    "love", "relationship", "partner", "boyfriend", "girlfriend", "husband",
+    "wife", "dating", "date", "flirt", "crush", "romance",
+    "bae", "significant other", "SO", "sweetheart", "darling", "dear",
+    "flame", "soulmate", "affection", "intimacy", "kiss", "cuddle",
+    "couple", "engagement", "fiancé", "fiancee", "proposal", "anniversary",
+    "valentine", "heart", "loving", "adoration", "infatuation", "amour",
+    "cherish", "beloved", "romantic", "passion", "devotion", "courtship",
+    "honeymoon", "forever", "together",
+    "butterflies", "heartthrob", "paramour", "besotted", "enamored",
+    "yearning", "longing", "desire", "lust", "allure",
+    "tenderness", "serenade", "bouquet", "candlelit", "moonlight",
+    "star-crossed", "spark", "chemistry", "heartbeat", "whisper",
+    "sweet talk", "muse", "covet", "enchanted", "amor",
+    "ti amo", "te amo", "je t'aime", "amoroso", "liaison",
+    "romantic dinner", "hand in hand", "flirtation", "swoon", "ardor",
+    "sentiment", "courtship ritual", "secret admirer", "love note", "j'adore",
+    "paramour", "diamond ring", "proposal speech", "romantic getaway"
+  ],
+
+  "familyPatterns": [
+    "mom", "dad", "mother", "father", "sister", "brother",
+    "grandma", "grandpa", "aunt", "uncle", "cousin", "niece",
+    "nephew", "son", "daughter", "child", "children", "guardian",
+    "parent", "relative", "kin", "ancestor", "descendant", "in-law",
+    "mother-in-law", "father-in-law", "sister-in-law", "brother-in-law", "stepmom", "stepdad",
+    "stepsister", "stepbrother", "half-sibling", "adopted", "foster", "household",
+    "family", "extended-family",
+    "parenthood", "kinship", "family tree", "heritage", "tradition",
+    "lineage", "heirloom", "ancestor worship", "family reunion", "nuclear family",
+    "clan", "tribe", "hearth", "matriarch", "patriarch",
+    "bloodline", "family bond", "family values", "family name", "family portrait",
+    "family vacation", "family business", "family legacy", "kinfolk", "foster care",
+    "stepfamily", "co-parenting", "genealogy", "family gathering", "household chores",
+    "siblings rivalry", "family dinner", "family support", "guardian role"
+  ],
+
+  "professionalPatterns": [
+    "boss", "colleague", "coworker", "manager", "supervisor", "director",
+    "team", "staff", "employee", "intern", "associate", "CEO",
+    "COO", "CTO", "CFO", "executive", "partner", "consultant",
+    "client", "customer", "vendor", "supplier", "stakeholder", "board",
+    "meeting", "conference", "presentation", "deadline", "project", "report",
+    "budget", "salary", "promotion", "benefits", "office", "cubicle",
+    "workspace", "department", "division", "headquarters", "remote", "virtual",
+    "workplace", "HR", "recruitment", "hiring", "onboarding", "training",
+    "performance", "review", "evaluation", "contract", "agreement", "policy",
+    "synergy", "networking", "deliverable", "milestone", "briefing",
+    "town hall", "invoice", "pitch", "KPIs", "OKRs",
+    "audit", "compliance", "governance", "merger", "acquisition",
+    "startup", "entrepreneur", "venture", "fundraising", "roadmap",
+    "strategy", "workflow", "automation", "outsourcing", "teleconference",
+    "webinar", "brainstorm", "task", "assignment", "resource",
+    "org chart", "delegation", "SOP", "RFP", "SLA"
+  ],
+
+  "friendshipPatterns": [
+    "friend", "buddy", "pal", "hang out", "catch up", "best friend",
+    "bestie", "BFF", "confidant", "companion", "chum", "mate",
+    "homie", "sidekick", "wingman", "get together", "meet up", "socialize",
+    "coffee date", "movie night", "game night", "squad", "crew", "circle",
+    "inner circle", "bond", "peer", "amigo", "compadre", "ally",
+    "bromance", "girlfriendship", "allyship", "confide", "trust",
+    "banter", "inside joke", "pub crawl", "road trip", "BBQ",
+    "hang time", "bonding", "support group", "comfortable silence", "shoulder to lean on",
+    "matey", "acquaintance", "old friend", "new friend", "fellowship",
+    "clique", "retreat", "get-together", "social circle", "gathering"
+  ]
+}

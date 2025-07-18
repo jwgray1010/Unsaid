@@ -1,0 +1,36 @@
+{
+  "i_statements": {
+    "anxious": [
+      "I feel {emotion} when {behavior} because I worry that {fear}.",
+      "I need some reassurance after {behavior} so I can feel more secure.",
+      "When {behavior} happens, I feel {emotion} and would appreciate if you could {request}.",
+      "I notice I get anxious when {behavior}. Could we {request} to help me feel calmer?",
+      "I've been feeling {emotion} about {behavior}. It would help me if you could {request}.",
+      "I feel unsettled when {behavior} because I fear {fear}. Would you be willing to {request}?"
+    ],
+    "avoidant": [
+      "I feel {emotion} when {behavior}, and I need a little space to process.",
+      "I notice I withdraw after {behavior}. I care about you, and I'll come back when I'm ready.",
+      "I need some quiet time after {behavior} so I can be fully present later.",
+      "I feel overwhelmed by {behavior}. Can I take a short break and then we reconnect at {time}?",
+      "I feel {emotion} and need to step away briefly—thank you for understanding.",
+      "I value our relationship. I need a pause after {behavior} so I can show up better later."
+    ],
+    "disorganized": [
+      "I'm feeling scattered right now after {behavior} and need to gather my thoughts.",
+      "I feel {emotion} and my thoughts are jumping around—could we focus on one point at a time?",
+      "I get overwhelmed when {behavior}. Would it help if I wrote down my thoughts before we continue?",
+      "I notice I'm all over the place thinking about {topic}. Can we set small steps to work through it?",
+      "I feel confused by {behavior} and need us to clarify one thing before moving on.",
+      "Im feeling disoriented after {behavior}. Could you help me by summarizing what you heard so far?"
+    ],
+    "secure": [
+      "I feel {emotion} when {behavior}. I'd like us to {request} so we both feel good about this.",
+      "I notice {behavior} and want to share that I feel {emotion}. How can we address this together?",
+      "I feel {emotion} when {behavior}. Would you be open to {request} so we can stay connected?",
+      "I value us. I felt {emotion} about {behavior} and would like to talk about how we can improve.",
+      "I feel calm sharing that {behavior} makes me {emotion}. Can we agree to {request} next time?",
+      "I feel supported when you {behavior}. It reassures me and makes me feel {positive_emotion}."
+    ]
+  }
+}

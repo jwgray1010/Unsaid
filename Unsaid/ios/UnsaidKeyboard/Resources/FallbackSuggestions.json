@@ -1,0 +1,92 @@
+{
+  "clear": [
+    "I appreciate your perspective on this",
+    "Thank you for sharing that with me",
+    "I understand what you're saying",
+    "That makes sense to me",
+    "I can see where you're coming from",
+    "Great point, I hadn't considered that",
+    "I'm glad we can discuss this openly",
+    "Your thoughts are really valuable to me"
+  ],
+  "alert": [
+    "I need to take a moment to process this",
+    "Let's pause and talk about this calmly",
+    "I want to understand your feelings better",
+    "Can we slow down and work through this together?",
+    "I care about you and want to resolve this",
+    "Let's take a breath and approach this differently",
+    "I'm feeling overwhelmed - can we take a break?",
+    "Your feelings matter to me, let's talk this through"
+  ],
+  "caution": [
+    "I'd like to discuss this more thoughtfully",
+    "Can we approach this differently?",
+    "Let me rephrase what I'm trying to say",
+    "I want to make sure I understand you correctly",
+    "Could we explore this topic more carefully?",
+    "I'm not sure I'm expressing myself clearly",
+    "Let's be more mindful about how we discuss this",
+    "I want to be more considerate in how I respond"
+  ],
+  "neutral": [
+    "I'm listening and want to understand",
+    "Could you help me see your perspective?",
+    "I'm open to hearing more about this",
+    "Let's continue this conversation",
+    "I want to make sure we're on the same page",
+    "Can you tell me more about what you're thinking?",
+    "I'm interested in your thoughts on this",
+    "Let's work through this together"
+  ],
+  "anxious": [
+    "I need some reassurance about this",
+    "Can we talk through this step by step?",
+    "I'm feeling uncertain and need your support",
+    "Could you help me understand what's happening?",
+    "I want to make sure we're okay",
+    "Can we check in with each other about this?",
+    "I need to feel secure in our conversation",
+    "Your patience with me means a lot"
+  ],
+  "avoidant": [
+    "I need some space to think about this",
+    "Let me process this and get back to you",
+    "I prefer to handle this methodically",
+    "I need time to consider my response",
+    "Can we revisit this when I'm ready?",
+    "I work best when I can think things through",
+    "I appreciate you giving me time to respond",
+    "Let me gather my thoughts on this"
+  ],
+  "secure": [
+    "I feel comfortable discussing this with you",
+    "I trust we can work through this together",
+    "I'm confident we can find a solution",
+    "I feel safe sharing my thoughts with you",
+    "I appreciate our open communication",
+    "I trust your intentions in this conversation",
+    "I'm comfortable being vulnerable with you",
+    "I feel supported in our discussion"
+  ],
+  "disorganized": [
+    "I'm feeling conflicted about this",
+    "Can you help me organize my thoughts?",
+    "I'm having mixed feelings and need clarity",
+    "I'm struggling to express what I mean",
+    "Could we slow down? I'm feeling confused",
+    "I need help making sense of this",
+    "I'm feeling pulled in different directions",
+    "Can we break this down into smaller parts?"
+  ],
+  "general": [
+    "I understand your perspective",
+    "Let's work through this together",
+    "I appreciate you sharing that with me",
+    "I want to understand better",
+    "Can we talk about this more?",
+    "I'm listening to what you're saying",
+    "I care about how you feel",
+    "Let's find a way forward"
+  ]
+}

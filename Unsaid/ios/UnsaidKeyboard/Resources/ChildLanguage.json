@@ -1,0 +1,184 @@
+{
+  "childCenteredLanguage": {
+    "kidFirstReframes": {
+      "parentVsParentPatterns": [
+        {
+          "trigger": "you left me to handle",
+          "childFocusedReframe": "I worry about how this affects {child_name}—maybe we can coordinate better?",
+          "reasoning": "Shifts from blame to child welfare focus"
+        },
+        {
+          "trigger": "you always make me deal with",
+          "childFocusedReframe": "I want to make sure {child_name} feels supported by both of us.",
+          "reasoning": "Reframes as unified parenting approach"
+        },
+        {
+          "trigger": "you never help with",
+          "childFocusedReframe": "I think {child_name} would benefit from both of us being involved in this.",
+          "reasoning": "Emphasizes child's needs over parent frustration"
+        },
+        {
+          "trigger": "i'm tired of doing everything",
+          "childFocusedReframe": "I want to make sure {child_name} has consistent support from both parents.",
+          "reasoning": "Focuses on child's need for stability"
+        },
+        {
+          "trigger": "you dumped all the chores on me",
+          "childFocusedReframe": "Let's balance chores so {child_name} sees teamwork at home.",
+          "reasoning": "Models cooperation for the child"
+        },
+        {
+          "trigger": "you always leave the kid with me",
+          "childFocusedReframe": "How can we share routines so {child_name} gets both our attention?",
+          "reasoning": "Centers around consistent caregiving"
+        }
+      ],
+      "selfOrientedPatterns": [
+        {
+          "trigger": "i need you to",
+          "childFocusedReframe": "For {child_name}'s sake, could we try...",
+          "reasoning": "Child-first motivation"
+        },
+        {
+          "trigger": "this is stressing me out",
+          "childFocusedReframe": "I'm concerned about how this might be affecting {child_name}.",
+          "reasoning": "Shifts focus from parent stress to child impact"
+        },
+        {
+          "trigger": "you're making my life difficult",
+          "childFocusedReframe": "I want to create stability for {child_name}—can we work together?",
+          "reasoning": "Reframes as collaborative child-focused goal"
+        },
+        {
+          "trigger": "i can't keep doing this",
+          "childFocusedReframe": "Can we adjust so {child_name} sees both parents engaged?",
+          "reasoning": "Frames parent's boundary as child's need"
+        },
+        {
+          "trigger": "i'm overwhelmed",
+          "childFocusedReframe": "I'm worried {child_name} feels unsettled—what can we change?",
+          "reasoning": "Links parental overwhelm to child well‑being"
+        }
+      ]
+    },
+    "developmentalPrompts": {
+      "bedtime": {
+        "ages_0_2": "At 0-2 years, sleep supports brain growth. Let's keep a calm, consistent bedtime routine.",
+        "ages_3_5": "At 3-5 years, consistent bedtime routines help with emotional regulation. Maybe we both try the same story time?",
+        "ages_6_8": "At 6-8 years, a predictable bedtime reduces meltdowns. Could we sync our routines?",
+        "ages_9_12": "At 9-12 years, they need 9-11 hours of sleep for school performance. Let's coordinate our schedules.",
+        "ages_13_17": "Teens need 8-10 hours of sleep for brain development. Maybe we can agree on consistent weekend rules?"
+      },
+      "homework": {
+        "ages_3_5": "At this age, playful learning is best—let's read together before bed.",
+        "ages_6_8": "At this age, homework should be 10-20 minutes max. Let's make sure we're both supporting without overwhelming.",
+        "ages_9_12": "Kids this age benefit from consistent homework spaces. Should we coordinate our setups?",
+        "ages_13_17": "Teens need independence with homework but still benefit from check‑ins. Let's align our approach."
+      },
+      "discipline": {
+        "ages_0_2": "Tiny ones need redirection, not punishment. Let's use the same gentle limits.",
+        "ages_3_5": "Toddlers need consistent, gentle boundaries. Let's make sure we're using similar approaches.",
+        "ages_6_8": "At this age, logical consequences work better than punishment. Should we discuss our strategies?",
+        "ages_9_12": "Preteens respond well to problem-solving together. Maybe we can coordinate our responses?",
+        "ages_13_17": "Teens need respect and collaboration in discipline. Let's align on our expectations."
+      },
+      "screen_time": {
+        "ages_0_2": "Under 2, screen time isn't recommended. Let's offer more interactive play.",
+        "ages_3_5": "AAP recommends 1 hour max of quality programming. Should we coordinate our screen rules?",
+        "ages_6_8": "Consistent screen time limits help with self-regulation. Let's sync our household rules.",
+        "ages_9_12": "They're learning digital citizenship now. Maybe we can create consistent guidelines together?",
+        "ages_13_17": "Teens benefit from collaborative screen time agreements. Should we discuss boundaries together?"
+      },
+      "doctor": {
+        "general": "Medical consistency helps kids feel secure. Should we coordinate on appointments and follow‑up care?",
+        "mental_health": "Therapy works best with consistent support from both homes. Let's align our approaches.",
+        "medication": "Medication schedules need to be exact. Can we set up a shared tracking system?",
+        "dental": "Regular dental visits build good habits. Maybe we can share reminders so {child_name} stays on schedule?"
+      }
+    },
+    "calmDownExercises": {
+      "high_conflict": [
+        "Let's both pause and take three deep breaths before we continue—{child_name} needs us at our best.",
+        "I'm noticing we're both activated. Can we take a moment to center ourselves for {child_name}'s sake?",
+        "This feels heated. Let's pause and remember we both want what's best for {child_name}.",
+        "I can feel tension rising. Can we take 30 seconds to breathe and refocus on {child_name}?",
+        "Let's step back for a moment. What would help {child_name} most right now?"
+      ],
+      "medium_conflict": [
+        "I'm noticing some tension. Can we pause and remember our shared goal of supporting {child_name}?",
+        "Let's take a breath and approach this from {child_name}'s perspective.",
+        "I want to make sure we're both thinking clearly about what's best for {child_name}.",
+        "Can we pause and ask ourselves: what would {child_name} want from this conversation?"
+      ],
+      "low_conflict": [
+        "Before we continue, how about a quick stretch so we're both present for {child_name}?",
+        "Shall we take a moment, refill our water, and refocus on {child_name}?",
+        "A short pause might help us come back calmer for {child_name}'s needs.",
+        "Let's take a collective deep breath so we tackle this together for {child_name}."
+      ]
+    },
+    "empathyEcho": {
+      "templates": [
+        "It sounds like {child_name}'s well-being is top of mind for both of you.",
+        "I can hear that you both care deeply about {child_name}.",
+        "It's clear that {child_name} is your shared priority.",
+        "I sense that you both want {child_name} to feel supported and loved.",
+        "It seems like {child_name}'s happiness matters a lot to both of you.",
+        "I can tell that {child_name}'s needs are driving this conversation for both of you.",
+        "Your shared concern for {child_name} shines through."
+      ],
+      "triggers": [
+        "for the kids",
+        "for {child_name}",
+        "the children",
+        "our child",
+        "my child",
+        "worry about",
+        "concerned about",
+        "support {child_name}",
+        "parenting {child_name}",
+        "co‑parenting"
+      ]
+    },
+    "childNameDetection": {
+      "commonNames": [
+        "Jamie", "Alex", "Taylor", "Jordan", "Casey", "Riley", "Avery", "Quinn",
+        "Emma", "Liam", "Olivia", "Noah", "Ava", "Ethan", "Sophia", "Mason",
+        "Isabella", "Logan", "Mia", "Lucas", "Charlotte", "Jackson", "Amelia",
+        "Aiden", "Harper", "Sebastian", "Evelyn", "Owen", "Abigail", "Caleb",
+        "Emily", "Nathan", "Elizabeth", "Ryan", "Sofia", "Jack", "Victoria"
+      ],
+      "patterns": [
+        "\\b([A-Z][a-z]+)\\b(?=\\s+(?:is|was|will|needs|wants|feels|said|told|asked))",
+        "\\bfor\\s+([A-Z][a-z]+)\\b",
+        "\\babout\\s+([A-Z][a-z]+)\\b",
+        "\\b([A-Z][a-z]+)'s\\b",
+        "\\bparenting\\s+([A-Z][a-z]+)\\b",
+        "\\bwith\\s+([A-Z][a-z]+)\\b"
+      ]
+    },
+    "coParentingTemplates": {
+      "coordination": [
+        "For {child_name}'s consistency, could we both try...",
+        "I think {child_name} would benefit if we both...",
+        "To give {child_name} stability, maybe we can...",
+        "So {child_name} feels secure, let's both...",
+        "To help {child_name} thrive, can we align on..."
+      ],
+      "disagreement": [
+        "I see this differently, but let's focus on what {child_name} needs...",
+        "We might not agree, but for {child_name}'s sake, could we...",
+        "I understand your view. For {child_name}, what if we...",
+        "Let's put {child_name} first and work toward...",
+        "Though we disagree, let's ask: what's best for {child_name}?"
+      ],
+      "appreciation": [
+        "I appreciate that you care about {child_name} so much.",
+        "Thank you for prioritizing {child_name} in this.",
+        "I can see how much {child_name} means to you.",
+        "I'm grateful we both want what's best for {child_name}.",
+        "I value your dedication to {child_name}'s well-being."
+      ]
+    }
+  }
+}

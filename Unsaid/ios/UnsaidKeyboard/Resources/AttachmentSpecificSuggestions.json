@@ -1,0 +1,740 @@
+{
+  "attachmentSpecificSuggestions": {
+    "anxious": {
+  "conditional": [
+    {
+      "contains": ["always", "never"],
+      "text": "Try replacing absolutes with frequency words: 'sometimes, often, occasionally.'",
+      "type": "attachmentAware",
+      "priority": "critical",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["leaving", "abandon"],
+      "text": "Consider: 'I'm feeling insecure and could use some reassurance.'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["ignore", "ignored"],
+      "text": "Try: 'It would help me if you could check in—even a quick message means a lot.'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["doubt", "doubting"],
+      "text": "Consider: 'Sometimes I doubt where we stand—would a reassurance help?'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["silent", "silence"],
+      "text": "Try: 'Your silence makes me anxious—could we agree on a quick check‑in?'",
+      "type": "attachmentAware",
+      "priority": "critical",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["uncertain", "unsure"],
+      "text": "Consider: 'I'm feeling uncertain—could you tell me how you're doing?'",
+      "type": "attachmentAware",
+      "priority": "critical",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["alone", "left alone"],
+      "text": "Try: 'I feel uneasy being left alone—would you mind sending a quick note?'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["worried", "worrying"],
+      "text": "Consider: 'I've been worrying—could you reassure me that we're okay?'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["question", "questions"],
+      "text": "Try: 'Could you help me understand what you need right now?'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["promise", "promised"],
+      "text": "Consider: 'You promised to let me know—could you share an update?'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    }
+  ],
+  "defaults": [
+    {
+      "text": "🔍 Anxious pattern detected: You may worry about connection or abandonment.",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Frame questions gently: 'Could we talk about this soon?'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "educational",
+      "repairScriptTemplate": "Could we talk about this soon?"
+    },
+    {
+      "text": "Own your feelings: 'I feel anxious when I don't hear from you.'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Set a check‑in: 'Can we touch base later today?'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": "Can we touch base later today?"
+    },
+    {
+      "text": "Anchor with gratitude: 'Thank you for listening to my concerns.'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Offer solution: 'What can I do to feel more secure?'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": "What can I do to feel more secure?"
+    },
+    {
+      "text": "Normalize doubt: 'Sometimes I struggle with uncertainty.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Share vulnerability: 'I get scared when I don't hear from you.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Invite partnership: 'Can we figure this out together?'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "Can we figure this out together?"
+    },
+    {
+      "text": "Use a safe word: 'Let's agree on a quick signal when I need reassurance.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Suggest routine: 'Can we set a daily check‑in time?'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "Can we set a daily check‑in time?"
+    },
+    {
+      "text": "Clarify expectations: 'How often can we touch base?'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Soften language: 'I wonder if we could…' instead of 'We need to…'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Avoid absolutes: swap 'always'/'never' for 'often'/'sometimes'",
+      "type": "attachmentAware",
+      "priority": "critical",
+      "interventionType": "corrective",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Invite feedback: 'What do you need from me right now?'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Express need: 'I need a little reassurance to feel calm.'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "I need a little reassurance to feel calm."
+    },
+    {
+      "text": "Frame it as mutual: 'We both deserve to feel secure.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    }
+  ]
+},
+
+   "avoidant": {
+  "conditional": [
+    {
+      "contains": ["space", "distance"],
+      "text": "Give a clear timeline: 'I need time to process this. Can we reconnect in an hour?'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["silence", "quiet"],
+      "text": "Try: 'I'm going silent for a bit to clear my head—I'll let you know when I'm back.'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["overwhelmed", "stressed"],
+      "text": "Consider: 'I'm feeling overwhelmed and need a short break—can we resume later?'",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["alone", "solo"],
+      "text": "Try: 'I need some solo time to think this through—let’s catch up afterward.'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["busy", "swamped"],
+      "text": "Consider: 'I'm pretty swamped right now—can we set a time to reconnect tomorrow?'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["tired", "drained"],
+      "text": "Try: 'I'm drained and need a breather—I'll reach out when I’ve recharged.'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["pause", "break"],
+      "text": "Consider: 'I need to pause for a moment—let’s pick this up in 30 minutes.'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["processing", "processing this"],
+      "text": "Try: 'I need to process my thoughts—can we revisit this in a bit?'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["reflect", "reflecting"],
+      "text": "Consider: 'Let me reflect on this—I'll get back to you shortly.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["privacy", "private"],
+      "text": "Try: 'I need some privacy to think—thank you for understanding.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "{{original}}"
+    }
+  ],
+  "defaults": [
+    {
+      "text": "🚶 Avoidant pattern detected: You may prioritize space or independence.",
+      "type": "attachmentAware",
+      "priority": "high",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Balance silence with check‑ins: 'I'll step back for now but I'm here if you want to talk.'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "I'll step back for now but I'm here if you want to talk."
+    },
+    {
+      "text": "Offer a low‑effort signal: 'Send me a 👍 when you want to reconnect.'",
+      "type": "attachmentAware",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Provide a concise status: 'I'm offline until 3pm—happy to talk then.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "I'm offline until 3pm—happy to talk then."
+    },
+    {
+      "text": "Normalize breaks: 'Sometimes I need time alone to be my best self.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Set a return window: 'I'll check back in one hour—looking forward to our chat.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "I'll check back in one hour—looking forward to our chat."
+    },
+    {
+      "text": "Reassure them: 'This pause isn't about you—it's about me recharging.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Offer alternative timing: 'If now isn’t good, I'm flexible later today.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "education",
+      "repairScriptTemplate": null
+    }
+  ]
+},
+
+"disorganized": {
+  "conditional": [
+    {
+      "contains": ["mixed feelings", "mixed emotions"],
+      "text": "Try: 'I'm feeling torn between different things—can we tackle one topic at a time?'",
+      "type": "emotionalRegulation",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["confused", "unclear"],
+      "text": "Consider: 'I'm not quite sure what I think—could you help me organize my thoughts?'",
+      "type": "emotionalRegulation",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["all over the place", "scattered"],
+      "text": "Try: 'My mind feels scattered—would it help to list out the main points together?'",
+      "type": "emotionalRegulation",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["flip‑flop", "flip flop"],
+      "text": "Consider: 'I keep changing my mind—shall we focus on one decision right now?'",
+      "type": "emotionalRegulation",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["overwhelmed", "overwhelming"],
+      "text": "Try: 'This is feeling overwhelming—can we slow down and address each point?'",
+      "type": "emotionalRegulation",
+      "priority": "critical",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["swirl", "jumbled"],
+      "text": "Consider: 'Everything feels jumbled—let’s pause and structure our conversation.'",
+      "type": "emotionalRegulation",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["lost track", "lost"],
+      "text": "Try: 'I feel lost in this discussion—could you summarize where we are?'",
+      "type": "emotionalRegulation",
+      "priority": "critical",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["too many", "too much"],
+      "text": "Consider: 'There's too much going on—can we narrow it down to the essentials?'",
+      "type": "emotionalRegulation",
+      "priority": "high",
+      "interventionType": "corrective",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["hesitant", "hesitation"],
+      "text": "Try: 'I'm hesitating to respond—could you ask me one specific question?'",
+      "type": "emotionalRegulation",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["brainstorm", "brain storm"],
+      "text": "Consider: 'I need to brainstorm—would you guide me with prompts?'",
+      "type": "emotionalRegulation",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": "{{original}}"
+    }
+  ],
+  "defaults": [
+    {
+      "text": "🌀 Disorganized pattern detected: You may feel torn or confused.",
+      "type": "emotionalRegulation",
+      "priority": "high",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Break into steps: 'First I feel…, then I think…, finally I need…'",
+      "type": "emotionalRegulation",
+      "priority": "high",
+      "interventionType": "educational",
+      "repairScriptTemplate": "First I feel anxious, then I think we can adjust, and finally I need reassurance."
+    },
+    {
+      "text": "Use bullet points: '• Step 1\n• Step 2\n• Step 3'",
+      "type": "emotionalRegulation",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Ask a single question at a time to reduce overwhelm.",
+      "type": "emotionalRegulation",
+      "priority": "medium",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Offer a summary: 'To recap, here’s what we've covered…'",
+      "type": "emotionalRegulation",
+      "priority": "medium",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}} To recap, …"
+    },
+    {
+      "text": "Label your emotions: 'I feel both anxious and hopeful right now.'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Set a short agenda: 'Let's focus first on X, then Y.'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Invite a quick break: 'Shall we pause for five minutes and come back?'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Use open‑ended prompts: 'What matters most to you in this?'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "{{original}} What matters most to you in this?"
+    },
+    {
+      "text": "Normalize uncertainty: 'It's okay not to have all the answers—let's explore together.'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Propose small steps: 'Can we commit to resolving one issue this session?'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Use reflective listening: 'So you’re saying… is that right?'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Frame complexity as normal: 'It makes sense to feel mixed—many factors are at play.'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Encourage two‑minute check‑ins: 'Every few minutes, let's pause and recap.'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Offer to co‑create an outline: 'Shall we draft a quick outline together?'",
+      "type": "emotionalRegulation",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    }
+  ]
+},
+
+"secure": {
+  "conditional": [
+    {
+      "contains": ["we can", "we'll", "we'll"],
+      "text": "Nice use of “we”—it reinforces partnership and shared responsibility.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["I trust", "I’m confident"],
+      "text": "Great affirmation of trust—keep building on that foundation.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["thank you", "thanks for"],
+      "text": "Appreciation anchors positive connection—excellent choice of wording.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["I feel heard", "I feel understood"],
+      "text": "You’re naming positive impact—this reinforces mutual respect.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["shall we", "let’s"],
+      "text": "“Let’s” invitations foster collaboration—keep including them.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["appreciate", "appreciation"],
+      "text": "Acknowledging effort builds goodwill—great to see that.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["I’m here", "I’m with you"],
+      "text": "Reassurance phrases like this deepen sense of safety.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}}"
+    },
+    {
+      "contains": ["goal", "plan"],
+      "text": "Future‑oriented framing keeps you both moving forward together.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "{{original}}"
+    }
+  ],
+  "defaults": [
+    {
+      "text": "✅ Secure communication detected: You combine clarity with warmth.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Maintain your mix of ‘I’ statements and ‘we’ collaborators.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Offer concrete next steps: 'What would you suggest we do next?'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "What would you suggest we do next?"
+    },
+    {
+      "text": "Highlight progress: 'I appreciate how far we’ve come together.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Use gratitude closers: 'Thank you for engaging so thoughtfully.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Validate emotions before proposing solutions.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Balance directive language with supportive phrasing.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Invite feedback: 'Does this approach work for you?'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "Does this approach work for you?"
+    },
+    {
+      "text": "Frame requests as mutual: 'Let’s decide on a time that suits us both.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "Let’s decide on a time that suits us both."
+    },
+    {
+      "text": "Express confidence: 'I know we can find a solution together.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Keep tone calm and steady—this fosters trust.",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Acknowledge their expertise: 'I value your perspective on this.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Use positive reinforcement: 'Thank you for being so open.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    },
+    {
+      "text": "Model vulnerability: 'I admit I don’t have all the answers—can you help me?'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "educational",
+      "repairScriptTemplate": "I admit I don’t have all the answers—can you help me?"
+    },
+    {
+      "text": "Set shared goals: 'Shall we agree on our next steps together?'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": "Shall we agree on our next steps together?"
+    },
+    {
+      "text": "Close with warmth: 'Looking forward to collaborating with you.'",
+      "type": "attachmentAware",
+      "priority": "low",
+      "interventionType": "enhancement",
+      "repairScriptTemplate": null
+    }
+  ]
+},
+
+    "unknown": {
+      "conditional": [],
+      "defaults": [
+        {
+          "text": "Attachment style unknown: Consider taking the quiz for tailored help.",
+          "type": "attachmentAware",
+          "priority": "low",
+          "interventionType": "educational",
+          "repairScriptTemplate": null
+        }
+      ]
+    }
+  }
+}

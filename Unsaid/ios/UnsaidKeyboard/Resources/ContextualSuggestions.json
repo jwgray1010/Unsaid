@@ -1,0 +1,772 @@
+{
+    "contextualSuggestions": {
+        "alert": [
+            {
+                "suggestion": "Consider taking a pause before responding",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Try reframing with 'I'm concerned that...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Remove accusatory language like 'you always...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Soften statements by replacing 'you did this' with 'I felt... when...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Limit punctuation—avoid multiple exclamation points",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Swap absolutes ('never', 'always') for frequency words ('sometimes', 'often')",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Break up long sentences into shorter ones for clarity",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Ask an open-ended question instead of making a demand",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Replace 'you must' with 'could you please' to soften the ask",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Frame feedback as concern: 'I care about…' instead of 'You did…'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Avoid blame‑laden words like 'fault' or 'wrong'; focus on impact",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Swap 'I hate when…' for 'It upsets me when…'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Use a calm opener: 'I’ve been thinking…', rather than 'We need to talk now!'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Offer to collaborate on solutions: 'How can we fix this together?'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Check whether emotion or fact is driving your words—state facts first",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Replace negative labels ('you're lazy') with descriptions of behavior ('I noticed you missed the deadline')",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "End with an invitation: 'What do you think?' rather than a period",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Read your message aloud--does it sound like a conversation or a confrontation?",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Avoid rhetorical questions that can feel accusatory ('Why won't you ever...?')",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Balance critique with appreciation: 'I appreciate when you..., but...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Limit your message to one main point to reduce overwhelm",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Swap harsh verbs ('attack', 'slam') for neutral ones ('address', 'discuss')",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Use a question tag to soften: '...right?' instead of a full stop",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Avoid 'you always...' by saying 'I've noticed...)' to own your experience",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Offer a follow-up plan: 'Can we revisit this tomorrow when we're calmer?'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Check for passive-aggressive words ('fine', 'whatever') and replace with direct language",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "End with appreciation: 'Thanks for hearing me out'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Ask 'How can I better phrase this?' to invite co-creation",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Avoid using capital letters for emphasis—they feel like shouting",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Frame your concern: 'I'm worried we might...' rather than 'We will...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Use softeners like 'perhaps' or 'maybe' to reduce pressure",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Validate their perspective before stating yours: 'I see you feel... and I feel...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Swap 'you never listen' for 'I feel unheard when...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Keep your tone curious rather than confrontational",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Offer to set an agenda: 'Let's agree on one topic at a time'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Use 'I care about this...' to frame urgency empathetically",
+                "type": "toneImprovement"
+            }
+        ],
+        "caution": [
+            {
+                "suggestion": "Try softening your language",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Add a brief reason: 'because I need clarity'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Preface with 'Would you mind...?'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Replace 'you must' with 'could you please'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Frame as a question instead of a command",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Use 'it would help if...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Include an appreciation: 'Thanks for your help with this'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Soften urgency: 'When you have a moment...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Balance critique with positive: 'I appreciate X, could we adjust Y?'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Use 'perhaps' or 'maybe' to reduce directness",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Avoid absolutes like 'always' or 'never'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Add 'I wonder if...' to invite collaboration",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Phrase concerns as questions: 'Is there a reason...?'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "State your own need: 'I'm hoping to understand...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Swap 'You didn't' for 'I noticed...'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Add 'please' before your main verb",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Use 'it seems to me' to avoid sounding accusatory",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Break long sentences into shorter, softer ones",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Replace 'I need you to' with 'Could we…?'",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Express empathy: 'I know you're busy, but...'",
+                "type": "toneImprovement"
+            }
+        ],
+        "clear": [
+            {
+                "suggestion": "Great communication!",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Your phrasing invites collaboration",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "You're clearly expressing your needs",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Nice use of 'I' statements",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "You balanced confidence with politeness",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Your message is concise and to the point",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "You acknowledged their perspective well",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Good job checking for understanding",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "You maintained a respectful tone",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Nice use of positive framing",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Your request is clear and actionable",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "You closed with appreciation",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Good pacing—no overwhelm in your ask",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "You used an inclusive 'we' effectively",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Your language builds rapport",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "You set clear expectations",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Excellent balance of warmth and professionalism",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Your closing reinforces collaboration",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "Great job summarizing key points",
+                "type": "toneImprovement"
+            },
+            {
+                "suggestion": "You provided helpful context",
+                "type": "toneImprovement"
+            }
+        ],
+        "romantic": [
+            {
+                "suggestion": "Include a heartfelt compliment about what you admire most in them",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Share a sweet memory you both cherish",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express how much you miss their presence",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Add a gentle declaration of affection like 'I’ve been thinking of you all day'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Suggest a cozy future plan: 'Can’t wait to cuddle up this weekend'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use a playful pet name that feels natural to your relationship",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Send a virtual kiss or heart emoji to punctuate your message",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express gratitude for something specific they did",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Share a line of poetry or lyrics that remind you of them",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Invite them to share something personal: 'What’s one thing that made you smile today?'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Reveal a small vulnerability: 'I feel so safe when I’m with you'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer a sweet promise: 'I’ll always be here for you, no matter what'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Ask a flirty question: 'How do you always know how to brighten my day?'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use sensory language: 'I can’t wait to feel your warm hug again'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Send a voice note for added intimacy",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Include a little tease: 'Bet you can’t guess what I’m dreaming about…'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer a loving reassurance: 'You mean the world to me'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Reference an inside joke to make them smile",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Add 'xoxo' at the end to show affection",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Suggest sharing something together: 'Let’s pick a movie and watch it together tonight'",
+                "type": "attachmentAware"
+            }
+        ],
+        "professional": [
+            {
+                "suggestion": "Use a formal greeting and closing",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "State your purpose clearly in the first sentence",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Avoid contractions like 'can't' or 'won't'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Refer to the recipient by their title and last name",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Keep paragraphs short and focused",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use bullet points for lists or action items",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Double‑check grammar and spelling before sending",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Include relevant context but omit personal details",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Confirm any deadlines or next steps explicitly",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use neutral, professional vocabulary",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Avoid emojis or informal punctuation",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Close with a professional sign‑off and your full name",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Attach only necessary documents with descriptive filenames",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Acknowledge any previous communications succinctly",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer to clarify if they have questions",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Refrain from using humor that could be misinterpreted",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Stay solution‑oriented, not complaint‑focused",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use passive voice sparingly to maintain clarity",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Include a professional email signature with contact info",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Verify recipient list to avoid sending to the wrong group",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Maintain a respectful tone, even when addressing issues",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Limit the use of jargon unless it’s industry‑standard",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Summarize key points at the end for clarity",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use direct statements rather than vague phrasing",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express appreciation for their time and attention",
+                "type": "attachmentAware"
+            }
+        ],
+        "acquaintance": [
+            {
+                "suggestion": "Use a polite greeting and closing",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Keep your message brief and to the point",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Avoid overly personal details",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use neutral language and tone",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Include a clear subject line if via email",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Be respectful of their time and schedule",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Avoid slang or overly casual language",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use full sentences, not fragments",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer a polite request rather than a demand",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Acknowledge their expertise or role if relevant",
+                "type": "attachmentAware"
+            }
+        ],
+        "family": [
+            {
+                "suggestion": "Remember your shared history",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express appreciation for their support",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Ask about a fond family memory",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer help with a recent challenge",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use a warm, informal greeting",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Include a family inside joke",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Check in on their well‑being",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Share a life update or milestone",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Invite them to a family gathering",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express pride in a recent achievement",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Acknowledge their feelings explicitly",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use affectionate terms like 'dear' or 'love'",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer a nostalgic photo or story",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Ask for family advice or recipes",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Mention a family tradition you cherish",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Suggest a shared activity or outing",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express gratitude for past kindnesses",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use gentle humor to lighten the mood",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer words of encouragement and support",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Ask about other family members’ updates",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Share plans for upcoming family events",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use emojis that resonate with family warmth",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express hope to see them soon",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Acknowledge any family challenges delicately",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer a small gift or gesture idea",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Invite them to share a favorite recipe",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Reminisce about a past family trip",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Include a lighthearted family challenge or game",
+                "type": "attachmentAware"
+            }
+        ],
+        "friendship": [
+            {
+                "suggestion": "Acknowledge how much their friendship means to you",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Share a fun memory you both love",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Ask how they’ve been doing lately",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer to catch up over coffee or a call",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express gratitude for their support",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Send a lighthearted joke or meme",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Check in on something they mentioned before",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Compliment a quality you admire in them",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Invite them to plan a fun activity together",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use a nickname only close friends use",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Share an update on your life and ask about theirs",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer help with a project or challenge",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express excitement to hear their news",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Mention a shared inside joke",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Suggest a spontaneous meet-up or adventure",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Acknowledge any distance and express you miss them",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Ask for their opinion or advice",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Send a photo that made you think of them",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Invite them to celebrate a milestone together",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Tell them you value their honesty and trust",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer encouragement for something they’re working on",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Share a playlist or article they’d enjoy",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Express how they’ve positively impacted your life",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Suggest planning a future trip or event together",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Ask about their goals and offer support",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Reminisce about a shared adventure",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Offer a sincere apology if needed",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "Use emojis that reflect your friendship style",
+                "type": "attachmentAware"
+            },
+            {
+                "suggestion": "End with a warm sign-off, like 'Your friend,'",
+                "type": "attachmentAware"
+            }
+        ]
+    }
+}

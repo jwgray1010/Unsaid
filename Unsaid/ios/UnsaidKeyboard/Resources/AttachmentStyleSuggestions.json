@@ -1,0 +1,375 @@
+{
+    "AttachmentStyleSuggestions": {
+
+        "anxious": {
+    "conditional": [
+        {
+            "contains": ["always", "never"],
+            "text": "Try: 'Sometimes I feel…' instead of 'You always/never…'"
+        },
+        {
+            "contains": ["ignore", "ignored"],
+            "text": "Try: 'It helps me when you check in—even a quick note means a lot.'"
+        },
+        {
+            "contains": ["doubt", "doubting"],
+            "text": "Consider: 'I sometimes doubt myself—would you remind me you're here?'"
+        },
+        {
+            "contains": ["uncertain", "unsure"],
+            "text": "Try: 'I'm a bit uncertain right now—could you let me know where we stand?'"
+        },
+        {
+            "contains": ["afraid", "scared"],
+            "text": "Consider: 'I get scared when I don't hear from you—would a brief update help?'"
+        },
+        {
+            "contains": ["if you want", "if you'd like"],
+            "text": "Try: 'If you'd like, let me know a good time to talk—I need a bit of reassurance.'"
+        },
+        {
+            "contains": ["makes sense", "if that makes sense"],
+            "text": "Consider: 'I hope that makes sense—please tell me if I'm overthinking.'"
+        },
+        {
+            "contains": ["alone", "left alone"],
+            "text": "Try: 'I feel uneasy being left alone without a word—could you send me a quick text?'"
+        },
+        {
+            "contains": ["silent", "silence"],
+            "text": "Consider: 'Your silence makes me anxious—would it help to agree on a check-in signal?'"
+        },
+        {
+            "contains": ["feedback", "input"],
+            "text": "Try: 'I really value your feedback—could you let me know what you think?'"
+        },
+        {
+            "contains": ["promise", "promised"],
+            "text": "Consider: 'I remember you promised to update me—could you let me know what's happening?'"
+        },
+        {
+            "contains": ["support", "supportive"],
+            "text": "Try: 'I could use a little support right now—would a quick reassurance help?'"
+        },
+        {
+            "contains": ["hold", "holding"],
+            "text": "Consider: 'I feel better when you hold space for me—can we set aside a moment?'"
+        },
+        {
+            "contains": ["cling", "clinging"],
+            "text": "Try: 'I know I can be clingy—I'm working on it, but a little check-in helps.'"
+        },
+        {
+            "contains": ["contact", "message"],
+            "text": "Consider: 'Even a one-word message like “I'm here” would really ease my mind.'"
+        },
+        {
+            "contains": ["lost", "confused"],
+            "text": "Try: 'I feel lost without your input—could you tell me how you're feeling?'"
+        },
+        {
+            "contains": ["pacing", "anxiety"],
+            "text": "Consider: 'My anxiety spikes when I'm pacing—would you mind sending a quick note?'"
+        }
+    ],
+      "defaults": [
+        "Anxious pattern detected: You may worry about connection or abandonment.",
+        "Express curiosity: 'I'm wondering how you're feeling about this.'",
+        "Own your feelings: 'I feel anxious when…'",
+        "Ask for clarity: 'Could you let me know where we stand?'",
+        "Set a check-in: 'Can we touch base later today?'",
+        "Frame questions gently: 'Could we talk about this when you're free?'",
+        "Validate yourself: 'It's okay for me to feel this way.'",
+        "Balance with hope: 'I believe we can work through this.'",
+        "Anchor gratitude: 'Thank you for listening to my concerns.'",
+        "Offer a solution: 'What can I do to feel more secure?'",
+        "Normalize doubt: 'I sometimes struggle with uncertainty.'",
+        "Set limits: 'I'll ask once, then wait for your response.'",
+        "Share vulnerability: 'I get scared when I don't hear from you.'",
+        "Invite partnership: 'Can we figure this out together?'",
+        "Use 'I appreciate': 'I appreciate your patience while I process.'",
+        "Frame support: 'It helps me when you check in regularly.'",
+        "Acknowledge positives: 'I love when you reassure me.'",
+        "Offer context: 'My mind races without updates.'",
+        "Use a safe word: 'Let's agree on a quick signal when I need reassurance.'",
+        "Suggest routine: 'Can we set a daily check-in time?'",
+        "Clarify expectations: 'How often can we touch base?'",
+        "Soften language: 'I wonder if we could…' instead of 'We need to…'",
+        "Avoid absolutes: swap 'always'/'never' for 'often'/'sometimes'",
+        "Check self-care: 'I'm feeling overwhelmed; could we pause?'",
+        "Invite feedback: 'What do you need from me right now?'",
+        "Express need: 'I need a little reassurance to feel calm.'",
+        "Frame it as mutual: 'We both deserve to feel secure.'",
+        "Offer transparency: 'I want to share my fears so they don't build up.'",
+        "Use positive framing: 'I'd love to feel closer—what do you think?'",
+        "Set collaborative goal: 'Let's agree on how to keep communication steady.'"
+      ]
+    },
+   
+ "avoidant": {
+  "conditional": [
+    {
+      "contains": ["space", "distance"],
+      "text": "Try: 'I need some time to process—can we reconnect later?'"
+    },
+    {
+      "contains": ["clingy", "needy"],
+      "text": "Consider: 'I'm feeling overwhelmed and need a short break.'"
+    },
+    {
+      "contains": ["quiet", "silence"],
+      "text": "You might say: 'I need some quiet time—I'll reach out when I'm ready to talk.'"
+    },
+    {
+      "contains": ["alone", "solo"],
+      "text": "Try: 'I'm going to take a moment alone to think this through. Let’s catch up afterward.'"
+    },
+    {
+      "contains": ["retreat", "step back"],
+      "text": "Consider: 'I need to step back for a bit to clear my head—can we chat later?'"
+    },
+    {
+      "contains": ["pause", "break"],
+      "text": "Try: 'I need a short pause—let's pick this up in an hour.'"
+    },
+    {
+      "contains": ["busy", "swamped"],
+      "text": "Consider: 'I'm really swamped right now—can we set a time to talk tomorrow?'"
+    },
+    {
+      "contains": ["logged off", "offline"],
+      "text": "Try: 'I'm going offline for a little while—I'll message you when I'm back.'"
+    },
+    {
+      "contains": ["tired", "drained"],
+      "text": "Consider: 'I'm feeling drained—can we resume this after I've rested?'"
+    },
+    {
+      "contains": ["processing", "thinking"],
+      "text": "Try: 'I need to process my thoughts—let's reconnect when I have some clarity.'"
+    },
+    {
+      "contains": ["unsure", "not sure"],
+      "text": "Consider: 'I'm not sure how to respond—I'll reflect and get back to you soon.'"
+    },
+    {
+      "contains": ["reflect", "ponder"],
+      "text": "Try: 'I need to reflect on this first—can we talk at [specific time]?'"
+    },
+    {
+      "contains": ["overwhelmed", "stressed"],
+      "text": "Consider: 'I'm feeling overwhelmed; I'd like a little breathing room before we continue.'"
+    },
+    {
+      "contains": ["head", "mind"],
+      "text": "Try: 'My mind is all over the place—I need a moment to regroup.'"
+    },
+    {
+      "contains": ["private", "privacy"],
+      "text": "Consider: 'I need some privacy to think this through—thank you for understanding.'"
+    }
+  ],
+            "defaults": [
+            "Express respect for your pace: 'I'll step back and circle back soon.'",
+            "Offer context: 'I'm gathering my thoughts before responding.'",
+            "Invite timing: 'Let me know when you're ready to chat.'",
+            "Reassure them: 'I care about this even if I need silence.'",
+            "Set a check-in: 'Can we catch up after I've rested?'",
+            "State intent: 'I need this pause, but want to return soon.'",
+            "Validate both needs: 'We both have different rhythms, and that's okay.'",
+            "Provide a clear timeframe: 'I'll be quiet for 30 minutes and then resume.'",
+            "Frame alone time as self-care: 'I need space to recharge so I can be present.'",
+            "Share your plan: 'I'm stepping away for a bit to clear my head—be back soon.'",
+            "Use a low-effort signal: 'Send me a 👍 when you want me back.'",
+            "Maintain warmth: 'I need quiet but I still care about you.'",
+            "Offer reassurance: 'This isn't about you; I just need time.'",
+            "Schedule reconnection: 'Let's set a time later to talk this through.'",
+            "Explain process: 'I think clearer when I'm alone for a moment.'",
+            "Acknowledge impact: 'I know my silence can be hard; thank you for your patience.'",
+            "Use bullet points: '- Brief pause\n- Return at [time]'",
+            "Invite their input: 'Let me know if you need something from me in the meantime.'",
+            "Balance distance and care: 'I appreciate your understanding and I'll return soon.'",
+            "Set mutual check-ins: 'Can we agree on a quick daily update? Even a word.'",
+            "Offer alternative mode: 'Would you prefer I text instead of call after my break?'",
+            "Frame break as temporary: 'This pause will help me respond more thoughtfully.'",
+            "Provide a brief teaser: 'I have ideas—just need to sort them first.'",
+            "Use reflective language: 'I need to step back so I can be fully here later.'",
+            "Avoid abrupt endings: 'I'm going to pause now; thanks for waiting.'",
+            "Invite patience: 'Thanks for giving me space; it means a lot.'",
+            "Normalize the need: 'Sometimes I need a moment alone to think things through.'",
+            "Clarify return conditions: 'I'll return as soon as I feel clear-headed.'",
+            "Acknowledge relationship: 'I care about us, and this helps me be present.'",
+            "Set minimal contact: 'Feel free to ping me if it's urgent.'",
+            "Share self-aware note: 'I know I can be too quiet—working on balancing that.'"
+            ]
+        },
+
+ "disorganized": {
+    "conditional": [
+    {
+      "contains": ["mixed feelings", "mixed emotions"],
+      "text": "Try: 'I'm feeling a bit torn—can we break this down step by step?'"
+    },
+    {
+      "contains": ["confused", "unclear"],
+      "text": "Consider: 'I'm not quite sure what I think—could you help me clarify my thoughts?'"
+    },
+    {
+      "contains": ["all over the place", "scattered"],
+      "text": "Try: 'My mind feels scattered—would it help to list out the main points together?'"
+    },
+    {
+      "contains": ["flip-flop", "flip flop"],
+      "text": "Consider: 'I keep changing my mind—can you ask me one question at a time?'"
+    },
+    {
+      "contains": ["overwhelmed", "overwhelming"],
+      "text": "Try: 'This feels overwhelming—can we focus on just one issue right now?'"
+    },
+    {
+      "contains": ["swirl", "jumbled"],
+      "text": "Consider: 'Everything feels jumbled—let's take a pause and organize our thoughts.'"
+    },
+    {
+      "contains": ["pull", "torn"],
+      "text": "Try: 'I'm pulled in two directions—can you help me figure out my priority?'"
+    },
+    {
+      "contains": ["lost track", "lost"],
+      "text": "Consider: 'I'm losing track of our main point—could you summarize where we are?'"
+    },
+    {
+      "contains": ["too many", "too much"],
+      "text": "Try: 'There's too much going on for me—can we narrow it down to the essentials?'"
+    },
+    {
+      "contains": ["brainstorm", "brain storm"],
+      "text": "Consider: 'I need to brainstorm out loud—would you mind guiding me with prompts?'"
+    },
+    {
+      "contains": ["rapidly", "racing"],
+      "text": "Try: 'My thoughts are racing—can we slow down and check in on each other?'"
+    },
+    {
+      "contains": ["uncertain", "unsure"],
+      "text": "Consider: 'I'm unsure how to proceed—could you share your perspective first?'"
+    },
+    {
+      "contains": ["hesitate", "hesitation"],
+      "text": "Try: 'I hesitate to decide—can we set a small goal to test our ideas?'"
+    },
+    {
+      "contains": ["switch", "switching"],
+      "text": "Consider: 'I keep switching topics—shall we list out the agenda before continuing?'"
+    },
+    {
+      "contains": ["spiral", "spiralling"],
+      "text": "Try: 'My mind is spiraling—can you help me ground by repeating the key points?'"
+    }
+  ],
+    "defaults": [
+            "Break it down: 'I have mixed emotions—here's what I feel…'",
+            "Use bullet points: 'First I think…, second I feel…, third I need…'",
+            "Add clarity: 'I'm uncertain and would appreciate your thoughts.'",
+            "Normalize confusion: 'It's okay to be unsure—can we sort through it?'",
+            "Ask open questions: 'What's your take on these possibilities?'",
+            "Offer stepwise process: 'Let's tackle one point at a time.'",
+            "Label feelings: 'I feel anxious and excited simultaneously.'",
+            "Invite teamwork: 'Shall we unpack this together?'",
+            "List pros and cons: 'Pros: …; Cons: …' to organize your thoughts",
+            "Frame pauses: 'I need a moment to gather my thoughts—can we pause?'",
+            "Use a summary: 'To recap, here's what I'e shared so far…'",
+            "Ask for reflections: 'Could you tell me what stood out to you?'",
+            "Share context: 'My mind is racing; can we slow down?'",
+            "Offer transparency: 'I want to be honest about my confusion.'",
+            "Set small goals: 'Let's focus on one issue before moving on.'",
+            "Use prompts: 'Can you help me identify my top concern?'",
+            "Acknowledge the swirl: 'Everything feels jumbled—thank you for your patience.'",
+            "Suggest mapping: 'Can we draw out the key points together?'",
+            "Use time-boxing: 'Let's spend two minutes on each topic.'",
+            "Ask for examples: 'Can you give me an example to guide me?'",
+            "Offer mutual check-ins: 'Let's pause every few minutes to summarize.'",
+            "Frame it as co-creation: 'We can figure this out as a team.'",
+            "Share feelings in sequence: 'First I felt X, then I felt Y…'",
+            "Use guiding questions: 'What do you think is most important?'",
+            "Acknowledge overwhelm: 'I'm feeling overwhelmed—can you help me focus?'",
+            "Propose structure: 'Shall we set an agenda for this talk?'",
+            "Invite a break: 'If it's too much, can we take a five-minute break?'",
+            "Offer your own pacing: 'I work best when we go slowly—does that work for you?'",
+            "Check for understanding: 'Is everything making sense so far?'",
+            "Use reflective listening: 'So you're hearing that… am I right?'",
+            "Express the need for order: 'I need to sort this out logically—let's list steps.'",
+            "Offer to validate: 'Can we affirm each other's feelings as we go?'" 
+            ]
+    },
+    
+    "secure": {
+        "conditional": [
+    {
+      "contains": ["we can", "we will"],
+      "text": "Nice use of 'we'—it reinforces partnership and shared responsibility."
+    },
+    {
+      "contains": ["I trust", "I'm confident"],
+      "text": "Great affirmation of trust—keep building on that foundation."
+    },
+    {
+      "contains": ["thank you", "thanks for"],
+      "text": "Appreciation anchors positive connection—excellent choice of wording."
+    },
+    {
+      "contains": ["I feel heard", "I feel understood"],
+      "text": "You're naming positive impact—that's a powerful way to reinforce mutual respect."
+    },
+    {
+      "contains": ["let's", "shall we"],
+      "text": "Use of 'let's' invites collaboration—perfect for shared problem‑solving."
+    }
+  ]
+},
+    "defaults": [               
+             "Excellent clarity: You combine empathy with directness.",
+            "Maintain 'I' statements to foster ownership.",
+            "Your respectful tone encourages open dialogue.",
+            "Offer support: 'How can I help you feel understood?'",
+            "Share appreciation: 'Thank you for your patience.'",
+            "Set collaborative tone: 'Let's work on this together.'",
+            "Invite feedback: 'What would you add to this?'",
+            "Express optimism: 'I believe we're on the right track.'",
+            "Validate their feelings before sharing yours.",
+            "Reaffirm trust: 'I trust we can solve this.'",
+            "Use future-focused language: 'Next, let's…'",
+            "Acknowledge effort: 'I see how much you've put into this.'",
+            "Frame statements positively: 'This is working well because…'",
+            "Share your perspective and ask theirs: 'Here's mine—what's yours?'",
+            "Encourage collaboration: 'How would you like to proceed?'",
+            "Offer reassurance: 'I'm here to support you.'",
+            "Set mutual goals: 'Shall we agree on our next steps?'",
+            "Express gratitude for their input: 'Thanks for sharing your thoughts.'",
+            "Balance giving and asking: 'I'll do X; how do you feel about that?'",
+            "Use calm affirmations: 'I appreciate our calm discussion.'",
+            "Highlight strengths: 'Your insight on this is really valuable.'",
+            "Suggest a constructive path: 'Maybe we can try… together.'",
+            "Model vulnerability: 'I admit I'm learning too—thank you.'",
+            "Offer to co-create solutions: 'Let's brainstorm ideas.'",
+            "Use a check-in signal: 'Can we pause here to see how we feel?'",
+            "Acknowledge progress: 'We've made great strides.'",
+            "Set a supportive boundary: 'I need X, and I'm open to your needs too.'",
+            "Propose a follow-up: 'Can we review this again tomorrow?'",
+            "Share encouragement: 'I have no doubt we'll work this out.'",
+            "Use polite permissions: 'May I suggest…?'",
+            "Frame feedback as enhancement: 'To make this even better…'",
+            "Invite honesty: 'Feel free to tell me if I'm off base.'",
+            "Close with warmth: 'Thank you for partnering with me on this.'"
+            ],
+            
+            "unknown": {
+            "conditional": [
+                {
+                    "contains": ["attachment style", "quiz"],
+                    "text": "Attachment style unknown: Consider taking the attachment quiz for tailored feedback."
+                }
+            ]
+        }
+    }
+}

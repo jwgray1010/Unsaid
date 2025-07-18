@@ -1,0 +1,124 @@
+{
+    "romantic": {
+        "conditional": [
+            "Romantic context detected: Consider expressing appreciation.",
+            "Share feelings: 'I feel really connected when we…'",
+            "Use affectionate language: 'I cherish our moments together.'",
+            "Express gratitude: 'Thank you for loving me unconditionally.'",
+            "Plan together: 'Can we schedule a date night?'",
+            "Send a surprise message: 'Just thinking of you—and smiling.'",
+            "Compliment sincerely: 'You make me feel so valued.'",
+            "Recall a favorite memory: 'Remember our first …? That meant so much.'",
+            "Offer small acts of kindness: 'Can I bring you coffee later?'",
+            "Set a shared goal: 'Let's choose a new hobby to explore together.'",
+            "Express excitement: 'I can't wait for our next adventure.'",
+            "Use playful tone: 'I'm still falling for you every day.'",
+            "Ask for a favorite moment: 'What was your favorite part of our last date?'",
+            "Write a mini love note: 'You brighten my world—thank you.'",
+            "Plan a thoughtful gesture: 'I'd love to cook your favorite meal tonight.'",
+            "Express support: 'I'm here for you, always.'",
+            "Share future dreams: 'I imagine us … together someday.'",
+            "Use pet names or endearments: 'Hey love, how's your day going?'",
+            "Offer reassurance: 'You're my person, and that won't change.'",
+            "Invite collaboration: 'Let's plan a weekend getaway—any ideas?'"
+            ]
+    },
+
+        "friendship": {
+            "conditional": [
+              "Friendship context detected: Keep the tone light and supportive.",
+            "Share enthusiasm: 'I had fun when we…'",
+            "Check in: 'How are you doing today?'",
+            "Use casual tone: 'Hey buddy, just checking in.'",
+            "Express appreciation: 'Thanks for always listening.'",
+            "Offer help: 'Let me know if you need anything.'",
+            "Celebrate wins: 'Congrats on your achievement!'",
+            "Suggest plans: 'Want to grab coffee this week?'",
+            "Use humor: 'Remember that time we…? 😂'",
+            "Send a friendly update: 'Just wanted to share some good news!'",
+            "Invite collaboration: 'Want to brainstorm together?'",
+            "Acknowledge challenges: 'Hope things are going well with…'",
+            "Share a memory: 'Thinking about our trip to… made me smile.'",
+            "Express encouragement: 'You've got this—rooting for you!'",
+            "Offer a simple gesture: 'I'm around if you need to talk.'"
+            ]
+        },
+
+        "family": {
+            "conditional": [
+               "Family context detected: Acknowledge shared history.",
+            "Use warm openers: 'Hey fam, I wanted to share…'",
+            "Express gratitude: 'Thanks for always being there.'",
+            "Share updates: 'Here's what's new with me…'",
+            "Express pride: 'I'm so proud of you.'",
+            "Offer support: 'Let me know how I can help.'",
+            "Suggest a family activity: 'How about a movie night this weekend?'",
+            "Recall a memory: 'Remember when we…? That was great.'",
+            "Check in on wellbeing: 'How's everyone doing today?'",
+            "Celebrate milestones: 'Congrats on your achievement!'",
+            "Use inclusive language: 'We could all use some fun—any ideas?'",
+            "Send a group message: 'Just wanted to say I love you all.'",
+            "Offer reassurance: 'No matter what, I've got your back.'",
+            "Ask for family input: 'What do you think about…?'",
+            "Plan a call: 'Can we catch up on Zoom tonight?'"  
+            ]
+        },
+
+        "professional": {
+            "conditional": [
+               "Professional context detected: Maintain professionalism.",
+            "Use formal tone: 'Please let me know your availability.'",
+            "Be concise: 'Here's the update on…'",
+            "Include call-to-action: 'Could you review this by EOD?'",
+            "Use polite closers: 'Thank you for your time.'",
+            "Provide clear next steps: 'Let's schedule a follow-up meeting.'",
+            "Acknowledge expertise: 'I appreciate your insight on this matter.'",
+            "Specify deadlines: 'Please submit your feedback by Friday COB.'",
+            "Offer assistance: 'Let me know if you have any questions.'",
+            "Use bullet points for clarity: 'Key points:'",
+            "Confirm receipt: 'Please confirm you've received this email.'",
+            "Frame collaboration: 'I look forward to working on this with you.'",
+            "Express appreciation: 'Thank you for your attention to this.'",
+            "Use neutral language: 'Per our discussion, attached is…'",
+            "Set expectations: 'We aim to complete this by next week.'",
+            "Reference policy or procedure: 'As per our guidelines…'",
+            "Maintain respectful tone: 'I value your professionalism.'",
+            "Include context: 'Following up on our last call…'",
+            "Offer flexibility: 'Let me know if you need more time.'",
+            "Use professional greetings: 'Dear [Name],' and closers: 'Sincerely,'.",
+            "Highlight accomplishments: 'Great job on the recent report.'",
+            "Use data-driven language: 'According to the Q2 metrics…'",
+            "Propose solutions: 'I suggest we implement…'"
+
+            ]
+        },
+
+        "acquaintance": {
+            "conditional": [
+                "Acquaintance context detected: Keep interactions respectful.",
+                "Use neutral openers: 'Hello, hope you're well.'",
+                "Be brief: 'I wanted to ask about…'",
+                "End politely: 'Thanks for your time.'",
+            "Use formal closers: 'Best regards,'",
+            "Introduce yourself if needed: 'Hi, this is [Your Name] from [Company].'",
+            "State your purpose quickly: 'I'm reaching out regarding…'",
+            "Offer context: 'Per our earlier conversation…'",
+            "Include a clear subject line if via email.",
+            "Use bullet points for multiple questions.",
+            "Avoid slang or casual emojis.",
+            "Provide your contact info: 'You can reach me at…'",
+            "Invite a response: 'Please let me know your thoughts.'",
+            "Acknowledge their schedule: 'I know you're busy, so…'",
+            "Be specific: 'Could you confirm receipt by…?'",
+            "Use polite requests: 'Would you mind…?'",
+            "Use full sentences, not fragments.",
+            "Avoid excessive punctuation (no '!!!').",
+            "Offer options: 'Would Tuesday or Wednesday work?'"
+            ]
+        },
+        "unknown": {
+            "conditional": [
+                "Unknown context detected: Proceed with caution."
+            ]
+        }
+    }
