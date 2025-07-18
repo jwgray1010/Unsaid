@@ -1464,23 +1464,6 @@ class KeyboardController: UIInputView {
         ])
     }
     
-    private func layoutSuggestionButtons() {
-        guard let suggestionButton = suggestionButtons.first else { return }
-        
-        // Make the suggestion button span the remaining width after the tone indicator
-        let logoWidth: CGFloat = 62  // Updated for new larger logo container size (52 + 10 margin)
-        let rightMargin: CGFloat = 10
-        
-        print("📱 Laying out single suggestion button")
-        
-        // Position the button centered vertically within the suggestion bar
-        NSLayoutConstraint.activate([
-            suggestionButton.leadingAnchor.constraint(equalTo: suggestionBar.leadingAnchor, constant: logoWidth),
-            suggestionButton.trailingAnchor.constraint(equalTo: suggestionBar.trailingAnchor, constant: -rightMargin),
-            suggestionButton.centerYAnchor.constraint(equalTo: suggestionBar.centerYAnchor), // Center in suggestion bar
-        ])
-    }
-    
     /// Cleans suggestion text to ensure only plain text is displayed
     private func cleanSuggestionText(_ text: String) -> String {
         var cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)

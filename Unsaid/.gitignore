@@ -10,6 +10,20 @@
 .svn/
 migrate_working_dir/
 
+# Environment files and API keys
+.env
+assets/.env
+ios/assets/.env
+**/assets/.env
+**/.env
+*.env
+
+# Firebase and Google Services
+GoogleService-Info.plist
+**/GoogleService-Info.plist
+google-services.json
+**/google-services.json
+
 # IntelliJ related
 *.iml
 *.ipr
