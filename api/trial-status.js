@@ -16,7 +16,7 @@ class TrialManager {
         'tone-analysis': true,
         'suggestions': true,
         'spell-check': true,
-        'openai-secure-fix': true
+        'openai-rewrite': true
       },
       isActive: true,
       hasAccess: true
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
         trial: trialStatus,
         pricing: {
           freeFeatures: ['tone-analysis'],
-          premiumFeatures: ['openai-secure-fix', 'spell-check', 'suggestions'],
+          premiumFeatures: ['openai-rewrite', 'spell-check', 'suggestions'],
           trialDuration: '7 days'
         },
         timestamp: new Date().toISOString()

@@ -33,8 +33,7 @@ class TrialManager {
             features: {
                 'tone-analysis': true,
                 'suggestions': true,
-                'spell-check': true,
-                'openai-secure-fix': true
+                'spell-check': true
             },
             isActive: true,
             hasAccess: true,
@@ -746,7 +745,7 @@ if (req.method === 'POST') {
         success: true,
         suggestions: formattedSuggestions, // Format for iOS compatibility
         general_suggestion: adviceText,
-        // NOTE: secure_fix is intentionally excluded - use /api/openai-secure-fix for that
+        // NOTE: OpenAI text rewriting handled directly in iOS KeyboardController
         primaryTone: toneStatus,
         toneStatus: toneStatus,
         confidence: confidence,
@@ -759,7 +758,7 @@ if (req.method === 'POST') {
         timestamp: new Date().toISOString(),
         source: finalToneAnalysisResult.source ? `SuggestionService-${finalToneAnalysisResult.source}` : 'SuggestionService-Sequential',
         trialStatus: trialStatus,
-        note: 'This endpoint returns only therapeutic advice. Use /api/openai-secure-fix for AI rewrites.',
+        note: 'This endpoint returns therapeutic advice. OpenAI text rewriting handled directly in iOS KeyboardController.',
         // Add ML system info if ML analysis was used
         ...(finalToneAnalysisResult.source === 'MLAdvancedToneAnalyzer' && {
           mlSystem: {
