@@ -172,10 +172,10 @@ private let idleDebounceNoPunct: TimeInterval = 1.4  // Delay without punctuatio
 - **Purpose**: Generate therapeutic advice
 - **API**: `/api/suggestions` 
 
-### **3. Secure Fix (OpenAI)**
+### **3. OpenAI Text Rewriting**
 - **Text**: Complete message + full context
-- **Purpose**: Rewrite entire message
-- **API**: `/api/openai-secure-fix`
+- **Purpose**: Rewrite entire message for clarity/professionalism
+- **Implementation**: Direct OpenAI integration in iOS KeyboardController
 
 ---
 
