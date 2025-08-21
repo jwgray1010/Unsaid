@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PersonalityTestDisclaimerScreenProfessional extends StatefulWidget {
-  final VoidCallback onAgree;
+  final VoidCallback? onAgree;  // Made optional for backward compatibility
+  final VoidCallback? onAgreeModern;  // New callback for modern assessment
 
   const PersonalityTestDisclaimerScreenProfessional({
     super.key,
-    required this.onAgree,
+    this.onAgree,
+    this.onAgreeModern,
   });
 
   @override
@@ -388,52 +390,108 @@ class _PersonalityTestDisclaimerScreenProfessionalState
                         // Action Buttons
                         Column(
                           children: [
-                            // Agree Button with helpful tooltip
-                            Tooltip(
-                              message:
-                                  "✨ The test takes just 2-3 minutes and helps personalize your experience",
-                              showDuration: const Duration(seconds: 3),
-                              textStyle: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withOpacity(
-                                  0.9,
+                            // Modern Assessment Button (Primary)
+                            if (widget.onAgreeModern != null)
+                              Tooltip(
+                                message:
+                                    "✨ Enhanced assessment with attachment science (Recommended)",
+                                showDuration: const Duration(seconds: 3),
+                                textStyle: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
                                 ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: widget.onAgree,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.colorScheme.primary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                      horizontal: 24,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 2,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withOpacity(
+                                    0.9,
                                   ),
-                                  icon: const Icon(
-                                    Icons.check_circle_outline,
-                                    size: 20,
-                                  ),
-                                  label: Text(
-                                    'I Understand & Want to Continue',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: widget.onAgreeModern,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: theme.colorScheme.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                        horizontal: 24,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.psychology_outlined,
+                                      size: 20,
+                                    ),
+                                    label: Text(
+                                      'Start Enhanced Assessment',
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                            
+                            // Spacing between options
+                            if (widget.onAgreeModern != null && widget.onAgree != null)
+                              const SizedBox(height: 12),
+                            
+                            // Classic Assessment Button (Alternative)
+                            if (widget.onAgree != null)
+                              Tooltip(
+                                message:
+                                    "✨ Classic personality test (2-3 minutes)",
+                                showDuration: const Duration(seconds: 3),
+                                textStyle: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withOpacity(
+                                    0.9,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: widget.onAgree,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: theme.colorScheme.primary,
+                                      side: BorderSide(
+                                        color: theme.colorScheme.primary,
+                                        width: 1.5,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                        horizontal: 24,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.check_circle_outline,
+                                      size: 20,
+                                    ),
+                                    label: Text(
+                                      widget.onAgreeModern != null 
+                                          ? 'Use Classic Assessment Instead'
+                                          : 'I Understand & Want to Continue',
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ),
 
                             const SizedBox(height: 16),
 

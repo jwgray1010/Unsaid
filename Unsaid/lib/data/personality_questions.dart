@@ -1,456 +1,482 @@
+import 'dart:math';
+
 class PersonalityQuestionOption {
   final String text;
-  final String type;
+  final String? type; // For goal profiling questions
+  final int? anxietyScore; // 1-5 scale for anxiety dimension
+  final int? avoidanceScore; // 1-5 scale for avoidance dimension
 
-  const PersonalityQuestionOption({required this.text, required this.type});
+  const PersonalityQuestionOption({
+    required this.text,
+    this.type,
+    this.anxietyScore,
+    this.avoidanceScore,
+  });
 }
 
 class PersonalityQuestion {
   final String question;
   final List<PersonalityQuestionOption> options;
+  final bool isGoalQuestion; // true for profiling, false for attachment
+  final bool isReversed; // true if higher scores indicate more security
 
-  const PersonalityQuestion({required this.question, required this.options});
-
-  void toJson() {}
+  const PersonalityQuestion({
+    required this.question,
+    required this.options,
+    this.isGoalQuestion = false,
+    this.isReversed = false,
+  });
 }
 
-const List<PersonalityQuestion> personalityQuestions = [
-  // Section 1: Attachment Style (5)
+// Enum for attachment styles
+enum AttachmentStyle {
+  secure('B', 'Secure'),
+  anxious('A', 'Anxious'),
+  avoidant('C', 'Avoidant'), 
+  disorganized('D', 'Disorganized');
+
+  const AttachmentStyle(this.shortName, this.longName);
+  final String shortName;
+  final String longName;
+}
+
+class PersonalityTest {
+  static final Random _random = Random();
+
+  // Calculate dimensional scores from answers
+  static Map<String, double> calculateDimensionalScores(
+    List<String> answers,
+    List<PersonalityQuestion> questions,
+  ) {
+    double anxietySum = 0;
+    double avoidanceSum = 0;
+    int anxietyCount = 0;
+    int avoidanceCount = 0;
+
+    for (int i = 0; i < answers.length && i < questions.length; i++) {
+      final question = questions[i];
+      
+      // Skip goal profiling questions
+      if (question.isGoalQuestion) continue;
+      
+      final answer = answers[i];
+      final option = question.options.firstWhere(
+        (opt) => opt.text == answer,
+        orElse: () => question.options.first,
+      );
+
+      if (option.anxietyScore != null) {
+        double score = option.anxietyScore!.toDouble();
+        if (question.isReversed) score = 6 - score; // Reverse score
+        anxietySum += score;
+        anxietyCount++;
+      }
+
+      if (option.avoidanceScore != null) {
+        double score = option.avoidanceScore!.toDouble();
+        if (question.isReversed) score = 6 - score; // Reverse score
+        avoidanceSum += score;
+        avoidanceCount++;
+      }
+    }
+
+    return {
+      'anxiety': anxietyCount > 0 ? anxietySum / anxietyCount : 3.0,
+      'avoidance': avoidanceCount > 0 ? avoidanceSum / avoidanceCount : 3.0,
+      'disorganized': 0.0, // Will be calculated based on anxiety + avoidance
+    };
+  }
+
+  // Get questions with shuffled answers (keep question order for consistency)
+  static List<PersonalityQuestion> getQuestionsWithShuffledAnswers() {
+    return improvedPersonalityQuestions.map((question) {
+      if (question.isGoalQuestion) {
+        // Don't shuffle goal questions - order matters for user experience
+        return question;
+      }
+      
+      List<PersonalityQuestionOption> shuffledOptions = List.from(question.options);
+      shuffledOptions.shuffle(_random);
+
+      return PersonalityQuestion(
+        question: question.question,
+        options: shuffledOptions,
+        isGoalQuestion: question.isGoalQuestion,
+        isReversed: question.isReversed,
+      );
+    }).toList();
+  }
+}
+
+// Infer attachment style from dimensional scores
+AttachmentStyle inferAttachmentStyle(Map<String, double> dimensions) {
+  final anxiety = dimensions['anxiety'] ?? 3.0;
+  final avoidance = dimensions['avoidance'] ?? 3.0;
+  
+  // Cutoffs based on research (3.5 on a 1-5 scale)
+  final highAnxiety = anxiety >= 3.5;
+  final highAvoidance = avoidance >= 3.5;
+  
+  if (highAnxiety && highAvoidance) {
+    return AttachmentStyle.disorganized;
+  } else if (highAnxiety && !highAvoidance) {
+    return AttachmentStyle.anxious;
+  } else if (!highAnxiety && highAvoidance) {
+    return AttachmentStyle.avoidant;
+  } else {
+    return AttachmentStyle.secure;
+  }
+}
+
+const List<PersonalityQuestion> improvedPersonalityQuestions = [
+  // ========================================
+  // GOAL PROFILING QUESTIONS (1-10)
+  // These determine weight multiplier profiles
+  // ========================================
+
   PersonalityQuestion(
-    question: "When I don’t get a text back, I usually:",
+    question: "What's your main goal in using tone and attachment analysis right now?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(text: "Assume the worst", type: "A"),
-      PersonalityQuestionOption(text: "Figure they’re just busy", type: "B"),
-      PersonalityQuestionOption(text: "Get annoyed and ignore them", type: "C"),
-      PersonalityQuestionOption(
-        text: "Feel fine and do my own thing",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "New connection or dating", type: "dating_sensitive"),
+      PersonalityQuestionOption(text: "Repairing or deepening an existing relationship", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "Staying consistent and becoming more secure", type: "secure_training"),
+      PersonalityQuestionOption(text: "Managing co-parenting communication", type: "coparenting_support"),
+      PersonalityQuestionOption(text: "Getting through tough conversations better", type: "boundary_forward"),
     ],
   ),
+
   PersonalityQuestion(
-    question: "I feel most secure in relationships when:",
+    question: "Do you find yourself feeling emotionally distant or disconnected in your current relationship?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "I get regular check-ins and verbal reassurance",
-        type: "A",
-      ),
-      PersonalityQuestionOption(
-        text: "We trust each other to do our own thing",
-        type: "B",
-      ),
-      PersonalityQuestionOption(
-        text: "I have control of the emotional pace",
-        type: "C",
-      ),
-      PersonalityQuestionOption(
-        text: "Conflict is rare or minimized",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Yes, often", type: "dating_sensitive"),
+      PersonalityQuestionOption(text: "Sometimes", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "Rarely", type: "secure_training"),
+      PersonalityQuestionOption(text: "No, not at all", type: "empathetic_mirror"),
     ],
   ),
+
   PersonalityQuestion(
-    question: "If my partner is upset with me, I tend to:",
+    question: "Do you tend to avoid conflict or shut down during difficult conversations?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Worry and try to fix it right away",
-        type: "A",
-      ),
-      PersonalityQuestionOption(
-        text: "Respect their space and wait",
-        type: "B",
-      ),
-      PersonalityQuestionOption(
-        text: "Shut down and avoid confrontation",
-        type: "C",
-      ),
-      PersonalityQuestionOption(
-        text: "Feel anxious but pretend I’m fine",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Yes, I always avoid conflict", type: "deescalator"),
+      PersonalityQuestionOption(text: "I often shut down", type: "coparenting_support"),
+      PersonalityQuestionOption(text: "Sometimes I avoid it", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "No, I engage with difficult conversations", type: "boundary_forward"),
     ],
   ),
+
   PersonalityQuestion(
-    question: "When I think about long-term commitment, I feel:",
+    question: "Are you often the one trying to repair or bring things back together after conflict?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Excited but scared of losing them",
-        type: "A",
-      ),
-      PersonalityQuestionOption(text: "Stable and comfortable", type: "B"),
-      PersonalityQuestionOption(text: "Claustrophobic or nervous", type: "C"),
-      PersonalityQuestionOption(
-        text: "Unsure — it depends on the partner",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Yes, always me", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "Usually me", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "Sometimes", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "No, we both work on it", type: "secure_training"),
     ],
   ),
+
   PersonalityQuestion(
-    question: "In my past relationships, I’ve often:",
+    question: "Are you currently trying to build a connection with someone new?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Tried harder than my partner",
-        type: "A",
-      ),
-      PersonalityQuestionOption(
-        text: "Had healthy, balanced communication",
-        type: "B",
-      ),
-      PersonalityQuestionOption(
-        text: "Been accused of being distant",
-        type: "C",
-      ),
-      PersonalityQuestionOption(
-        text: "Stayed too long even when I was unhappy",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Yes, actively dating", type: "dating_sensitive"),
+      PersonalityQuestionOption(text: "Yes, new relationship", type: "dating_sensitive"),
+      PersonalityQuestionOption(text: "No, focusing on existing relationships", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "No, single and not dating", type: "secure_training"),
     ],
   ),
-  // Section 2: Emotional Communication Type (5)
+
   PersonalityQuestion(
-    question: "When my partner is going through something hard, I usually:",
+    question: "Do you want to focus on how to express your emotions more clearly and vulnerably?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Take on their emotions as my own",
-        type: "A",
-      ),
-      PersonalityQuestionOption(
-        text: "Give them room but offer support",
-        type: "B",
-      ),
-      PersonalityQuestionOption(
-        text: "Avoid the topic unless they bring it up",
-        type: "C",
-      ),
-      PersonalityQuestionOption(text: "Struggle to know what to do", type: "D"),
+      PersonalityQuestionOption(text: "Yes, definitely", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "Yes, somewhat", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "Maybe", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "No, I'm comfortable with my expression", type: "secure_training"),
     ],
   ),
+
   PersonalityQuestion(
-    question: "Expressing my emotions in a relationship feels:",
+    question: "Are you navigating a challenging topic right now (like boundaries, needs, or big changes)?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Natural but I worry I’m too much",
-        type: "A",
-      ),
-      PersonalityQuestionOption(text: "Comfortable and easy", type: "B"),
-      PersonalityQuestionOption(
-        text: "Uncomfortable — I’d rather not",
-        type: "C",
-      ),
-      PersonalityQuestionOption(text: "Difficult but necessary", type: "D"),
+      PersonalityQuestionOption(text: "Yes, very challenging topics", type: "boundary_forward"),
+      PersonalityQuestionOption(text: "Yes, some difficult conversations", type: "deescalator"),
+      PersonalityQuestionOption(text: "Maybe some smaller issues", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "No, things are stable", type: "secure_training"),
     ],
   ),
+
   PersonalityQuestion(
-    question: "If my partner needs constant reassurance, I:",
+    question: "Is your co-parenting communication more about logistics or emotional conflict?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Feel responsible for their feelings",
-        type: "A",
-      ),
-      PersonalityQuestionOption(text: "Can handle it to a point", type: "B"),
-      PersonalityQuestionOption(text: "Feel smothered", type: "C"),
-      PersonalityQuestionOption(text: "Need to pull away sometimes", type: "D"),
+      PersonalityQuestionOption(text: "Mostly logistics", type: "coparenting_support"),
+      PersonalityQuestionOption(text: "Mix of both", type: "coparenting_support"),
+      PersonalityQuestionOption(text: "Mostly emotional conflict", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "Not applicable - no co-parenting", type: "empathetic_mirror"),
     ],
   ),
+
   PersonalityQuestion(
-    question: "In a typical week, I reach out:",
+    question: "Would you prefer gentle daily check-ins to help regulate tone, even in casual texts?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Constantly — I like frequent contact",
-        type: "A",
-      ),
-      PersonalityQuestionOption(
-        text: "A few times, depending on the flow",
-        type: "B",
-      ),
-      PersonalityQuestionOption(
-        text: "Rarely — I prefer less communication",
-        type: "C",
-      ),
-      PersonalityQuestionOption(text: "Mostly when they text first", type: "D"),
+      PersonalityQuestionOption(text: "Yes, that sounds helpful", type: "balanced"),
+      PersonalityQuestionOption(text: "Maybe occasionally", type: "secure_training"),
+      PersonalityQuestionOption(text: "Not really needed", type: "empathetic_mirror"),
+      PersonalityQuestionOption(text: "No, I prefer minimal intervention", type: "deescalator"),
     ],
   ),
+
   PersonalityQuestion(
-    question: "When I feel misunderstood, I usually:",
+    question: "Would you describe your tone goal as: more clarity, more warmth, or more calm?",
+    isGoalQuestion: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Get louder or try to explain harder",
-        type: "A",
-      ),
-      PersonalityQuestionOption(
-        text: "Try to calmly explain or clarify",
-        type: "B",
-      ),
-      PersonalityQuestionOption(text: "Stay quiet and shut down", type: "C"),
-      PersonalityQuestionOption(
-        text: "Pull away and replay it in my head",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "More clarity", type: "boundary_forward"),
+      PersonalityQuestionOption(text: "More warmth", type: "dating_sensitive"),
+      PersonalityQuestionOption(text: "More calm", type: "secure_training"),
+      PersonalityQuestionOption(text: "All of the above", type: "empathetic_mirror"),
     ],
   ),
-  // Section 3: Conflict Response + Repair Style (5)
+
+  // ========================================
+  // ATTACHMENT STYLE QUESTIONS (11+)
+  // Scored on anxiety and avoidance dimensions
+  // ========================================
+
+  // ANXIETY DIMENSION QUESTIONS
   PersonalityQuestion(
-    question: "During arguments, I’m most likely to:",
+    question: "I worry about being abandoned or rejected in close relationships.",
     options: [
-      PersonalityQuestionOption(text: "Get emotional or cry", type: "A"),
-      PersonalityQuestionOption(text: "Stay calm and talk it out", type: "B"),
-      PersonalityQuestionOption(text: "Shut down completely", type: "C"),
-      PersonalityQuestionOption(
-        text: "Leave or walk away until I cool off",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 1),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 3),
     ],
   ),
+
   PersonalityQuestion(
-    question: "After a fight, I want:",
+    question: "I often worry that my partner doesn't really care about me.",
     options: [
-      PersonalityQuestionOption(
-        text: "Immediate closeness and reassurance",
-        type: "A",
-      ),
-      PersonalityQuestionOption(text: "Time and space to process", type: "B"),
-      PersonalityQuestionOption(
-        text: "Silence — I don’t want to talk about it",
-        type: "C",
-      ),
-      PersonalityQuestionOption(
-        text: "A distraction or something to take my mind off it",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 3),
     ],
   ),
+
   PersonalityQuestion(
-    question: "If my partner needs to talk through everything, I:",
+    question: "I need a lot of reassurance from my partner.",
     options: [
-      PersonalityQuestionOption(text: "Feel overwhelmed but try", type: "A"),
-      PersonalityQuestionOption(text: "Appreciate the clarity", type: "B"),
-      PersonalityQuestionOption(text: "Feel like it's dragging on", type: "C"),
-      PersonalityQuestionOption(
-        text: "Avoid deep emotional conversations",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 1),
     ],
   ),
+
   PersonalityQuestion(
-    question: "The worst part of conflict for me is:",
+    question: "I feel secure in my relationships.", // REVERSED
+    isReversed: true,
     options: [
-      PersonalityQuestionOption(text: "Feeling disconnected", type: "A"),
-      PersonalityQuestionOption(
-        text: "Losing peace and emotional balance",
-        type: "B",
-      ),
-      PersonalityQuestionOption(text: "Not being in control", type: "C"),
-      PersonalityQuestionOption(
-        text: "Feeling judged or criticized",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 5, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 4, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 1, avoidanceScore: 1),
     ],
   ),
+
   PersonalityQuestion(
-    question: "When conflict is over, I usually:",
+    question: "I find it easy to depend on romantic partners.", // REVERSED
+    isReversed: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Still carry emotional tension",
-        type: "A",
-      ),
-      PersonalityQuestionOption(text: "Feel closure and move on", type: "B"),
-      PersonalityQuestionOption(
-        text: "Stay quiet, even if I’m not okay",
-        type: "C",
-      ),
-      PersonalityQuestionOption(
-        text: "Try to act normal even if I’m hurt",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 4, avoidanceScore: 5),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 1, avoidanceScore: 1),
     ],
   ),
-  // Section 4: New Section (4)
+
+  // AVOIDANCE DIMENSION QUESTIONS
   PersonalityQuestion(
-    question: "When I disagree with someone, I usually:",
+    question: "I prefer not to show how I feel deep down.",
     options: [
-      PersonalityQuestionOption(
-        text: "Stay quiet to avoid conflict",
-        type: "P",
-      ), // Passive
-      PersonalityQuestionOption(
-        text: "Express my view respectfully",
-        type: "AS",
-      ), // Assertive
-      PersonalityQuestionOption(
-        text: "Raise my voice or get angry",
-        type: "AG",
-      ), // Aggressive
-      PersonalityQuestionOption(
-        text: "Use sarcasm or indirect comments",
-        type: "PA",
-      ), // Passive-Aggressive
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 2, avoidanceScore: 1),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 3, avoidanceScore: 5),
     ],
   ),
-  // --- More Attachment Style Questions ---
+
   PersonalityQuestion(
-    question: "When someone cancels plans last minute, I:",
+    question: "I find it difficult to depend on my partners.",
     options: [
-      PersonalityQuestionOption(text: "Worry they don’t value me", type: "A"),
-      PersonalityQuestionOption(text: "Understand and reschedule", type: "B"),
-      PersonalityQuestionOption(text: "Feel relieved to have space", type: "C"),
-      PersonalityQuestionOption(
-        text: "Act like it’s fine but feel hurt",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 2, avoidanceScore: 1),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 3, avoidanceScore: 5),
     ],
   ),
+
   PersonalityQuestion(
-    question: "If my partner doesn’t reply for hours, I:",
+    question: "I don't feel comfortable opening up.",
     options: [
-      PersonalityQuestionOption(text: "Check my phone constantly", type: "A"),
-      PersonalityQuestionOption(
-        text: "Trust they’ll reply when they can",
-        type: "B",
-      ),
-      PersonalityQuestionOption(
-        text: "Distract myself and don’t reach out",
-        type: "C",
-      ),
-      PersonalityQuestionOption(
-        text: "Feel upset but don’t say anything",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 2, avoidanceScore: 1),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 3, avoidanceScore: 5),
     ],
   ),
+
   PersonalityQuestion(
-    question: "When I feel disconnected, I:",
+    question: "I prefer not to have others depend on me.", 
     options: [
-      PersonalityQuestionOption(text: "Reach out repeatedly", type: "A"),
-      PersonalityQuestionOption(
-        text: "Communicate my feelings calmly",
-        type: "B",
-      ),
-      PersonalityQuestionOption(text: "Withdraw and become distant", type: "C"),
-      PersonalityQuestionOption(
-        text: "Act normal but feel chaotic inside",
-        type: "D",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 2, avoidanceScore: 1),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 3, avoidanceScore: 5),
     ],
   ),
-  // --- More Communication Style Questions ---
+
   PersonalityQuestion(
-    question: "If a friend upsets me, I:",
+    question: "I find it easy to express my feelings.", // REVERSED
+    isReversed: true,
     options: [
-      PersonalityQuestionOption(
-        text: "Say nothing and hope it passes",
-        type: "P",
-      ),
-      PersonalityQuestionOption(
-        text: "Tell them honestly how I feel",
-        type: "AS",
-      ),
-      PersonalityQuestionOption(
-        text: "Confront them directly and forcefully",
-        type: "AG",
-      ),
-      PersonalityQuestionOption(
-        text: "Drop hints or make jokes about it",
-        type: "PA",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 3, avoidanceScore: 5),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 1, avoidanceScore: 1),
     ],
   ),
+
+  // DISORGANIZED-SPECIFIC QUESTIONS
   PersonalityQuestion(
-    question: "When giving feedback, I:",
+    question: "I want to be very close to my partner but also fear intimacy.",
     options: [
-      PersonalityQuestionOption(
-        text: "Soften my words to avoid hurting them",
-        type: "P",
-      ),
-      PersonalityQuestionOption(
-        text: "Share my thoughts clearly and kindly",
-        type: "AS",
-      ),
-      PersonalityQuestionOption(text: "Point out flaws bluntly", type: "AG"),
-      PersonalityQuestionOption(
-        text: "Use sarcasm or backhanded compliments",
-        type: "PA",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 5),
     ],
   ),
+
   PersonalityQuestion(
-    question: "If someone disagrees with me, I:",
+    question: "My feelings about romantic relationships seem contradictory.",
     options: [
-      PersonalityQuestionOption(
-        text: "Let them have their way to keep peace",
-        type: "P",
-      ),
-      PersonalityQuestionOption(
-        text: "Listen and explain my view respectfully",
-        type: "AS",
-      ),
-      PersonalityQuestionOption(
-        text: "Insist I’m right and push my point",
-        type: "AG",
-      ),
-      PersonalityQuestionOption(
-        text: "Agree outwardly but resent it",
-        type: "PA",
-      ),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 1),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 5),
     ],
   ),
+
   PersonalityQuestion(
-    question: "When I want something in a relationship, I:",
+    question: "I sometimes send mixed signals about how close I want to be.",
     options: [
-      PersonalityQuestionOption(text: "Hope my partner will notice", type: "P"),
-      PersonalityQuestionOption(
-        text: "Ask directly for what I need",
-        type: "AS",
-      ),
-      PersonalityQuestionOption(text: "Demand or expect it", type: "AG"),
-      PersonalityQuestionOption(text: "Complain or guilt-trip", type: "PA"),
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 1),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 5),
+    ],
+  ),
+
+  // ADDITIONAL DATING CONTEXT QUESTIONS
+  PersonalityQuestion(
+    question: "When someone I'm dating takes a while to text back, I assume something is wrong.",
+    options: [
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 3),
+    ],
+  ),
+
+  PersonalityQuestion(
+    question: "I'm comfortable expressing interest when I'm attracted to someone.", // REVERSED
+    isReversed: true,
+    options: [
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 4, avoidanceScore: 5),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 1, avoidanceScore: 1),
+    ],
+  ),
+
+  PersonalityQuestion(
+    question: "When dating gets more serious, I start to worry they'll lose interest.",
+    options: [
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 3),
+    ],
+  ),
+
+  PersonalityQuestion(
+    question: "I find it easy to be emotionally close to romantic partners.", // REVERSED
+    isReversed: true,
+    options: [
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 3, avoidanceScore: 5),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 1, avoidanceScore: 1),
+    ],
+  ),
+
+  PersonalityQuestion(
+    question: "I worry about being alone more than losing my independence.",
+    options: [
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 1, avoidanceScore: 5),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 4, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 5, avoidanceScore: 1),
+    ],
+  ),
+
+  PersonalityQuestion(
+    question: "It's easy for me to trust new romantic partners.", // REVERSED
+    isReversed: true,
+    options: [
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 5, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 4, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 1, avoidanceScore: 1),
+    ],
+  ),
+
+  PersonalityQuestion(
+    question: "I get frustrated when romantic partners want to be very close.",
+    options: [
+      PersonalityQuestionOption(text: "Strongly Disagree", anxietyScore: 2, avoidanceScore: 1),
+      PersonalityQuestionOption(text: "Disagree", anxietyScore: 2, avoidanceScore: 2),
+      PersonalityQuestionOption(text: "Neutral", anxietyScore: 3, avoidanceScore: 3),
+      PersonalityQuestionOption(text: "Agree", anxietyScore: 3, avoidanceScore: 4),
+      PersonalityQuestionOption(text: "Strongly Agree", anxietyScore: 3, avoidanceScore: 5),
     ],
   ),
 ];
-
-enum AttachmentStyle { anxious, secure, avoidant, disorganized }
-
-enum CommunicationStyle { passive, assertive, aggressive, passiveAggressive }
-
-AttachmentStyle getDominantAttachmentStyle(List<String> selectedTypes) {
-  final counts = <String, int>{"A": 0, "B": 0, "C": 0, "D": 0};
-  for (final type in selectedTypes) {
-    if (counts.containsKey(type)) counts[type] = counts[type]! + 1;
-  }
-  final maxType = counts.entries
-      .reduce((a, b) => a.value >= b.value ? a : b)
-      .key;
-  switch (maxType) {
-    case "A":
-      return AttachmentStyle.anxious;
-    case "B":
-      return AttachmentStyle.secure;
-    case "C":
-      return AttachmentStyle.avoidant;
-    case "D":
-      return AttachmentStyle.disorganized;
-    default:
-      return AttachmentStyle.secure; // fallback
-  }
-}
-
-CommunicationStyle getDominantCommunicationStyle(List<String> selectedTypes) {
-  final counts = <String, int>{"P": 0, "AS": 0, "AG": 0, "PA": 0};
-  for (final type in selectedTypes) {
-    if (counts.containsKey(type)) counts[type] = counts[type]! + 1;
-  }
-  final maxType = counts.entries
-      .reduce((a, b) => a.value >= b.value ? a : b)
-      .key;
-  switch (maxType) {
-    case "P":
-      return CommunicationStyle.passive;
-    case "AS":
-      return CommunicationStyle.assertive;
-    case "AG":
-      return CommunicationStyle.aggressive;
-    case "PA":
-      return CommunicationStyle.passiveAggressive;
-    default:
-      return CommunicationStyle.assertive; // fallback
-  }
-}

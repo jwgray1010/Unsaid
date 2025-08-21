@@ -2,198 +2,204 @@
 //  KeyboardViewController.swift
 //  UnsaidKeyboard
 //
-//  Created by John Gray on 7/15/25.
+//  Created by John Gray on 8/5/25.
 //
 
 import UIKit
+import os.log
 
 class KeyboardViewController: UIInputViewController {
-    
-    // Custom keyboard controller
-    private var keyboardController: KeyboardController?
-    
-    override func updateViewConstraints() {
-        super.updateViewConstraints()
-        
-        // Update keyboard controller constraints
-        keyboardController?.updateViewConstraints()
-    }
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        print(" KeyboardViewController viewDidLoad")
-        print(" View bounds: \(view.bounds)")
-        print(" View frame: \(view.frame)")
-        print(" Has full access: \(hasFullAccess)")
-        
-        // Configure keyboard to prevent system takeover
-        configureKeyboardBehavior()
-        
-        // Create and setup custom keyboard controller
-        setupKeyboardController()
-        
-        print("📱 Final view bounds: \(view.bounds)")
-        print("📱 Final view frame: \(view.frame)")
-        
-        // Force layout to ensure everything is properly set up
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        
-        print(" KeyboardViewController viewDidLoad completed")
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        
-        print("📱 KeyboardViewController viewWillAppear")
-        
-        // Set up preferred content size for the keyboard extension
-        // Do this in viewWillAppear when view bounds are established
-        let keyboardWidth = view.bounds.width > 0 ? view.bounds.width : UIScreen.main.bounds.width
-        
-        // Use the keyboard controller's intrinsic content size if available
-        let keyboardHeight: CGFloat
-        if let keyboardController = keyboardController {
-            keyboardHeight = keyboardController.intrinsicContentSize.height
-        } else {
-            keyboardHeight = 320  // Fallback height
-        }
-        
-        let keyboardSize = CGSize(width: keyboardWidth, height: keyboardHeight)
-        preferredContentSize = keyboardSize
-        
-        print(" Preferred content size set to: \(keyboardSize)")
-        print(" View bounds at viewWillAppear: \(view.bounds)")
-        print(" View frame at viewWillAppear: \(view.frame)")
-        
-        keyboardController?.viewWillAppear(animated)
-    }
-    
-    override func viewWillLayoutSubviews() {
-        super.viewWillLayoutSubviews()
-        
-        keyboardController?.viewWillLayoutSubviews()
-    }
-    
-    override func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
-        
-        print(" KeyboardViewController viewDidDisappear")
-        keyboardController?.viewDidDisappear(animated)
-    }
-    
-    override func textWillChange(_ textInput: UITextInput?) {
-        super.textWillChange(textInput)
-        
-        keyboardController?.textWillChange(textInput)
-    }
-    
-    override func textDidChange(_ textInput: UITextInput?) {
-        super.textDidChange(textInput)
-        
-        keyboardController?.textDidChange(textInput)
-    }
-    
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        
-        keyboardController?.traitCollectionDidChange(previousTraitCollection)
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        print(" KeyboardViewController viewDidAppear")
-        print(" View bounds: \(view.bounds)")
-        print(" View frame: \(view.frame)")
-        print(" Has full access: \(hasFullAccess)")
-        
-        // Ensure the keyboard is properly visible
-        if let keyboardController = keyboardController {
-            print(" KeyboardController frame: \(keyboardController.frame)")
-            print(" KeyboardController bounds: \(keyboardController.bounds)")
-            print(" KeyboardController superview: \(keyboardController.superview != nil)")
-            print(" KeyboardController subviews count: \(keyboardController.subviews.count)")
-            
-            // Ensure it's visible
-            keyboardController.isHidden = false
-            keyboardController.alpha = 1.0
-            
-            // Force layout one more time
-            view.setNeedsLayout()
-            view.layoutIfNeeded()
-            keyboardController.setNeedsLayout()
-            keyboardController.layoutIfNeeded()
-        } else {
-            print(" KeyboardController is nil in viewDidAppear")
-        }
-    }
-    
-    // MARK: - Private Methods
-    
-    private func setupKeyboardController() {
-        print("🔧 Setting up KeyboardController...")
-        
-        // Create keyboard controller with proper initial frame (use view bounds like backup)
-        let width = view.bounds.width > 0 ? view.bounds.width : UIScreen.main.bounds.width
-        let initialFrame = CGRect(x: 0, y: 0, width: width, height: 320)
-        keyboardController = KeyboardController(frame: initialFrame)
-        
-        guard let keyboardController = keyboardController else {
-            print(" Failed to create KeyboardController")
-            return
-        }
-        
-        print(" KeyboardController created with frame: \(keyboardController.frame)")
-        print(" KeyboardController backgroundColor: \(keyboardController.backgroundColor?.description ?? "nil")")
-        print(" KeyboardController isUserInteractionEnabled: \(keyboardController.isUserInteractionEnabled)")
-        
-        // Configure the keyboard controller with this input view controller
-        keyboardController.configure(with: self)
-        
-        // Set the keyboard controller as the main view for this keyboard extension
-        self.view = keyboardController
-        
-        print("📱 KeyboardController configured and set as main view")
-        print("📱 View subviews count: \(view.subviews.count)")
-        
-        // Force layout
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        
-        print(" KeyboardController final frame: \(keyboardController.frame)")
-        print(" KeyboardController final bounds: \(keyboardController.bounds)")
-        
-        // Call viewDidLoad equivalent
-        keyboardController.viewDidLoad()
-        
-        print(" KeyboardController setup complete")
-    }
-    
-    // MARK: - Configuration
-    
-    private func configureKeyboardBehavior() {
-        // Prevent automatic keyboard switching
-        if responds(to: #selector(getter: hasFullAccess)) {
-            print(" Keyboard has full access: \(hasFullAccess)")
-        }
-        
-        // Configure keyboard appearance
-        if responds(to: #selector(getter: primaryLanguage)) {
-            print(" Primary language: \(primaryLanguage ?? "unknown")")
-        }
-    }
-    
-    // MARK: - Prevent System Keyboard Takeover
-    
-    override func selectionWillChange(_ textInput: UITextInput?) {
-        super.selectionWillChange(textInput)
-        // Don't allow selection changes to trigger system keyboard
-    }
-    
-    override func selectionDidChange(_ textInput: UITextInput?) {
-        super.selectionDidChange(textInput)
-        // Handle selection changes without triggering system keyboard
-    }
+	// MARK: - Properties
+	private var keyboardController: KeyboardController?
+	private let logger = Logger(subsystem: "com.example.unsaid.UnsaidKeyboard", category: "KeyboardViewController")
+
+	// MARK: - Constraint Management
+	private var heightConstraint: NSLayoutConstraint?
+	private var isKeyboardSetup = false
+
+	// MARK: - Keyboard Height Calculation
+	private var preferredKeyboardHeight: CGFloat {
+		// IMPROVED: Less brittle height calculation using trait collection
+		let isCompact = traitCollection.verticalSizeClass == .compact
+		let baseHeight: CGFloat = isCompact ? 209 : 300
+		// FUTURE-PROOF: Add safe area bottom inset for newer devices
+		let bottomInset = view.safeAreaInsets.bottom
+		let finalHeight = baseHeight + bottomInset
+		logger.debug("📐 KeyboardViewController: Height calculation - base: \(baseHeight), inset: \(bottomInset), final: \(finalHeight)")
+		return finalHeight
+	}
+
+	// MARK: - View Lifecycle
+	override func viewDidLoad() {
+		super.viewDidLoad()
+		logger.info("🎹 KeyboardViewController: viewDidLoad started")
+		// CRITICAL: Only set up keyboard once to prevent crashes
+		if !isKeyboardSetup {
+			setupKeyboard()
+			// FIXED: Only set flag after successful setup
+		}
+		logger.info("🎹 KeyboardViewController: viewDidLoad completed")
+	}
+
+	override func viewWillAppear(_ animated: Bool) {
+		super.viewWillAppear(animated)
+		logger.debug("🎹 KeyboardViewController: viewWillAppear")
+		// SAFE: Only prepare if keyboard is set up
+		// KeyboardController doesn't need special preparation
+	}
+
+	override func viewDidAppear(_ animated: Bool) {
+		super.viewDidAppear(animated)
+		logger.debug("🎹 KeyboardViewController: viewDidAppear")
+		// SAFE: Update height only after keyboard is set up and visible
+		if isKeyboardSetup {
+			updateKeyboardHeight()
+		}
+	}
+
+	override func updateViewConstraints() {
+		super.updateViewConstraints()
+		// SAFE: Only update height if keyboard is properly set up
+		if isKeyboardSetup && heightConstraint == nil {
+			updateKeyboardHeight()
+		}
+	}
+
+	override func viewWillLayoutSubviews() {
+		super.viewWillLayoutSubviews()
+		// SAFE: Only update appearance if keyboard is set up
+		// KeyboardController handles its own layout in layoutSubviews()
+	}
+
+	// MARK: - Keyboard Setup
+	private func setupKeyboard() {
+		// CRASH PREVENTION: Guard against multiple setup calls
+		guard keyboardController == nil else {
+			logger.warning("⚠️ KeyboardViewController: setupKeyboard called multiple times - ignoring")
+			return
+		}
+		logger.info("🔧 KeyboardViewController: Setting up custom keyboard")
+		// Create the keyboard controller (no need for do-catch since it doesn't throw)
+		keyboardController = KeyboardController()
+		keyboardController?.configure(with: self)
+		guard let keyboardController = keyboardController else {
+			logger.error("❌ KeyboardViewController: Failed to create keyboard controller")
+			return
+		}
+		// SAFE: Add with proper constraint setup
+		setupKeyboardConstraints(keyboardController)
+		// POLISH: Observe Dynamic Type changes for accessibility
+		NotificationCenter.default.addObserver(
+			self,
+			selector: #selector(contentSizeCategoryDidChange),
+			name: UIContentSizeCategory.didChangeNotification,
+			object: nil
+		)
+		// FIXED: Only set flag after successful setup
+		isKeyboardSetup = true
+		logger.info("✅ KeyboardViewController: Custom keyboard setup completed")
+	}
+
+	// MARK: - Constraint Setup
+	private func setupKeyboardConstraints(_ keyboardController: KeyboardController) {
+		// Add the keyboard controller as the input view
+		view.addSubview(keyboardController)
+		keyboardController.translatesAutoresizingMaskIntoConstraints = false
+		// Set up constraints to fill the entire view (SAFE - no height constraint yet)
+		NSLayoutConstraint.activate([
+			keyboardController.topAnchor.constraint(equalTo: view.topAnchor),
+			keyboardController.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+			keyboardController.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+			keyboardController.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+		])
+		logger.debug("✅ KeyboardViewController: Keyboard constraints activated")
+	}
+
+	// MARK: - Height Management
+	private func updateKeyboardHeight() {
+		// CRASH PREVENTION: Guard against multiple height constraint creation
+		guard heightConstraint == nil else {
+			logger.debug("⚠️ KeyboardViewController: Height constraint already exists - skipping")
+			return
+		}
+		let targetHeight = preferredKeyboardHeight
+		// FIXED: Create new height constraint with proper priority
+		heightConstraint = view.heightAnchor.constraint(equalToConstant: targetHeight)
+		heightConstraint?.priority = UILayoutPriority(760) // Slightly higher to win over incidental low-priorities
+		heightConstraint?.isActive = true
+		logger.debug("📏 KeyboardViewController: Set keyboard height to \(targetHeight)pt (safe mode)")
+	}
+
+	// MARK: - Text Input Delegate Methods
+	override func textWillChange(_ textInput: UITextInput?) {
+		// SAFE: Check if keyboard is ready before delegating
+		guard isKeyboardSetup else { return }
+		super.textWillChange(textInput)
+		// KeyboardController doesn't need these delegate methods
+	}
+
+	override func textDidChange(_ textInput: UITextInput?) {
+		// SAFE: Check if keyboard is ready before delegating
+		guard isKeyboardSetup else { return }
+		super.textDidChange(textInput)
+		// Forward text changes to KeyboardController
+		keyboardController?.textDidChange()
+	}
+
+	// MARK: - Trait Collection Changes
+	override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+		super.traitCollectionDidChange(previousTraitCollection)
+		// SAFE: Only update if keyboard is set up
+		guard isKeyboardSetup else { return }
+		// Update keyboard appearance for the new trait collection
+		if traitCollection.userInterfaceStyle != previousTraitCollection?.userInterfaceStyle {
+			// KeyboardController handles its own appearance updates
+		}
+		// SAFE: Update height if orientation changed (but don't recreate constraint)
+		if traitCollection.verticalSizeClass != previousTraitCollection?.verticalSizeClass ||
+			traitCollection.horizontalSizeClass != previousTraitCollection?.horizontalSizeClass {
+			// Only update the constraint constant, don't recreate the constraint
+			let newHeight = preferredKeyboardHeight
+			heightConstraint?.constant = newHeight
+			// POLISH: Animate height changes for smooth orientation transitions
+			UIView.animate(withDuration: 0.15) {
+				self.view.layoutIfNeeded()
+			}
+			logger.debug("📏 KeyboardViewController: Updated height to \(newHeight)pt for orientation change")
+		}
+	}
+
+	// MARK: - Memory Management
+	deinit {
+		// SAFE: Clean up observers
+		NotificationCenter.default.removeObserver(self)
+		// SAFE: Clean up height constraint
+		if let constraint = heightConstraint {
+			constraint.isActive = false
+			heightConstraint = nil
+		}
+		// SAFE: Clean up keyboard controller
+		keyboardController?.removeFromSuperview()
+		keyboardController = nil
+		logger.info("✅ KeyboardViewController: Deallocated safely")
+	}
+
+	override func didReceiveMemoryWarning() {
+		super.didReceiveMemoryWarning()
+		logger.warning("⚠️ KeyboardViewController: Received memory warning")
+		// SAFE: KeyboardController doesn't need special cleanup
+	}
+
+	// MARK: - Accessibility Support
+	@objc private func contentSizeCategoryDidChange() {
+		// POLISH: Update keyboard appearance when user changes text size
+		logger.debug("📱 KeyboardViewController: Content size category changed")
+		// KeyboardController handles its own appearance updates
+	}
+
+	// MARK: - Input Mode Switching
+	override var needsInputModeSwitchKey: Bool {
+		// RESPECT: System requirement for globe/dismiss key
+		return true
+	}
 }

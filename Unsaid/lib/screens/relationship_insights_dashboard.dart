@@ -472,22 +472,35 @@ class _RelationshipInsightsDashboardState
   }
 
   // Generate relationship goals progress bar chart data
-  void _generateGoalsProgressData() {
+  void _generateGoalsProgressData() async {
     _goalsProgressData.clear();
     
-    // Sample goals progress - in real app this would come from actual goal tracking
-    final goals = [
-      {'name': 'Active Listening', 'progress': 0.7},
-      {'name': 'Emotional Support', 'progress': 0.8},
-      {'name': 'Conflict Resolution', 'progress': 0.6},
-      {'name': 'Quality Time', 'progress': 0.9},
-    ];
-    
-    for (int i = 0; i < goals.length; i++) {
-      final progress = goals[i]['progress'] as double;
-      _goalsProgressData.add(
-        BarChartGroupData(
-          x: i,
+    // Load real goals progress from keyboard data and user interactions
+    try {
+      final realKeyboardData = await _keyboardManager.getComprehensiveRealData();
+      final analysisHistory = _keyboardManager.analysisHistory;
+      
+      if (analysisHistory.isNotEmpty) {
+        // Calculate progress based on real communication patterns
+        final recentAnalyses = analysisHistory.take(20).toList();
+        
+        double listeningProgress = _calculateListeningProgress(recentAnalyses);
+        double supportProgress = _calculateSupportProgress(recentAnalyses);
+        double conflictProgress = _calculateConflictProgress(recentAnalyses);
+        double qualityTimeProgress = _calculateQualityTimeProgress(recentAnalyses);
+        
+        final goals = [
+          {'name': 'Active Listening', 'progress': listeningProgress},
+          {'name': 'Emotional Support', 'progress': supportProgress},
+          {'name': 'Conflict Resolution', 'progress': conflictProgress},
+          {'name': 'Quality Time', 'progress': qualityTimeProgress},
+        ];
+        
+        for (int i = 0; i < goals.length; i++) {
+          final progress = goals[i]['progress'] as double;
+          _goalsProgressData.add(
+            BarChartGroupData(
+              x: i,
           barRods: [
             BarChartRodData(
               toY: progress,
@@ -499,6 +512,138 @@ class _RelationshipInsightsDashboardState
         ),
       );
     }
+      } else {
+        // Fallback for new users with no analysis history
+        final goals = [
+          {'name': 'Active Listening', 'progress': 0.0},
+          {'name': 'Emotional Support', 'progress': 0.0},
+          {'name': 'Conflict Resolution', 'progress': 0.0},
+          {'name': 'Quality Time', 'progress': 0.0},
+        ];
+        
+        for (int i = 0; i < goals.length; i++) {
+          final progress = goals[i]['progress'] as double;
+          _goalsProgressData.add(
+            BarChartGroupData(
+              x: i,
+              barRods: [
+                BarChartRodData(
+                  toY: progress,
+                  color: _getProgressColor(progress),
+                  width: 20,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error generating goals progress data: $e');
+      // Fallback to empty data
+      _goalsProgressData.clear();
+    }
+  }
+
+  // Calculate listening progress based on recent analyses
+  double _calculateListeningProgress(List<Map<String, dynamic>> analyses) {
+    if (analyses.isEmpty) return 0.0;
+    
+    int positiveListeningIndicators = 0;
+    for (final analysis in analyses) {
+      final suggestions = analysis['suggestions'] as List<dynamic>? ?? [];
+      final text = analysis['original_text']?.toString().toLowerCase() ?? '';
+      
+      // Look for positive listening patterns
+      if (text.contains('understand') || text.contains('hear you') || 
+          text.contains('what you mean') || text.contains('tell me more')) {
+        positiveListeningIndicators++;
+      }
+      
+      // Check for listening-related suggestions
+      for (final suggestion in suggestions) {
+        if (suggestion.toString().toLowerCase().contains('listen') ||
+            suggestion.toString().toLowerCase().contains('understand')) {
+          positiveListeningIndicators++;
+          break;
+        }
+      }
+    }
+    
+    return (positiveListeningIndicators / analyses.length).clamp(0.0, 1.0);
+  }
+
+  // Calculate emotional support progress
+  double _calculateSupportProgress(List<Map<String, dynamic>> analyses) {
+    if (analyses.isEmpty) return 0.0;
+    
+    int supportiveIndicators = 0;
+    for (final analysis in analyses) {
+      final tone = analysis['tone_status']?.toString().toLowerCase() ?? '';
+      final text = analysis['original_text']?.toString().toLowerCase() ?? '';
+      
+      // Look for supportive language
+      if (text.contains('support') || text.contains('help') || 
+          text.contains('care') || text.contains('love')) {
+        supportiveIndicators++;
+      }
+      
+      // Positive tone indicates good emotional support
+      if (tone == 'clear' || tone == 'positive') {
+        supportiveIndicators++;
+      }
+    }
+    
+    return (supportiveIndicators / (analyses.length * 2)).clamp(0.0, 1.0);
+  }
+
+  // Calculate conflict resolution progress
+  double _calculateConflictProgress(List<Map<String, dynamic>> analyses) {
+    if (analyses.isEmpty) return 0.0;
+    
+    int conflictResolutionIndicators = 0;
+    int totalConflicts = 0;
+    
+    for (final analysis in analyses) {
+      final tone = analysis['tone_status']?.toString().toLowerCase() ?? '';
+      final text = analysis['original_text']?.toString().toLowerCase() ?? '';
+      
+      // Identify potential conflicts
+      if (tone == 'alert' || tone == 'angry' || 
+          text.contains('angry') || text.contains('upset') || 
+          text.contains('frustrated')) {
+        totalConflicts++;
+        
+        // Look for resolution indicators
+        if (text.contains('sorry') || text.contains('understand') || 
+            text.contains('work together') || text.contains('resolve')) {
+          conflictResolutionIndicators++;
+        }
+      }
+    }
+    
+    if (totalConflicts == 0) return 0.8; // Good if no conflicts
+    return (conflictResolutionIndicators / totalConflicts).clamp(0.0, 1.0);
+  }
+
+  // Calculate quality time progress
+  double _calculateQualityTimeProgress(List<Map<String, dynamic>> analyses) {
+    if (analyses.isEmpty) return 0.0;
+    
+    int qualityTimeIndicators = 0;
+    for (final analysis in analyses) {
+      final text = analysis['original_text']?.toString().toLowerCase() ?? '';
+      
+      // Look for quality time language
+      if (text.contains('together') || text.contains('time with') || 
+          text.contains('date') || text.contains('spend time') ||
+          text.contains('do something') || text.contains('plan')) {
+        qualityTimeIndicators++;
+      }
+    }
+    
+    return (qualityTimeIndicators / analyses.length).clamp(0.0, 1.0);
+  }
   }
 
   // Get color based on progress

@@ -9,6 +9,7 @@ import 'services/new_user_experience_service.dart';
 import 'services/partner_data_service.dart';
 import 'services/trial_service.dart';
 import 'services/onboarding_service.dart';
+import 'widgets/keyboard_data_sync_widget.dart';
 import 'firebase_options.dart';
 
 import 'theme/app_theme.dart';
@@ -16,7 +17,9 @@ import 'screens/splash_screen_professional.dart';
 import 'screens/onboarding_account_screen_professional.dart';
 import 'screens/personality_test_disclaimer_screen_professional.dart';
 import 'screens/personality_test_screen_professional_fixed_v2.dart';
+import 'screens/modern_personality_test_screen.dart';
 import 'screens/personality_results_screen_professional.dart';
+import 'screens/modern_personality_results_screen.dart';
 import 'screens/premium_screen_professional.dart';
 import 'screens/keyboard_intro_screen_professional.dart';
 import 'screens/emotional_state_screen.dart';
@@ -33,9 +36,10 @@ import 'screens/tone_indicator_tutorial_screen.dart';
 // import 'screens/color_test_screen.dart';
 import 'screens/main_shell.dart';
 import 'data/randomized_personality_questions.dart';
+import 'data/attachment_assessment.dart';
+import 'data/assessment_integration.dart';
 import 'screens/relationship_insights_dashboard.dart';
 // import 'screens/smart_message_templates.dart';
-import 'screens/secure_attachment_coaching.dart';
 import 'screens/predictive_ai_tab.dart';
 // import 'screens/generate_invite_code_screen_professional.dart';
 // import 'screens/code_generate_screen_professional.dart';
@@ -118,10 +122,18 @@ class UnsaidApp extends StatelessWidget {
       ],
       child: Consumer<AuthService>(
         builder: (context, authService, child) {
-          return Semantics(
-            // This ensures the app is accessible at the root level.
-            label: 'Unsaid communication and relationship app',
-            child: MaterialApp(
+          return KeyboardDataSyncWidget(
+            onDataReceived: (data) {
+              debugPrint('📱 Main App: Received keyboard data with ${data.totalItems} items');
+              // Here you can integrate with your existing analytics or storage
+            },
+            onError: (error) {
+              debugPrint('❌ Main App: Keyboard data sync error: $error');
+            },
+            child: Semantics(
+              // This ensures the app is accessible at the root level.
+              label: 'Unsaid communication and relationship app',
+              child: MaterialApp(
               title: 'Unsaid',
               debugShowCheckedModeBanner: false,
               theme: AppTheme.lightTheme,
@@ -249,6 +261,10 @@ class UnsaidApp extends StatelessWidget {
                               context,
                               '/personality_test',
                             ),
+                            onAgreeModern: () => Navigator.pushReplacementNamed(
+                              context,
+                              '/personality_test_modern',
+                            ),
                           );
                         },
                       ),
@@ -319,6 +335,35 @@ class UnsaidApp extends StatelessWidget {
                     return MaterialPageRoute(
                       builder: (context) =>
                           PersonalityResultsScreenProfessional(answers: args),
+                    );
+                  case '/personality_test_modern':
+                    return MaterialPageRoute(
+                      builder: (context) => ModernPersonalityTestScreen(
+                        onComplete: (attachmentScores, goalRouting, mergedConfig) async {
+                          // Navigate to modern results with complete assessment data
+                          Navigator.pushReplacementNamed(
+                            context,
+                            '/personality_results_modern',
+                            arguments: {
+                              'attachmentScores': attachmentScores,
+                              'goalRouting': goalRouting,
+                              'mergedConfig': mergedConfig,
+                            },
+                          );
+                        },
+                      ),
+                    );
+                  case '/personality_results_modern':
+                    final args = settings.arguments as Map<String, dynamic>? ?? {};
+                    return MaterialPageRoute(
+                      builder: (context) => ModernPersonalityResultsScreen(
+                        attachmentScores: args['attachmentScores'] as AttachmentScores? ?? 
+                            AttachmentScores(anxiety: 0, avoidance: 0, confidence: 'low'),
+                        goalRouting: args['goalRouting'] as GoalRoutingResult? ?? 
+                            GoalRoutingResult(primaryGoal: 'unknown', confidence: 'low', weightMultipliers: {}),
+                        mergedConfig: args['mergedConfig'] as MergedConfig? ?? 
+                            MergedConfig(weightModifiers: {}, attachmentOverrides: {}, guardrailsConfig: {}),
+                      ),
                     );
                   case '/premium':
                     final args = settings.arguments as List<String>?;
@@ -416,11 +461,6 @@ class UnsaidApp extends StatelessWidget {
                   //   return MaterialPageRoute(
                   //     builder: (context) => const SmartMessageTemplates(),
                   //   );
-                  case '/secure_attachment_coaching':
-                    return MaterialPageRoute(
-                      builder: (context) =>
-                          const SecureAttachmentCoachingPage(),
-                    );
                   case '/predictive_ai':
                     return MaterialPageRoute(
                       builder: (context) => const PredictiveAITab(),
@@ -456,6 +496,7 @@ class UnsaidApp extends StatelessWidget {
                     );
                 }
               },
+            ),
             ),
           );
         },

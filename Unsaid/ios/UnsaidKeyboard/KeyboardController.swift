@@ -1,880 +1,1649 @@
+You said:
 //
 //  KeyboardController.swift
-//  UnsaidKeyboard
-//
-//  Apple-style keyboard with Unsaid tone analysis and advice suggestions.
-//  Recreates the exact Apple keyboard layout with custom Quick Fix functionality.
-//  Suggestions are advice-only (no text insertion) and toggled via tone indicator.
-//
-//  Created by John Gray on 7/11/25.
 //
 
-import UIKit
 import Foundation
-import NaturalLanguage
+import os.log
+import AudioToolbox
+import UIKit
 
-/// Custom button that extends touch area beyond visual bounds for better accessibility
-class ExtendedTouchButton: UIButton {
-    private let minTouchTargetSize: CGFloat = 44.0
+// MARK: - UndoManagerLite for autocorrect undo
+final class UndoManagerLite {
+    static let shared = UndoManagerLite()
+    private var last: (original: String, corrected: String, chars: Int)?
     
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        // Calculate expanded bounds to ensure minimum 44pt touch target
-        let expandedBounds = bounds.insetBy(
-            dx: min(0, (bounds.width - minTouchTargetSize) / 2),
-            dy: min(0, (bounds.height - minTouchTargetSize) / 2)
-        )
-        
-        return expandedBounds.contains(point)
+    func record(original: String, corrected: String) { 
+        last = (original, corrected, corrected.count) 
+    }
+    
+    func tryUndo(in proxy: UITextDocumentProxy) -> Bool {
+        guard let l = last else { return false }
+        for _ in 0..<l.chars { proxy.deleteBackward() }
+        proxy.insertText(l.original)
+        last = nil
+        return true
     }
 }
 
-/// Advanced keyboard controller with tone analysis and AI-powered suggestions
-class KeyboardController: UIInputView {
+// MARK: - Analysis Result for switch-in analysis
+struct AnalysisResult {
+    let topSuggestion: String?
+    let rewrite: String?
+    let confidence: Double
+}
+
+// MARK: - Switch-in Analyzer
+final class SwitchInAnalyzer {
+    static let shared = SwitchInAnalyzer()
     
-    // MARK: - Enhanced Tone Analysis Properties
+    // LRU-ish in-memory cache: hash(text) -> result
+    private var cache: [String: AnalysisResult] = [:]
+    private var order: [String] = []
+    private let maxEntries = 64
+    private let workQ = DispatchQueue(label: "switchin.analyzer", qos: .userInitiated)
     
-    // Smart debouncing intervals - optimized for instant word/space feedback
-    private let instantAnalysisDelay: TimeInterval = 0.0 // Immediate for word boundaries
-    private let quickAnalysisDelay: TimeInterval = 0.01 // 10ms for very fast analysis
-    private let standardAnalysisDelay: TimeInterval = 0.1 // 100ms for delayed analysis
-    private let suggestionDelay: TimeInterval = 0.2 // 200ms for background suggestions
+    private init() {}
     
-    // Timer management
-    private var toneAnalysisWorkItem: DispatchWorkItem?
-    private var suggestionWorkItem: DispatchWorkItem?
-    private var lastAnalyzedText: String = ""
-    private var lastAnalysisTime: Date = Date()
-    private var toneChangeAnimationDuration: TimeInterval = 0.1 // Much faster animation (100ms)
-    
-    // Smart triggering properties
-    private var isTypingPaused: Bool = false
-    private var lastTypingTime: Date = Date()
-    private var typingPauseThreshold: TimeInterval = 0.1 // 100ms pause threshold for responsiveness
-    private var lastWordBoundary: Date = Date()
-    private var isWordComplete: Bool = false
-    
-    // Performance tracking
-    private var analysisCount: Int = 0
-    private var lastPerformanceLog: Date = Date()
-    
-    // Fallback handling
-    private var consecutiveFailures: Int = 0
-    private let maxConsecutiveFailures: Int = 3
-    
-    // MARK: - Enhanced Tone Indicator Properties
-    
-    private var toneIndicatorPulseLayer: CAShapeLayer?
-    private var shouldShowToneChanges: Bool = true
-    
-    // MARK: - Typing Animation Properties
-    
-    private var isTypingAnimation: Bool = false
-    private var typingAnimationWorkItem: DispatchWorkItem?
-    
-    // MARK: - Core Components
-    
-    /// Reference to the parent input view controller for accessing textDocumentProxy
-    weak var parentInputViewController: UIInputViewController?
-    
-    /// Computed property to access textDocumentProxy from parent
-    var textDocumentProxy: UITextDocumentProxy? {
-        return parentInputViewController?.textDocumentProxy
+    func prewarm() {
+        // Build regexes, load small dictionaries, prime NL models, etc.
+        _ = Self.hash("warm")
+        // If you have heavy resources, load them here once.
     }
     
-    /// Smart inference manager for memory-efficient AI processing
-    private let smartInferenceManager = SmartInferenceManager()
+    static func hash(_ s: String) -> String {
+        // fast non-crypto hash is fine here
+        var h: UInt64 = 1469598103934665603
+        for b in s.utf8 { h = (h ^ UInt64(b)) &* 1099511628211 }
+        return String(h, radix: 16)
+    }
     
-    /// Memory monitor for tracking usage
-    private let memoryMonitor = MemoryMonitor.shared
+    func analyze(text: String, completion: @escaping (AnalysisResult) -> Void) {
+        let key = Self.hash(text)
+        
+        // Cache hit
+        if let hit = cache[key] {
+            completion(hit)
+            return
+        }
+        
+        workQ.async { [weak self] in
+            guard let self = self else { return }
+            // ---------- FAST PASS (<= 25–40ms target) ----------
+            // 1) cheap heuristics (toxicity / caps / profanity)
+            let lower = text.lowercased()
+            
+            let isShouty = Self.hasShouting(text)
+            let hasDirectVulgar = Self.directVulgarRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: lower.utf16.count)) != nil
+            
+            // 2) quick rewrite & suggestion synthesis
+            let suggestion: String?
+            let rewrite: String?
+            
+            if hasDirectVulgar {
+                suggestion = "Lowering the heat raises the chance they'll hear you."
+                rewrite = Self.softenInsult(text)
+            } else if isShouty {
+                suggestion = "Want to keep this strong but easier to hear?"
+                rewrite = Self.downcaseIfAllCaps(text)
+            } else {
+                suggestion = nil
+                rewrite = nil
+            }
+            
+            let result = AnalysisResult(topSuggestion: suggestion, rewrite: rewrite, confidence: hasDirectVulgar ? 0.9 : (isShouty ? 0.7 : 0.4))
+            
+            // cache (simple LRU)
+            self.cache[key] = result
+            self.order.append(key)
+            if self.order.count > self.maxEntries {
+                let drop = self.order.removeFirst()
+                self.cache.removeValue(forKey: drop)
+            }
+            
+            DispatchQueue.main.async { completion(result) }
+        }
+    }
     
-    /// Spell checking functionality
-    private let spellCheckerManager = SpellCheckerManager()
-    
-    /// Analytics storage for data flow to main app
-    private let analyticsStorage = KeyboardAnalyticsStorage.shared
-    
-    private let roseColor = UIColor.keyboardRose
-    
-    // MARK: - Keyboard Mode
-    
-    private var currentMode: KeyboardMode = .letters
-    
-    // MARK: - Keys Layout
-    
-    private let topRowKeys = ["Q","W","E","R","T","Y","U","I","O","P"]
-    private let midRowKeys = ["A","S","D","F","G","H","J","K","L"]
-    private let botRowKeys = ["Z","X","C","V","B","N","M"]
-    
-    // Number keys layout
-    private let topRowNumbers = ["1","2","3","4","5","6","7","8","9","0"]
-    private let midRowNumbers = ["-","/",":",";","(",")","$","&","@","\""]
-    private let botRowNumbers = [".",",","?","!","'","\"","_"]
-    
-    // Symbol keys layout
-    private let topRowSymbols = ["[","]","{","}","#","%","^","*","+","="]
-    private let midRowSymbols = ["_","\\","|","~","<",">","€","£","¥","•"]
-    private let botRowSymbols = [".",",","?","!","'","\"","_"]
-    
-    // Special buttons
-    private lazy var shiftButton: UIButton = {
-        let btn = makeKeyButton(title: "⇧")
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 18)
-        // Color already set in makeKeyButton - gray background, rose text
-        return btn
+    // MARK: - Tiny helpers (keep fast)
+    private static let directVulgarRegex: NSRegularExpression = {
+        let pattern = #"(?xi) \b f \W* u \W* c \W* k \W* (you|u|ya)\b | \b(shut\W*up|idiot|moron|stupid|dumb|loser)\b | \byou('re| are)?\s+(an?\s+)?(idiot|moron|loser|pathetic|disgusting)\b"#
+        return try! NSRegularExpression(pattern: pattern)
     }()
     
-    private lazy var deleteButton: UIButton = {
-        let btn = makeKeyButton(title: "⌫")
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 18)
-        return btn
-    }()
+    private static func hasShouting(_ s: String) -> Bool {
+        let letters = s.filter { $0.isLetter }
+        guard letters.count >= 6 else { return false }
+        let upper = letters.filter { $0.isUppercase }.count
+        return Double(upper) / Double(letters.count) > 0.7
+    }
     
-    private lazy var modeButton: UIButton = {
-        let btn = makeControlButton(title: "123")
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium) // Smaller font for narrower button
-        btn.addTarget(self, action: #selector(handleModeSwitch), for: .touchUpInside)
-        return btn
-    }()
+    private static func downcaseIfAllCaps(_ s: String) -> String? {
+        // If most letters are caps, suggest a sentence‑case rewrite
+        let letters = s.filter { $0.isLetter }
+        guard !letters.isEmpty else { return nil }
+        let upper = letters.filter { $0.isUppercase }.count
+        guard Double(upper) / Double(letters.count) > 0.7 else { return nil }
+        let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.prefix(1).uppercased() + trimmed.dropFirst().lowercased()
+    }
     
-    private lazy var spaceButton: UIButton = {
-        let btn = makeControlButton(title: "space")
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 18)
-        btn.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
-        return btn
-    }()
+    private static func softenInsult(_ s: String) -> String? {
+        // Tiny demo: strip common slurs & keep the complaint
+        let lowered = s.replacingOccurrences(of: #"(?i)\b(f\W*u\W*c\W*k\W*\b|idiot|moron|stupid|dumb)\b"#,
+                                             with: "", options: .regularExpression)
+        let cleaned = lowered.replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+        guard cleaned.count >= 3 else { return nil }
+        // Add a calmer stem
+        return "I'm upset about this—" + cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+// MARK: - Simple Apple-like candidate strip
+final class SpellCandidatesStrip: UIView {
+    private let stack = UIStackView()
+    private var onTap: ((String) -> Void)?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = UIColor.systemGray6.withAlphaComponent(0.8)
+        layer.cornerRadius = 8
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 6
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            stack.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4)
+        ])
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func setSuggestions(_ suggestions: [String], onTap: @escaping (String) -> Void) {
+        self.onTap = onTap
+        stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        if suggestions.isEmpty {
+            // Don't show any placeholder when empty - just leave it clean
+            return
+        }
+        for s in suggestions.prefix(3) { stack.addArrangedSubview(pill(s)) }
+    }
     
-    private lazy var quickFixButton: UIButton = {
-        let btn = makeControlButton(title: "Secure")
-        btn.backgroundColor = roseColor
-        btn.setTitleColor(.white, for: .normal)
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 11, weight: .bold) // Slightly smaller for 40pt width
-        return btn
-    }()
+    // Convenience method for compatibility
+    func updateCandidates(_ suggestions: [String]) {
+        setSuggestions(suggestions) { _ in }
+    }
+
+    private func pill(_ title: String) -> UIButton {
+        let b = UIButton(type: .system)
+        b.setTitle(title, for: .normal)
+        b.setTitleColor(.label, for: .normal)                 // better contrast
+        b.titleLabel?.font = UIFont.systemFont(ofSize: 16)
+        b.contentEdgeInsets = UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
+        b.backgroundColor = UIColor.systemGray6               // clearer on light bars
+        b.layer.cornerRadius = 8
+        b.layer.borderWidth = 0.5
+        b.layer.borderColor = UIColor.separator.cgColor
+        b.addAction(UIAction { [weak self] _ in
+            guard let word = b.title(for: .normal)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !word.isEmpty else { return }
+            self?.onTap?(word)
+        }, for: .touchUpInside)
+        return b
+    }
+}
+
+// MARK: - Key Preview Balloon
+final class KeyPreview: UIView {
+    private let label = UILabel()
+    init(text: String) {
+        super.init(frame: .zero)
+        backgroundColor = .white
+        layer.cornerRadius = 8
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowOpacity = 0.15
+        layer.shadowRadius = 6
+        layer.shadowOffset = .init(width: 0, height: 2)
+        label.text = text
+        label.font = .systemFont(ofSize: 28, weight: .semibold)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+        translatesAutoresizingMaskIntoConstraints = false
+        widthAnchor.constraint(equalToConstant: 52).isActive = true
+        heightAnchor.constraint(equalToConstant: 60).isActive = true
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+}
+
+// MARK: - Polished Single-Suggestion Chip (fixed)
+final class SuggestionChipView: UIControl {
+    // API
+    var onTap: (() -> Void)?
+    var onDismiss: (() -> Void)?
+    var onCTATap: (() -> Void)?
+
+    enum Tone { case neutral, alert, caution, clear }
+
+    private let iconView = UIImageView()
+    private let titleLabel = UILabel()
+    private let closeButton = UIButton(type: .system)
+    private let chevronButton = UIButton(type: .system)
+    private let ctaButton = UIButton(type: .system)
+
+    private let content = UIView()
+    private let impact = UIImpactFeedbackGenerator(style: .light)
     
-    private lazy var returnButton: UIButton = {
-        let btn = makeControlButton(title: "return")
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 14) // Appropriate for 40pt width
-        // Color already set in makeControlButton - gray background, rose text
-        return btn
-    }()
-    
-    private lazy var symbolsButton: UIButton = {
-        let btn = makeControlButton(title: "#+=")
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 16)
-        // Color already set in makeControlButton - gray background, rose text
-        return btn
-    }()
-    
-    // Main keyboard stack view for dynamic updates
-    private var keyboardStackView: UIStackView!
-    
-    // MARK: - UI Components (Suggestion Bar)
-    
-    private var suggestionBar: UIView!
-    private var suggestionButtons: [UIButton] = []
-    private var toneIndicator: UIView!
-    
-    // MARK: - State Management
-    
-    private var currentText: String = ""
-    private var suggestions: [String] = []
-    private var currentToneStatus: ToneStatus = .clear
-    private var isSetupComplete = false
-    private var isShifted = false
-    private var isCapsLocked = false
     private var isExpanded = false
-    private var isSuggestionBarVisible = false // Start with suggestion buttons hidden
-    private var expandedSuggestionButton: UIButton? // Track expanded button
-    
-    // MARK: - Layout Constants
-    
-    private let keyboardHeight: CGFloat = 280  // Increased from 260 to give more room
-    private let suggestionBarHeight: CGFloat = 60  // Increased height for better visual balance
-    
-    // Keyboard styling constants - Following Apple's iOS design guidelines
-    private let keyBackground = UIColor.keyBackground
-    private let keyFont = UIFont.systemFont(ofSize: 18)
-    private let keyCornerRadius: CGFloat = 8
-    private let horizontalSpacing: CGFloat = 6 // Apple standard spacing between keys
-    private let verticalSpacing: CGFloat = 8 // Apple standard vertical spacing between rows
-    private let rowInsets: CGFloat = 0
-    private let sideMargins: CGFloat = 6 // Apple standard side margins
-    private let keyCapHeight: CGFloat = 40 // Visible keycap height
-    private let touchTargetHeight: CGFloat = 44 // Apple HIG minimum touch target height (44×44pt)
-    private let minKeyWidth: CGFloat = 44 // Apple HIG minimum touch target width
-    
-    // Height constraint for managing keyboard size
-    private var heightConstraint: NSLayoutConstraint?
-    
-    // MARK: - Settings and Configuration
-     private let userDefaults = UserDefaults.standard
-    private var enableSuggestions: Bool = true
-    private var enableToneAnalysis: Bool = true
-    private var enableInsights: Bool = true
-    private var suggestionsEnabled: Bool = true
-    private var feedbackEnabled: Bool = true
-    
-    // MARK: - Secure Transformations
-    
-    private let secureTransformations: [SecureTransformation] = [
-        SecureTransformation(pattern: "\\bi'm\\s+so\\s+mad\\b", replacement: "I'm feeling frustrated"),
-        SecureTransformation(pattern: "\\byou\\s+always\\b", replacement: "I notice that you often"),
-        SecureTransformation(pattern: "\\byou\\s+never\\b", replacement: "I'd appreciate it if you could"),
-        SecureTransformation(pattern: "\\bwhatever\\b", replacement: "I understand")
-    ]
-    
-    // MARK: - Data Collection and Analytics
-    
-    private var keyboardInteractions: [KeyboardInteraction] = []
-    private let maxStoredInteractions = 1000
-    
-    // MARK: - Initialization
-    
-    override init(frame: CGRect, inputViewStyle: UIInputView.Style) {
-        super.init(frame: frame, inputViewStyle: inputViewStyle)
-        setupKeyboardView()
+    private var expandedConstraints: [NSLayoutConstraint] = []
+    private var compactConstraints: [NSLayoutConstraint] = []
+    private var keyButtons: [UIButton] = []
+    private var keyHitRects: [UIButton: CGRect] = [:]   // in self coords
+
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isAccessibilityElement = true
+        accessibilityTraits.insert(.button)
+        setupUI()
     }
-    
-    convenience init(frame: CGRect) {
-        self.init(frame: frame, inputViewStyle: .keyboard)
-    }
-    
-    func configure(with inputViewController: UIInputViewController) {
-        self.parentInputViewController = inputViewController
-        
-        // Note: When used as inputView, the keyboard extension framework manages the view hierarchy
-        // No need to add as subview or set constraints - this is handled by setting as inputView
-        
-        print(" KeyboardController configured with parent view controller (inputView mode)")
-    }
-    
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        setupKeyboardView()
+        isAccessibilityElement = true
+        accessibilityTraits.insert(.button)
+        setupUI()
     }
-    
-    private func setupKeyboardView() {
-        print("🔧 KeyboardController: Setting up keyboard view...")
-        
-        // Set up keyboard properties
-        backgroundColor = UIColor.keyboardBackground // iPhone style light gray background
-        isUserInteractionEnabled = true
-        // Don't disable auto-resizing mask - let the parent handle constraints
-        // translatesAutoresizingMaskIntoConstraints = false
-        
-        print(" KeyboardController: Background color set to black")
-        print(" KeyboardController: User interaction enabled")
-        
-        setupKeyboard()
-        loadSettings()
-        syncPersonalityData()
-        updateKeyboardSessionStatus(isActive: true)
-        
-        // Start analytics session
-        analyticsStorage.startSession()
-        
-        print(" KeyboardController initialized successfully")
-        print(" KeyboardController frame: \(frame)")
-        print(" KeyboardController bounds: \(bounds)")
-        print(" KeyboardController subviews count: \(subviews.count)")
+
+    private func setupUI() {
+        translatesAutoresizingMaskIntoConstraints = false
+
+        // Capsule container (solid color, no blur)
+        content.translatesAutoresizingMaskIntoConstraints = false
+        content.layer.cornerCurve = .continuous
+        content.layer.cornerRadius = 18
+        content.layer.masksToBounds = false
+        content.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.9)
+
+        // Soft shadow
+        content.layer.shadowColor = UIColor.black.withAlphaComponent(0.18).cgColor
+        content.layer.shadowOpacity = 1
+        content.layer.shadowOffset = CGSize(width: 0, height: 2)
+        content.layer.shadowRadius = 6
+
+        addSubview(content)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: topAnchor),
+            content.bottomAnchor.constraint(equalTo: bottomAnchor),
+            content.leadingAnchor.constraint(equalTo: leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: trailingAnchor),
+            heightAnchor.constraint(greaterThanOrEqualToConstant: 36)
+        ])
+
+        // Icon
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.contentMode = .scaleAspectFit
+        iconView.preferredSymbolConfiguration = .init(pointSize: 14, weight: .bold)
+        iconView.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        // Title
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        titleLabel.numberOfLines = 2
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        // Chevron/expand button
+        chevronButton.translatesAutoresizingMaskIntoConstraints = false
+        chevronButton.setImage(UIImage(systemName: "chevron.right"), for: .normal)
+        chevronButton.accessibilityLabel = "Expand suggestion"
+        chevronButton.addAction(UIAction { [weak self] _ in
+            self?.toggleExpanded()
+        }, for: .touchUpInside)
+        chevronButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        // CTA button (initially hidden)
+        ctaButton.translatesAutoresizingMaskIntoConstraints = false
+        ctaButton.setTitle("Apply", for: .normal)
+        ctaButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        ctaButton.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+        ctaButton.layer.cornerRadius = 12
+        ctaButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
+        ctaButton.accessibilityLabel = "Apply suggestion"
+        ctaButton.addAction(UIAction { [weak self] _ in
+            self?.onCTATap?()
+        }, for: .touchUpInside)
+        ctaButton.alpha = 0
+        ctaButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        // Close
+        var xConfig = UIButton.Configuration.plain()
+        xConfig.contentInsets = .init(top: 6, leading: 6, bottom: 6, trailing: 6)
+        closeButton.configuration = xConfig
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
+        closeButton.accessibilityLabel = "Dismiss suggestion"
+        closeButton.addAction(UIAction { [weak self] _ in
+            self?.dismiss(animated: true)
+        }, for: .touchUpInside)
+        closeButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        // Compact layout (default)
+        let compactStack = UIStackView(arrangedSubviews: [iconView, titleLabel, chevronButton, closeButton])
+        compactStack.translatesAutoresizingMaskIntoConstraints = false
+        compactStack.axis = .horizontal
+        compactStack.alignment = .center
+        compactStack.spacing = 10
+        content.addSubview(compactStack)
+        content.addSubview(ctaButton)
+
+        // Store constraint references for layout switching
+        compactConstraints = [
+            compactStack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
+            compactStack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -6),
+            compactStack.topAnchor.constraint(equalTo: content.topAnchor, constant: 6),
+            compactStack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -6),
+            iconView.widthAnchor.constraint(equalToConstant: 18),
+            iconView.heightAnchor.constraint(equalToConstant: 18)
+        ]
+
+        expandedConstraints = [
+            compactStack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
+            compactStack.trailingAnchor.constraint(equalTo: ctaButton.leadingAnchor, constant: -8),
+            compactStack.topAnchor.constraint(equalTo: content.topAnchor, constant: 6),
+            compactStack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -6),
+            ctaButton.trailingAnchor.constraint(equalTo: closeButton.leadingAnchor, constant: -8),
+            ctaButton.centerYAnchor.constraint(equalTo: content.centerYAnchor),
+            ctaButton.heightAnchor.constraint(equalToConstant: 24),
+            iconView.widthAnchor.constraint(equalToConstant: 18),
+            iconView.heightAnchor.constraint(equalToConstant: 18)
+        ]
+
+        // Start with compact layout
+        NSLayoutConstraint.activate(compactConstraints)
+
+        // Tap behavior
+        addAction(UIAction { [weak self] _ in
+            guard let self else { return }
+            self.impact.impactOccurred()
+            self.animateTap()
+            self.onTap?()
+        }, for: .touchUpInside)
     }
-    
-    // MARK: - Lifecycle
-    
-    func viewDidLoad() {
-        // Monitor memory usage at startup
-        memoryMonitor.logMemoryUsage(context: "Keyboard ViewDidLoad")
+
+    private func toggleExpanded() {
+        isExpanded.toggle()
+        impact.impactOccurred()
         
-        // Set preferred content size for keyboard extension
-        // This will be called from the parent view controller
-        
-        // Ensure proper keyboard height
-        setNeedsLayout()
-        layoutIfNeeded()
-        
-        print("📱 KeyboardController viewDidLoad completed")
-    }
-    
-    func viewWillAppear(_ animated: Bool) {
-        memoryMonitor.logMemoryUsage(context: "ViewWillAppear")
-        
-        // Ensure proper keyboard height
-        setNeedsLayout()
-        layoutIfNeeded()
-    }
-    
-    func updateViewConstraints() {
-        // Height is managed by parent UIInputViewController via preferredContentSize
-        // No need to update height constraint here
-    }
-    
-    func viewWillLayoutSubviews() {
-        // Layout suggestion buttons if needed
-        if suggestionButtons.count > 0 {
-            layoutSuggestionButtons()
+        // Update chevron rotation immediately for better UX
+        UIView.animate(withDuration: 0.2) {
+            if self.isExpanded {
+                self.chevronButton.transform = CGAffineTransform(rotationAngle: .pi / 2)
+            } else {
+                self.chevronButton.transform = .identity
+            }
         }
-    }
-    
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
         
-        // Handle trait collection changes (dark mode, size class changes, etc.)
-        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
-            updateAppearanceForTraitCollection()
-        }
-        
-        if traitCollection.horizontalSizeClass != previousTraitCollection?.horizontalSizeClass ||
-           traitCollection.verticalSizeClass != previousTraitCollection?.verticalSizeClass {
-            setNeedsLayout()
-        }
-    }
-    
-    private func updateAppearanceForTraitCollection() {
-        // Update keyboard appearance based on current trait collection
-        backgroundColor = UIColor.keyboardBackground // iPhone style light gray background
-        suggestionBar?.backgroundColor = UIColor.keyboardBackground
-    }
-    
-    func viewDidDisappear(_ animated: Bool) {
-        memoryMonitor.logMemoryUsage(context: "ViewDidDisappear")
-        
-        updateKeyboardSessionStatus(isActive: false)
-        
-        // End analytics session
-        analyticsStorage.endSession()
-        
-        // Clean up timers
-        cleanupTimers()
-    }
-    
-    private func cleanupTimers() {
-        // Cancel work items
-        toneAnalysisWorkItem?.cancel()
-        toneAnalysisWorkItem = nil
-        
-        suggestionWorkItem?.cancel()
-        suggestionWorkItem = nil
-        
-        // Cancel typing animation
-        cancelTypingAnimation()
-        
-        // Reset performance tracking
-        analysisCount = 0
-        
-        // Clear last analyzed text
-        lastAnalyzedText = ""
-        
-        print("🧹 Cleaned up tone analysis timers, work items, and typing animation")
-    }
-    
-    // MARK: - Keyboard Setup
-    
-    private func setupKeyboard() {
-        guard !isSetupComplete else { 
-            print("SetupKeyboard: Already completed")
-            return 
-        }
-        
-        print("🔧 SetupKeyboard: Starting keyboard setup...")
-        memoryMonitor.logMemoryUsage(context: "SetupKeyboard")
-        
-        setupSuggestionBar()
-        print(" SetupKeyboard: Suggestion bar setup complete")
-        
-        setupKeyboardLayout()
-        print(" SetupKeyboard: Keyboard layout setup complete")
-        
-        isSetupComplete = true
-        print(" SetupKeyboard: Setup completed successfully")
-        print("📱 SetupKeyboard: Final subviews count: \(subviews.count)")
-    }
-    
-    private func setupSuggestionBar() {
-        do {
-            suggestionBar = UIView()
-            suggestionBar.backgroundColor = UIColor.keyboardBackground
-            suggestionBar.translatesAutoresizingMaskIntoConstraints = false
-            suggestionBar.isHidden = false // Always show suggestion bar (contains tone indicator)
-            addSubview(suggestionBar)
-            
-            // Add tone indicator
-            setupToneIndicator()
-            
-            // Add suggestion bar constraints
-            NSLayoutConstraint.activate([
-                suggestionBar.topAnchor.constraint(equalTo: topAnchor),
-                suggestionBar.leadingAnchor.constraint(equalTo: leadingAnchor),
-                suggestionBar.trailingAnchor.constraint(equalTo: trailingAnchor),
-                suggestionBar.heightAnchor.constraint(equalToConstant: suggestionBarHeight)
-            ])
-            
-            print(" SetupSuggestionBar: Suggestion bar setup completed successfully")
-        } catch {
-            print(" SetupSuggestionBar: Error setting up suggestion bar: \(error)")
-            // Create fallback suggestion bar
-            suggestionBar = UIView()
-            suggestionBar.backgroundColor = UIColor.keyboardBackground
-            suggestionBar.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(suggestionBar)
-            
-            NSLayoutConstraint.activate([
-                suggestionBar.topAnchor.constraint(equalTo: topAnchor),
-                suggestionBar.leadingAnchor.constraint(equalTo: leadingAnchor),
-                suggestionBar.trailingAnchor.constraint(equalTo: trailingAnchor),
-                suggestionBar.heightAnchor.constraint(equalToConstant: suggestionBarHeight)
-            ])
-        }
-    }
-    
-    private func setupToneIndicator() {
-        do {
-            // Create logo/icon container
-            let logoContainer = UIView()
-            logoContainer.translatesAutoresizingMaskIntoConstraints = false
-            suggestionBar.addSubview(logoContainer)
-            
-            // Add tone indicator background (changes colors based on tone)
-            toneIndicator = UIView()
-            toneIndicator.backgroundColor = UIColor.white
-            toneIndicator.layer.cornerRadius = 22  // Updated for larger size (44x44)
-            toneIndicator.layer.shadowColor = UIColor.black.cgColor
-            toneIndicator.layer.shadowOpacity = 0.1
-            toneIndicator.layer.shadowOffset = CGSize(width: 0, height: 1)
-            toneIndicator.layer.shadowRadius = 2
-            toneIndicator.translatesAutoresizingMaskIntoConstraints = false
-            logoContainer.addSubview(toneIndicator)
-            
-            // Add logo image
-            let logoImageView = UIImageView()
-            logoImageView.image = UIImage(systemName: "message.circle.fill") // Use filled version
-            logoImageView.tintColor = UIColor(red: 0.8, green: 0.6, blue: 0.6, alpha: 1.0) // Remove transparency
-            logoImageView.contentMode = .scaleAspectFill // Fill the entire circle
-            logoImageView.backgroundColor = UIColor.clear // Ensure background is transparent
-            logoImageView.translatesAutoresizingMaskIntoConstraints = false
-            toneIndicator.addSubview(logoImageView) // Add to tone indicator instead of logo container
-            
-            // Add tap gesture to logo container
-            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(toggleSuggestionsDisplay))
-            logoContainer.addGestureRecognizer(tapGesture)
-            logoContainer.isUserInteractionEnabled = true
-            
-            NSLayoutConstraint.activate([
-                logoContainer.leadingAnchor.constraint(equalTo: suggestionBar.leadingAnchor, constant: 10),
-                logoContainer.centerYAnchor.constraint(equalTo: suggestionBar.centerYAnchor),
-                logoContainer.widthAnchor.constraint(equalToConstant: 52),  // Increased size
-                logoContainer.heightAnchor.constraint(equalToConstant: 44), // Increased size
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0) {
+            if self.isExpanded {
+                // Deactivate compact constraints first
+                NSLayoutConstraint.deactivate(self.compactConstraints)
                 
-                // Tone indicator constraints
-                toneIndicator.centerXAnchor.constraint(equalTo: logoContainer.centerXAnchor),
-                toneIndicator.centerYAnchor.constraint(equalTo: logoContainer.centerYAnchor),
-                toneIndicator.widthAnchor.constraint(equalToConstant: 44),  // Increased size
-                toneIndicator.heightAnchor.constraint(equalToConstant: 44), // Increased size
+                // Make the text smaller for better fit when expanded
+                self.titleLabel.font = .systemFont(ofSize: 11, weight: .medium)
+                self.titleLabel.numberOfLines = 4
                 
-                // Logo image constraints - fill the entire tone indicator
-                logoImageView.centerXAnchor.constraint(equalTo: toneIndicator.centerXAnchor),
-                logoImageView.centerYAnchor.constraint(equalTo: toneIndicator.centerYAnchor),
-                logoImageView.widthAnchor.constraint(equalToConstant: 44),  // Fill entire circle
-                logoImageView.heightAnchor.constraint(equalToConstant: 44)  // Fill entire circle
-            ])
+                // Show CTA button
+                self.ctaButton.alpha = 1.0
+                
+                // Activate expanded constraints
+                NSLayoutConstraint.activate(self.expandedConstraints)
+            } else {
+                // Deactivate expanded constraints first
+                NSLayoutConstraint.deactivate(self.expandedConstraints)
+                
+                // Return to normal size
+                self.titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+                self.titleLabel.numberOfLines = 2
+                self.ctaButton.alpha = 0.0
+                
+                // Activate compact constraints
+                NSLayoutConstraint.activate(self.compactConstraints)
+            }
             
-            updateToneIndicator(with: ToneAnalysis(status: .neutral, confidence: 0.5, suggestions: []))
-            
-            print(" SetupToneIndicator: Tone indicator setup completed successfully")
-        } catch {
-            print(" SetupToneIndicator: Error setting up tone indicator: \(error)")
-            // Create fallback tone indicator
-            toneIndicator = UIView()
-            toneIndicator.backgroundColor = UIColor.white
-            toneIndicator.layer.cornerRadius = 22
-            toneIndicator.translatesAutoresizingMaskIntoConstraints = false
-            suggestionBar.addSubview(toneIndicator)
-            
-            NSLayoutConstraint.activate([
-                toneIndicator.leadingAnchor.constraint(equalTo: suggestionBar.leadingAnchor, constant: 10),
-                toneIndicator.centerYAnchor.constraint(equalTo: suggestionBar.centerYAnchor),
-                toneIndicator.widthAnchor.constraint(equalToConstant: 44),
-                toneIndicator.heightAnchor.constraint(equalToConstant: 44)
-            ])
+            // Force layout update on both the chip and its superview
+            self.layoutIfNeeded()
+            self.superview?.layoutIfNeeded()
+        }
+        
+        // Update accessibility
+        chevronButton.accessibilityLabel = isExpanded ? "Collapse suggestion" : "Expand suggestion"
+    }
+
+    func configure(text: String, tone: Tone) {
+        titleLabel.text = text
+        accessibilityLabel = text
+        applyTone(tone, animated: false)
+    }
+
+    func updateTone(_ tone: Tone) {
+        applyTone(tone, animated: true)
+    }
+
+    private func applyTone(_ tone: Tone, animated: Bool) {
+        let (bg, icon, textColor, iconColor) = toneColors(tone)
+        let apply = {
+            self.content.backgroundColor = bg
+            self.iconView.image = UIImage(systemName: icon)
+            self.iconView.tintColor = iconColor
+            self.titleLabel.textColor = textColor
+            self.closeButton.tintColor = iconColor.withAlphaComponent(0.9)
+            self.chevronButton.tintColor = iconColor.withAlphaComponent(0.8)
+            self.ctaButton.setTitleColor(textColor, for: .normal)
+        }
+        if animated {
+            UIView.transition(with: content, duration: 0.15, options: [.transitionCrossDissolve], animations: apply)
+        } else {
+            apply()
         }
     }
+
+    /// (bg, icon, titleColor, iconColor)
+    private func toneColors(_ tone: Tone) -> (UIColor, String, UIColor, UIColor) {
+        switch tone {
+        case .neutral: return (UIColor.systemBlue.withAlphaComponent(0.90), "sparkles", .white, .white)
+        case .alert:   return (UIColor.systemRed.withAlphaComponent(0.95), "exclamationmark.triangle.fill", .white, .white)
+        case .caution: return (UIColor.systemYellow.withAlphaComponent(0.95), "exclamationmark.triangle.fill", .black, .black)
+        case .clear:   return (UIColor.systemGreen.withAlphaComponent(0.92), "checkmark.seal.fill", .white, .white)
+        }
+    }
+
+    private func animateTap() {
+        UIView.animate(withDuration: 0.08, animations: {
+            self.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
+        }) { _ in
+            UIView.animate(withDuration: 0.18,
+                           delay: 0,
+                           usingSpringWithDamping: 0.7,
+                           initialSpringVelocity: 0) {
+                self.transform = .identity
+            }
+        }
+    }
+
+    func present(in container: UIView, from startAlpha: CGFloat = 0) {
+        if superview == nil { container.addSubview(self) }
+        alpha = startAlpha
+        transform = CGAffineTransform(translationX: 0, y: 6)
+        UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut]) {
+            self.alpha = 1
+            self.transform = .identity
+        }
+    }
+
+    func dismiss(animated: Bool) {
+        let work = {
+            self.alpha = 0
+            self.transform = CGAffineTransform(translationX: 0, y: 6)
+        }
+        let done: (Bool) -> Void = { _ in
+            self.removeFromSuperview()
+            self.onDismiss?()
+        }
+        if animated {
+            UIView.animate(withDuration: 0.18,
+                           delay: 0,
+                           options: [.curveEaseIn],
+                           animations: work,
+                           completion: done)
+        } else {
+            work()
+            done(true)
+        }
+    }
+}
+
+// MARK: - Keyboard Controller
+final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputViewAudioFeedback, UIGestureRecognizerDelegate {
+
+    // MARK: - Services
+    private let logger = Logger(subsystem: "com.example.unsaid.keyboard", category: "KeyboardController")
+    private var coordinator: ToneSuggestionCoordinator?
     
-    private func setupKeyboardLayout() {
+    // MARK: - OpenAI Configuration
+    private var openAIAPIKey: String {
+        let extBundle = Bundle(for: KeyboardController.self)
+        let mainBundle = Bundle.main
+        let fromExt = extBundle.object(forInfoDictionaryKey: "OPENAI_API_KEY") as? String
+        let fromMain = mainBundle.object(forInfoDictionaryKey: "OPENAI_API_KEY") as? String
+        return (fromExt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? fromMain?.trimmingCharacters(in: .whitespacesAndNewlines)) ?? ""
+    }
+    
+    // MARK: - OpenAI Integration
+    private func callOpenAI(text: String, completion: @escaping (String?) -> Void) {
+        let apiKey = openAIAPIKey
+        guard !apiKey.isEmpty else {
+            logger.error("OpenAI API key not found")
+            completion(nil)
+            return
+        }
+        
+        let url = URL(string: "https://api.openai.com/v1/chat/completions")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let payload: [String: Any] = [
+            "model": "gpt-4o-mini",
+            "messages": [
+                [
+                    "role": "user",
+                    "content": text
+                ]
+            ],
+            "max_tokens": 200,
+            "temperature": 0.3
+        ]
+        
         do {
-            print("🔧 SetupKeyboardLayout: Creating keyboard stack view...")
-            
-            keyboardStackView = UIStackView()
-            keyboardStackView.axis = .vertical
-            keyboardStackView.spacing = verticalSpacing
-            keyboardStackView.alignment = .fill
-            keyboardStackView.distribution = .fill // Allow different row heights
-            keyboardStackView.translatesAutoresizingMaskIntoConstraints = false
-            
-            print(" SetupKeyboardLayout: Stack view created")
-            
-            // Build initial keyboard layout
-            updateKeyboardForCurrentMode()
-            
-            print(" SetupKeyboardLayout: Keyboard mode layout updated")
-            
-            addSubview(keyboardStackView)
-            print(" SetupKeyboardLayout: Stack view added to parent")
-            
-            // Ensure suggestionBar exists before setting up constraints
-            guard suggestionBar != nil else {
-                print(" SetupKeyboardLayout: suggestionBar is nil, cannot set up constraints")
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        } catch {
+            logger.error("Failed to serialize OpenAI request: \(error)")
+            completion(nil)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                self.logger.error("OpenAI request failed: \(error)")
+                completion(nil)
                 return
             }
             
-            NSLayoutConstraint.activate([
-                keyboardStackView.leadingAnchor.constraint(equalTo: leadingAnchor),
-                keyboardStackView.trailingAnchor.constraint(equalTo: trailingAnchor),
-                keyboardStackView.topAnchor.constraint(equalTo: suggestionBar.bottomAnchor, constant: rowInsets),
-                keyboardStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -rowInsets)
-            ])
+            guard let data = data else {
+                self.logger.error("No data received from OpenAI")
+                completion(nil)
+                return
+            }
             
-            print(" SetupKeyboardLayout: Constraints activated")
-            
-            // Note: Height is managed by the parent UIInputViewController via preferredContentSize
-            // Do not set height constraint here as it conflicts with keyboard extension framework
-                 print(" SetupKeyboardLayout: Height managed by parent UIInputViewController")
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let choices = json["choices"] as? [[String: Any]],
+                   let firstChoice = choices.first,
+                   let message = firstChoice["message"] as? [String: Any],
+                   let content = message["content"] as? String {
+                    completion(content.trimmingCharacters(in: .whitespacesAndNewlines))
+                } else {
+                    self.logger.error("Failed to parse OpenAI response")
+                    completion(nil)
+                }
+            } catch {
+                self.logger.error("Failed to parse OpenAI response: \(error)")
+                completion(nil)
+            }
+        }.resume()
+    }
+
+    // MARK: - Native feedback
+    private let impact = UIImpactFeedbackGenerator(style: .light)
+    var enableInputClicksWhenVisible: Bool { true }
+
+    // MARK: - Spell checking (local only)
+    private let spellChecker = LightweightSpellChecker.shared
+    private let spellStrip = SpellCandidatesStrip()
+
+    // ✅ Polished suggestion chip (modern replacement)
+    private var suggestionChip: SuggestionChipView?
+
+    // Suggestion stickiness / hysteresis
+    private var suggestionStickyUntil: TimeInterval = 0
+    private let minSuggestionShowTime: TimeInterval = 10.0 // Increased to 10 seconds minimum display
+    private var lastSuggestionText: String?
+
+    // MARK: - Parent VC
+    private weak var parentInputVC: UIInputViewController?
+
+    // MARK: - UI
+    private var suggestionBar: UIView?
+    private var toneIndicator: UIButton?
+    private var logoImageView: UIImageView?
+    private var keyboardStackView: UIStackView?
+    private var undoButtonRef: UIButton?
+
+    // Control buttons
+    private var spaceButton: UIButton?
+    private var quickFixButton: UIButton?
+    private var globeButton: UIButton?
+    private var modeButton: UIButton?
+    private var symbolsButton: UIButton?
+    private var returnButton: UIButton?
+    private var deleteButton: UIButton?
+    private var shiftButton: UIButton?
+
+    // State
+    private var currentMode: KeyboardMode = .letters
+    private var isShifted = true
+    private var isCapsLocked = false
+    private var lastShiftTapAt: TimeInterval = 0
+    private var lastShiftUpdateTime: Date = .distantPast
+
+    // Delete repeat
+    private var deleteTimer: Timer?
+    private var deleteInterval: TimeInterval = 0.12
+    private var deletePressBeganAt: CFTimeInterval = 0
+    private var deleteDidRepeat = false
+    private var deleteInitialTimer: Timer?
+
+    // Key preview management
+    private let keyPreviewTable = NSMapTable<UIButton, KeyPreview>(keyOptions: .weakMemory, valueOptions: .strongMemory)
+    private var keyPreviewAutoDismissTimers = [UIButton: Timer]()
+
+    // Suggestions
+    private var suggestions: [String] = []
+    private var isSuggestionBarVisible = true  // Default to true so suggestions show
+    private var lastDisplayedSuggestions: [String] = []
+
+    // Text cache
+    private var currentText: String = ""
+
+    // FAT-FINGER
+    private let fatFinger = FatFingerEngine()
+    private var fatFingerPan: UIPanGestureRecognizer?
+
+    // Canonical key vocabulary for the engine (matches your UI labels)
+    private enum KeyID: String {
+        case character         // dynamic letters/numbers, use payload
+        case space     = "SPACE"
+        case return  = "RETURN"
+        case backspace = "BACKSPACE"
+        case shift     = "SHIFT"
+        case mode      = "MODE"     // "123" / "ABC"
+        case symbols   = "SYMBOLS"  // "#+=" / "123" depending on mode
+        case globe     = "GLOBE"
+        case quickFix  = "QUICKFIX" // "Secure"
+    }
+
+    // Fat-finger tracking properties
+    private var keyButtons: [UIButton] = []
+    private var keyHitRects: [UIButton: CGRect] = [:]
+    private var fatFingerActive = false
+    private var fatFingerCurrentButton: UIButton?
+    private var fatFingerInitialButton: UIButton?
+    private var fatFingerHoverScale: CGFloat = 0.96
+    
+    // Fat-finger config constants
+    private let ffBiasTowardInitialKey: CGFloat = 0.22
+    private let ffNeighborInset: CGFloat = 6.0
+    private let ffCommitOnRelease: Bool = true
+
+    // Layout constants
+    private let verticalSpacing: CGFloat = 8
+    private let horizontalSpacing: CGFloat = 6
+    private let sideMargins: CGFloat = 8
+    private let touchTargetHeight: CGFloat = 50
+    private let minKeyWidth: CGFloat = 44
+    private let keyCornerRadius: CGFloat = 6
+
+    // Rows
+    private let topRowKeys = ["q","w","e","r","t","y","u","i","o","p"]
+    private let midRowKeys = ["a","s","d","f","g","h","j","k","l"]
+    private let botRowKeys = ["z","x","c","v","b","n","m"]
+    private let topRowNumbers = ["1","2","3","4","5","6","7","8","9","0"]
+    private let midRowNumbers = ["-","/",":",";","(",")","$","&","@","\""]
+    private let botRowNumbers = [".",",","?","!","'"]
+    private let topRowSymbols = ["[","]","{","}","#","%","^","*","+","="]
+    private let midRowSymbols = ["_","\\","|","~","<",">","€","£","¥","•"]
+    private let botRowSymbols = [".",",","?","!","'"]
+
+    // Run autocorrect only on commit boundaries
+    private let correctionBoundaries = Set<Character>([" ", "\n", ".", ",", "!", "?", ":", ";"])
+
+    // MARK: - Analysis gating config
+    private let analyzeOnSentenceBoundaryOnly = false  // Allow analysis without punctuation
+    private let minCharsForAnalysis: Int = 8  // Reduced from 12
+    private let minWordsForAnalysis: Int = 2  // Reduced from 3
+    private let boundaryDebounce: TimeInterval = 0.22
+    private let idleDebounceNoPunct: TimeInterval = 1.4  // Reduced from 1.6
+
+    // Switch-in analysis properties
+    private let analyzeQueue = DispatchQueue(label: "analysis.queue", qos: .userInitiated)
+    private var pendingToken: UUID?
+    private var lastAnalyzedHash: String?
+    private var lastResult: AnalysisResult?
+    private let analyzer = SwitchInAnalyzer.shared
+
+// State
+    private var analysisTimer: Timer?
+    private var lastAnalyzedSentence: String = ""
+    private var lastInputAt: TimeInterval = 0
+
+    // MARK: - Context refresh properties
+    private var beforeContext: String = ""
+    private var afterContext: String = ""
+
+    private func refreshContext() {
+        guard let proxy = textDocumentProxy else { return }
+        // Host app may truncate; secure fields often return nil
+        beforeContext = proxy.documentContextBeforeInput ?? ""
+        afterContext  = proxy.documentContextAfterInput  ?? ""
+
+        // Optional: clamp for your own perf
+        beforeContext = String(beforeContext.suffix(600))  // keep last 600 chars
+        afterContext  = String(afterContext.prefix(200))   // keep next 200 chars
+
+        // Now pass this to your tone engine / spell system
+        // ToneEngine.shared.updateContext(before: beforeContext, after: afterContext)
+    }
+
+    // MARK: - Public lifecycle
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: UIView.noIntrinsicMetric, height: 396)
+    }
+
+    override init(frame: CGRect, inputViewStyle: UIInputView.Style) {
+        super.init(frame: frame, inputViewStyle: inputViewStyle)
+        commonInit()
+    }
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        commonInit()
+    }
+
+// Call this on every text change
+    func handleTextChanged(_ text: String) {
+    lastInputAt = CACurrentMediaTime()
+    analysisTimer?.invalidate()
+
+    let sentence = lastSentence(in: text)
+    let hasBoundary = isBoundaryEnded(text)
+
+    // Basic minimums
+    guard sentence.count >= minCharsForAnalysis,
+          wordCount(in: sentence) >= minWordsForAnalysis else { return }
+
+    // Don’t re-analyze the same sentence
+    if sentence == lastAnalyzedSentence { return }
+
+    // Decide debounce interval
+    let delay: TimeInterval
+    if analyzeOnSentenceBoundaryOnly {
+        delay = hasBoundary ? boundaryDebounce : idleDebounceNoPunct
+    } else {
+        delay = hasBoundary ? boundaryDebounce : boundaryDebounce // quick feedback even without punct
+    }
+
+    analysisTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+        guard let self = self else { return }
+
+        // Optional: idle check for “no punctuation” path
+        if analyzeOnSentenceBoundaryOnly && !hasBoundary {
+            let idle = CACurrentMediaTime() - self.lastInputAt
+            if idle < self.idleDebounceNoPunct { return } // user resumed typing
+        }
+
+        self.runAnalysis(on: sentence)
+        self.lastAnalyzedSentence = sentence
+    }
+    RunLoop.current.add(analysisTimer!, forMode: .common)
+    }
+
+    func cancelAnalysis() {
+        analysisTimer?.invalidate()
+        analysisTimer = nil
+    }
+
+// MARK: - Helpers
+
+    private func runAnalysis(on sentence: String) {
+        // Debug logging
+        logger.debug("Running analysis on sentence: '\(sentence)'")
         
-        // Set initial shift button appearance
-        updateShiftButtonAppearance()
+        // Your analysis call here
+        coordinator?.analyzeFinalSentence(sentence)
         
-        // Ensure all dynamically created buttons are connected when layout updates
-        updateButtonTargets()
-            
-            print(" SetupKeyboardLayout: Setup completed successfully")
-        } catch {
-            print(" SetupKeyboardLayout: Error setting up keyboard layout: \(error)")
-            // Create fallback keyboard layout
-            keyboardStackView = UIStackView()
-            keyboardStackView.axis = .vertical
-            keyboardStackView.spacing = verticalSpacing
-            keyboardStackView.alignment = .fill
-            keyboardStackView.distribution = .fill
-            keyboardStackView.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(keyboardStackView)
-            
-            NSLayoutConstraint.activate([
-                keyboardStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: rowInsets),
-                keyboardStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -rowInsets),
-                keyboardStackView.topAnchor.constraint(equalTo: topAnchor, constant: 60), // Fallback: 60pt from top
-                keyboardStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -rowInsets)
-            ])
+        logger.debug("Analysis request sent to coordinator")
+    }
+
+
+    private func isBoundaryEnded(_ text: String) -> Bool {
+        guard let last = text.trimmingCharacters(in: .whitespacesAndNewlines).last else { return false }
+        return [".", "!", "?", "…"].contains(last)
+}
+
+    private func lastSentence(in text: String) -> String {
+    // Lightweight splitter: split on . ! ? … keeping last chunk
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "" }
+    // Split on common sentence enders
+        let parts = trimmed.split(whereSeparator: { ".!?…".contains($0) })
+        let candidate = parts.last.map(String.init) ?? trimmed
+        return candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+    private func wordCount(in s: String) -> Int {
+        s.split { $0.isWhitespace || $0.isNewline }.count
+}
+
+    // Trackpad gesture
+    private var spacePan: UIPanGestureRecognizer?
+    private var cursorAccumulator: CGFloat = 0
+
+    // MARK: - Convenience
+    private var textDocumentProxy: UITextDocumentProxy? {
+        return parentInputVC?.textDocumentProxy
+    }
+
+    func configure(with inputVC: UIInputViewController) {
+        parentInputVC = inputVC
+        if let lang = UserDefaults(suiteName: "group.com.example.unsaid.shared")?.string(forKey: "keyboard_language") {
+            spellChecker.setPreferredLanguage(lang)
+        }
+        coordinator = ToneSuggestionCoordinator()
+        coordinator?.delegate = self
+        
+        // Debug: Log coordinator initialization
+        logger.debug("ToneSuggestionCoordinator initialized: \(self.coordinator != nil)")
+    }
+
+    private func commonInit() {
+        translatesAutoresizingMaskIntoConstraints = false
+        backgroundColor = UIColor.keyboardBackground
+        impact.prepare()
+        setupSuggestionBar()
+        setupKeyboardLayout()
+        updateSecureFixButtonState()
+        
+        // Fat-finger: install pan recognizer on the whole keyboard surface
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(handleFatFingerPan(_:)))
+        pan.minimumNumberOfTouches = 1
+        pan.maximumNumberOfTouches = 1
+        pan.cancelsTouchesInView = false   // keep normal taps working
+        addGestureRecognizer(pan)
+        fatFingerPan = pan
+    }
+    
+    // MARK: - Lifecycle Methods
+    override func willMove(toSuperview newSuperview: UIView?) {
+        super.willMove(toSuperview: newSuperview)
+        if newSuperview == nil {
+            // About to be removed from superview - clean up previews
+            dismissAllKeyPreviews()
         }
     }
     
-    private func updateButtonTargets() {
-        // Ensure main keyboard buttons have proper targets
-        [shiftButton, deleteButton, spaceButton, quickFixButton, returnButton].forEach {
-            $0.removeTarget(nil, action: nil, for: .allEvents)
-            $0.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
-        }
-        
-        // Update mode button specific target
-        modeButton.removeTarget(nil, action: nil, for: .allEvents)
-        modeButton.addTarget(self, action: #selector(handleModeSwitch), for: .touchUpInside)
-        
-        // Update symbols button specific target
-        symbolsButton.removeTarget(nil, action: nil, for: .allEvents)
-        symbolsButton.addTarget(self, action: #selector(handleSymbolsSwitch), for: .touchUpInside)
-        
-        // Update quickFixButton specific target
-        quickFixButton.removeTarget(nil, action: nil, for: .allEvents)
-        quickFixButton.addTarget(self, action: #selector(handleQuickFix), for: .touchUpInside)
-        
-        // Update suggestion buttons if they exist
-        suggestionButtons.forEach { button in
-            button.removeTarget(nil, action: nil, for: .allEvents)
-            button.addTarget(self, action: #selector(suggestionTapped(_:)), for: .touchUpInside)
-        }
-        
-        print(" Button targets updated for all keyboard buttons")
+    override func removeFromSuperview() {
+        dismissAllKeyPreviews()
+        super.removeFromSuperview()
     }
     
-    private func updateKeyboardForCurrentMode() {
-        print("🔧 UpdateKeyboardForCurrentMode: Starting for mode \(currentMode)")
-        
-        // Clear existing arranged subviews
-        keyboardStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        
-        let (topRow, midRow, botRow) = getKeysForCurrentMode()
-        
-        print("🔧 UpdateKeyboardForCurrentMode: Creating top row with \(topRow.count) keys")
-        keyboardStackView.addArrangedSubview(rowStack(for: topRow, leftOffset: 0, rightOffset: 0))
-        
-        print("🔧 UpdateKeyboardForCurrentMode: Creating mid row with \(midRow.count) keys")
-        // Add proper QWERTY indentation for middle row in letters mode
-        let midRowOffset: CGFloat = currentMode == .letters ? 20.0 : 0.0
-        keyboardStackView.addArrangedSubview(rowStack(for: midRow, leftOffset: midRowOffset, rightOffset: midRowOffset))
-        
-        // Bottom row with special keys
-        let bottomRowKeys = currentMode == .letters ? botRowKeys : botRow
-        let bottomKeyButtons = bottomRowKeys.map(makeKeyButton)
-        bottomKeyButtons.forEach { $0.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside) }
-        
-        print("🔧 UpdateKeyboardForCurrentMode: Creating bottom row with \(bottomRowKeys.count) keys")
-        
-        // Create bottom row based on current mode
-        let bottomRowArrangedSubviews: [UIView]
-        switch currentMode {
-        case .letters:
-            bottomRowArrangedSubviews = [shiftButton] + bottomKeyButtons + [deleteButton]
-        case .numbers:
-            bottomRowArrangedSubviews = [symbolsButton] + bottomKeyButtons + [deleteButton]
-        case .symbols:
-            bottomRowArrangedSubviews = [symbolsButton] + bottomKeyButtons + [deleteButton]
-        case .compact, .expanded, .suggestion, .analysis, .settings:
-            bottomRowArrangedSubviews = [shiftButton] + bottomKeyButtons + [deleteButton]
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        dismissAllKeyPreviews()
+        refreshKeyHitRects()
+
+    }
+// MARK: - FAT FINGER: atlas
+private func refreshKeyHitRects() {
+    guard let stack = keyboardStackView else { return }
+    keyHitRects.removeAll()
+    for b in keyButtons {
+        // Convert button frame into self’s coordinate space
+        let frameInSelf = b.convert(b.bounds, to: self)
+        // Expand the rect slightly to create gentle “neighbor” capture
+        let expanded = frameInSelf.insetBy(dx: -ffNeighborInset, dy: -ffNeighborInset)
+        keyHitRects[b] = expanded
+    }
+}
+private func keyIdentifier(for button: UIButton) -> (id: KeyID, payload: String?) {
+    let raw = button.accessibilityValue ?? button.title(for: .normal) ?? ""
+    switch raw {
+    case "SPACE":           return (.space, nil)
+    case "return":          return (.return, nil)
+    case "⌫":               return (.backspace, nil)
+    case "⇧":               return (.shift, nil)
+    case "123", "ABC":      return (.mode, nil)
+    case "#+=":             return (.symbols, nil)
+    case "🌐":              return (.globe, nil)
+    case "Secure":          return (.quickFix, nil)
+    default:
+        if raw.count == 1 { return (.character, raw) }
+        return (.character, raw) // fallback; covers punctuation & long labels
+    }
+}
+private func applyHover(to button: UIButton?) {
+    // Remove old hover
+    if let prev = fatFingerCurrentButton, prev !== button {
+        UIView.animate(withDuration: 0.06) {
+            prev.backgroundColor = .systemGray6
+            prev.transform = .identity
         }
-        
-        let bottomLetters = UIStackView(arrangedSubviews: bottomRowArrangedSubviews)
-        bottomLetters.axis = .horizontal
-        bottomLetters.spacing = horizontalSpacing
-        bottomLetters.alignment = .fill
-        bottomLetters.distribution = .fillEqually // Use fillEqually for consistent sizing
-        bottomLetters.layoutMargins = UIEdgeInsets(top: 0, left: sideMargins, bottom: 0, right: sideMargins)
-        bottomLetters.isLayoutMarginsRelativeArrangement = true
-        
-        // Make shift/symbols and delete buttons wider (Apple style) but ensure minimum touch target
-        if currentMode == .letters {
-            shiftButton.widthAnchor.constraint(equalToConstant: max(52, minKeyWidth)).isActive = true // ~1.7x standard key width or minimum
+    }
+    guard let button else { return }
+    // Apply hover to new
+    UIView.animate(withDuration: 0.06) {
+        button.backgroundColor = .systemGray4
+        button.transform = CGAffineTransform(scaleX: self.fatFingerHoverScale, y: self.fatFingerHoverScale)
+    }
+    fatFingerCurrentButton = button
+}
+
+private func bestButton(at point: CGPoint) -> UIButton? {
+    // 1) Prefer buttons whose expanded rect contains the point
+    var containing: [UIButton] = []
+    for (b, rect) in keyHitRects where rect.contains(point) {
+        containing.append(b)
+    }
+    // 2) If multiple contain, bias toward initial button
+    if !containing.isEmpty {
+        if let initial = fatFingerInitialButton, containing.contains(initial) {
+            // Weighted pick favoring the initial
+            if CGFloat.random(in: 0...1) < ffBiasTowardInitialKey { return initial }
+        }
+        // Otherwise closest center
+        return containing.min { a, b in
+            let ca = a.convert(a.bounds.center, to: self)
+            let cb = b.convert(b.bounds.center, to: self)
+            return ca.distance(to: point) < cb.distance(to: point)
+        }
+    }
+    // 3) If none contain, pick globally closest center (keeps selection stable near edges)
+    return keyButtons.min { a, b in
+        let ca = a.convert(a.bounds.center, to: self)
+        let cb = b.convert(b.bounds.center, to: self)
+        return ca.distance(to: point) < cb.distance(to: point)
+    }
+}
+
+@objc private func handleFatFingerPan(_ gr: UIPanGestureRecognizer) {
+    let p = gr.location(in: self)
+
+    switch gr.state {
+    case .began:
+        fatFingerActive = true
+        refreshKeyHitRects() // in case layout just changed
+        let btn = bestButton(at: p)
+        fatFingerInitialButton = btn
+        applyHover(to: btn)
+
+    case .changed:
+        guard fatFingerActive else { return }
+        let btn = bestButton(at: p)
+        if btn !== fatFingerCurrentButton {
+            applyHover(to: btn)
+            UIDevice.current.playInputClick()
+        }
+
+    case .ended, .cancelled, .failed:
+        defer {
+            // Cleanup hover
+            applyHover(to: nil)
+            fatFingerActive = false
+            fatFingerInitialButton = nil
+        }
+        guard fatFingerActive else { return }
+        guard let btn = bestButton(at: p) else { return }
+
+        // Commit on release if enabled
+        if ffCommitOnRelease {
+            commit(button: btn)
+        }
+
+    default: break
+    }
+}
+
+// MARK: - FAT FINGER: commit routing
+private func commit(button: UIButton) {
+    // Prefer sending .touchUpInside; this triggers your keyTapped(_:), special handlers, etc.
+    // We also simulate the visual press for consistency.
+    specialButtonTouchDown(button)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { [weak self, weak button] in
+        guard let self, let button else { return }
+        self.specialButtonTouchUp(button)
+        // Route to correct handler – mirrors a normal tap
+        if self.keyButtons.contains(button) {
+            self.keyTapped(button)
         } else {
-            symbolsButton.widthAnchor.constraint(equalToConstant: max(52, minKeyWidth)).isActive = true
+            // Fallback: send actions to whatever is wired (e.g., control row)
+            button.sendActions(for: .touchUpInside)
         }
-        deleteButton.widthAnchor.constraint(equalToConstant: max(52, minKeyWidth)).isActive = true
+    }
+}
+
+    // MARK: - FAT FINGER: Helper Methods
+    
+    private func registerFatFingerKeyFrames() {
+        guard let root = keyboardStackView else { return }
+        var frames: [FatFingerEngine.KeyFrame] = []
+
+        for case let b as UIButton in allButtons(in: root) {
+            guard let desc = describe(button: b) else { continue }
+            let id = (desc.id == .character) ? (desc.label ?? "") : desc.id.rawValue
+            let frame = convert(b.bounds, from: b)
+            frames.append(.init(id: id, frame: frame.insetBy(dx: -3, dy: -3))) // tiny expansion helps
+        }
+        // Note: FatFingerEngine doesn't need explicit reconfiguration
+    }
+
+    private func allButtons(in v: UIView) -> [UIButton] {
+        var out: [UIButton] = []
+        func walk(_ n: UIView) {
+            if let b = n as? UIButton { out.append(b) }
+            n.subviews.forEach(walk)
+        }
+        walk(v)
+        return out
+    }
+
+    /// Normalize your various titles into canonical KeyID + label
+    private struct KeyDesc { let id: KeyID; let label: String? }
+
+    private func describe(button b: UIButton) -> KeyDesc? {
+        let raw = (b.accessibilityValue ?? b.title(for: .normal) ?? "").trimmingCharacters(in: .whitespaces)
+        let upper = raw.uppercased()
+
+        switch upper {
+        case "SPACE":               return .init(id: .space, label: nil)
+        case "RETURN", "ENTER":     return .init(id: .return, label: nil)
+        case "⌫", "BACKSPACE":      return .init(id: .backspace, label: nil)
+        case "⇧", "SHIFT":          return .init(id: .shift, label: nil)
+        case "🌐", "GLOBE":         return .init(id: .globe, label: nil)
+        case "SECURE":              return .init(id: .quickFix, label: nil)
+        case "#+=":                 return .init(id: .symbols, label: "#+=")
+        case "123":                 return .init(id: .mode, label: "123")
+        case "ABC":                 return .init(id: .mode, label: "ABC")
+        default:
+            // Any single visible glyph we treat as a character key
+            if raw.count == 1 { return .init(id: .character, label: raw) }
+            return nil
+        }
+    }
+    
+    private func handleFatFingerEvent(_ e: FatFingerEngine.Event) {
+        switch e {
+        case .highlight(let id):
+            setKeyHighlighted(id: id, true)
+        case .unhighlight(let id):
+            setKeyHighlighted(id: id, false)
+        case .commit(let id):
+            commitKeyByID(id)
+        case .cancel(let id):
+            setKeyHighlighted(id: id, false)
+        }
+    }
+
+    private func setKeyHighlighted(id: String, _ on: Bool) {
+        // optional: tint button while hovered
+        guard let b = findButton(byID: id) else { return }
+        UIView.animate(withDuration: 0.06) {
+            b.backgroundColor = on ? .systemGray4 : .systemGray6
+            b.transform = on ? CGAffineTransform(scaleX: 0.97, y: 0.97) : .identity
+        }
+    }
+
+    private func findButton(byID id: String) -> UIButton? {
+        guard let root = keyboardStackView else { return nil }
+        for case let b as UIButton in allButtons(in: root) {
+            if let d = describe(button: b) {
+                let bid = (d.id == .character) ? (d.label ?? "") : d.id.rawValue
+                if bid == id { return b }
+            }
+        }
+        return nil
+    }
+
+    /// Mirrors your keyTapped(_:) switch but via IDs
+    private func commitKeyByID(_ id: String) {
+        guard let proxy = textDocumentProxy else { return }
+
+        switch id {
+        case KeyID.space.rawValue:
+            handleSpaceTap()
+        case KeyID.return.rawValue:
+            commitAndCleanup()
+            proxy.insertText("\n")
+            currentText += "\n"
+            handleTextChange()
+        case KeyID.backspace.rawValue:
+            proxy.deleteBackward()
+            if !currentText.isEmpty { currentText.removeLast() }
+            refreshSpellCandidates()
+        case KeyID.shift.rawValue:
+            handleShiftPressed()
+        case KeyID.mode.rawValue:
+            handleModeSwitch()
+        case KeyID.symbols.rawValue:
+            handleSymbolsSwitch()
+        case KeyID.globe.rawValue:
+            handleGlobeKey()
+        case KeyID.quickFix.rawValue:
+            handleQuickFix()
+        default:
+            // character or number/symbol
+            let ch = id
+            let isAlphaMode = [.letters, .standard, .compact, .expanded].contains(currentMode)
+            let out = isAlphaMode ? (isShifted ? ch.uppercased() : ch.lowercased()) : ch
+            proxy.insertText(out)
+            currentText += out
+
+            // auto-unshift for single letters (same logic as your tap path)
+            if isAlphaMode, isShifted, !isCapsLocked, ![".", "!", "?"].contains(out) {
+                isShifted = false
+                updateShiftButtonAppearance()
+                updateKeyTitlesForShiftState()
+            }
+
+            if [".", ",", "!", "?", ":", ";"].contains(out) {
+                proxy.deleteBackward()
+                currentText = String(currentText.dropLast())
+                handlePunctuationInsertion(out)
+            } else {
+                refreshSpellCandidates()
+                handleTextChange()
+            }
+        }
+    }
+
+    // MARK: - Secure Fix profile builders (kept as-is)
+    private func buildUserProfileForSecureFix() -> [String: Any] {
+        let shared = UserDefaults(suiteName: "group.com.example.unsaid.shared")
+        var profile: [String: Any] = [:]
+        if let v = shared?.string(forKey: "attachment_style") { profile["attachment_style"] = v }
+        if let v = shared?.string(forKey: "currentEmotionalState") { profile["emotional_state"] = v }
+        if let v = shared?.string(forKey: "communication_style") { profile["communication_style"] = v }
+        if let v = shared?.string(forKey: "emotional_bucket") { profile["emotional_bucket"] = v }
+        if let v = shared?.string(forKey: "personality_type") { profile["personality_type"] = v }
+        return profile
+    }
+    private func buildUserPersonalityProfile() -> [String: Any] {
+        let shared = UserDefaults(suiteName: "group.com.example.unsaid.shared")
+        var profile: [String: Any] = [:]
+        if let v = shared?.string(forKey: "attachment_style") { profile["attachment_style"] = v }
+        if let v = shared?.string(forKey: "currentEmotionalState") { profile["emotional_state"] = v }
+        if let v = shared?.string(forKey: "communication_style") { profile["communication_style"] = v }
+        if let v = shared?.string(forKey: "personality_type") { profile["personality_type"] = v }
+        if let v = shared?.string(forKey: "emotional_bucket") { profile["emotional_bucket"] = v }
+        return profile
+    }
+
+    // Replace ALL text content with new text, simulating typing behavior with animation
+    private func replaceAllText(with newText: String, on proxy: UITextDocumentProxy) {
+        // First, clear all existing text
+        // Move cursor to beginning
+        while let before = proxy.documentContextBeforeInput, !before.isEmpty {
+            proxy.adjustTextPosition(byCharacterOffset: -before.count)
+        }
         
-        // Bottom row letter keys should maintain standard width
-        // They will automatically adjust spacing to fill available space
+        // Delete all text before cursor
+        while let before = proxy.documentContextBeforeInput, !before.isEmpty {
+            proxy.deleteBackward()
+        }
         
-        keyboardStackView.addArrangedSubview(bottomLetters)
+        // Delete all text after cursor by selecting and deleting
+        while let after = proxy.documentContextAfterInput, !after.isEmpty {
+            // Move cursor to end of text after current position
+            proxy.adjustTextPosition(byCharacterOffset: after.count)
+            // Then delete backwards to remove the text
+            for _ in 0..<after.count {
+                proxy.deleteBackward()
+            }
+            // Check if there's still text after cursor
+            if proxy.documentContextAfterInput?.isEmpty == false {
+                break // Safety break to avoid infinite loop
+            }
+        }
         
-        // Control row - Order: [123/ABC] [Quick Fix] [space] [return]
-        // Following Apple's iOS control row layout with proper width constraints
-        let controlRow = UIStackView(arrangedSubviews: [
-            modeButton, quickFixButton, spaceButton, returnButton
+        // Now simulate typing animation with the new text
+        simulateTypingAnimation(text: newText, on: proxy)
+    }
+    
+    // Simulate realistic typing animation
+    private func simulateTypingAnimation(text: String, on proxy: UITextDocumentProxy) {
+        let characters = Array(text)
+        guard !characters.isEmpty else { return }
+        
+        // Start typing animation
+        var index = 0
+        
+        func typeNextCharacter() {
+            guard index < characters.count else { return }
+            
+            let char = String(characters[index])
+            proxy.insertText(char)
+            
+            // Provide haptic feedback occasionally during typing
+            if index % 5 == 0 {
+                AudioServicesPlaySystemSound(1104) // Light click sound
+            }
+            
+            index += 1
+            
+            // Schedule next character with realistic typing delay
+            let baseDelay: TimeInterval = 0.08 // Base typing speed
+            let variance: TimeInterval = 0.04 // Add some natural variance
+            let delay = baseDelay + TimeInterval.random(in: 0...variance)
+            
+            // Slightly longer pause after punctuation for realism
+            let finalDelay = [".", "!", "?", ",", ";", ":"].contains(char) ? delay + 0.1 : delay
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + finalDelay) {
+                typeNextCharacter()
+            }
+        }
+        
+        // Start the typing animation
+        typeNextCharacter()
+    }
+
+    // MARK: - Suggestion bar (gray strip)
+    private func setupSuggestionBar() {
+        let bar = UIView()
+        bar.translatesAutoresizingMaskIntoConstraints = false
+        bar.backgroundColor = UIColor.systemGray5
+        addSubview(bar)
+        suggestionBar = bar
+
+        NSLayoutConstraint.activate([
+            bar.topAnchor.constraint(equalTo: topAnchor),
+            bar.leadingAnchor.constraint(equalTo: leadingAnchor),
+            bar.trailingAnchor.constraint(equalTo: trailingAnchor),
+            bar.heightAnchor.constraint(equalToConstant: 50)
         ])
-        controlRow.axis = .horizontal
-        controlRow.spacing = 4 // Apple standard compact spacing
-        controlRow.alignment = .fill
-        controlRow.distribution = .fill
-        controlRow.layoutMargins = UIEdgeInsets(top: 0, left: sideMargins, bottom: 0, right: sideMargins)
-        controlRow.isLayoutMarginsRelativeArrangement = true
+
+        let tone = UIButton(type: .custom)
+        tone.translatesAutoresizingMaskIntoConstraints = false
+        tone.backgroundColor = UIColor.systemGray6
+        tone.layer.cornerRadius = keyCornerRadius
+        tone.addTarget(self, action: #selector(toggleChipOrStrip), for: .touchUpInside)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(forceAnalysisTap))
+        doubleTap.numberOfTapsRequired = 2
+        tone.addGestureRecognizer(doubleTap)
+        let hold = UILongPressGestureRecognizer(target: self, action: #selector(toggleSuggestionsDisplayLongPress(_:)))
+        tone.addGestureRecognizer(hold)
+        bar.addSubview(tone)
+        toneIndicator = tone
+
+        let iv = UIImageView()
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.contentMode = .scaleAspectFit
+        iv.clipsToBounds = true
+        let extensionBundle = Bundle(for: KeyboardController.self)
+        var logo: UIImage? = UIImage(named: "logo_icon", in: extensionBundle, compatibleWith: nil)
+        if logo == nil { logo = UIImage(named: "logo_icon") }
+        if let logo = logo {
+            iv.image = logo.withRenderingMode(.alwaysTemplate)
+            iv.tintColor = UIColor.keyboardRose
+        }
+        tone.addSubview(iv)
+        logoImageView = iv
+
+        NSLayoutConstraint.activate([
+            tone.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 12),
+            tone.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            tone.widthAnchor.constraint(equalToConstant: 44),
+            tone.heightAnchor.constraint(equalToConstant: 44),
+            iv.centerXAnchor.constraint(equalTo: tone.centerXAnchor),
+            iv.centerYAnchor.constraint(equalTo: tone.centerYAnchor),
+            iv.widthAnchor.constraint(equalToConstant: 44),
+            iv.heightAnchor.constraint(equalToConstant: 44)
+        ])
+
+        bar.addSubview(spellStrip)
+        spellStrip.translatesAutoresizingMaskIntoConstraints = false
+
+        let undoButton = UIButton(type: .system)
+        undoButton.translatesAutoresizingMaskIntoConstraints = false
+        undoButton.setTitle("↶", for: .normal)
+        undoButton.setTitleColor(.systemBlue, for: .normal)
+        undoButton.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        undoButton.backgroundColor = UIColor.systemGray6
+        undoButton.layer.cornerRadius = 6
+        undoButton.addTarget(self, action: #selector(undoButtonTapped), for: .touchUpInside)
+        undoButton.isHidden = true
+        bar.addSubview(undoButton)
+        undoButtonRef = undoButton
+
+        NSLayoutConstraint.activate([
+            undoButton.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -8),
+            undoButton.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            undoButton.widthAnchor.constraint(equalToConstant: 32),
+            undoButton.heightAnchor.constraint(equalToConstant: 32),
+            spellStrip.leadingAnchor.constraint(equalTo: tone.trailingAnchor, constant: 8),
+            spellStrip.trailingAnchor.constraint(equalTo: undoButton.leadingAnchor, constant: -8),
+            spellStrip.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            spellStrip.heightAnchor.constraint(equalTo: bar.heightAnchor, multiplier: 0.8)
+        ])
+        undoButton.tag = 999
+    }
+
+    // MARK: - Keyboard layout
+    private func setupKeyboardLayout() {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = verticalSpacing
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        keyboardStackView = stack
+
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: suggestionBar!.bottomAnchor, constant: verticalSpacing),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: sideMargins),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -sideMargins),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16)
+        ])
+
+        setupControlButtons()
+        updateKeyboardForCurrentMode()
+    }
+
+    private func setupControlButtons() {
+        spaceButton = makeControlButton(title: "space", background: .white, text: .label)
+        spaceButton?.addTarget(self, action: #selector(handleSpaceKey), for: .touchUpInside)
+
+        // Trackpad gesture on space bar
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(handleSpacePan(_:)))
+        pan.minimumNumberOfTouches = 1
+        spaceButton?.addGestureRecognizer(pan)
+        self.spacePan = pan
+
+        globeButton = makeControlButton(title: "🌐")
+        globeButton?.addTarget(self, action: #selector(handleGlobeKey), for: .touchUpInside)
+
+        modeButton = makeControlButton(title: "123")
+        modeButton?.addTarget(self, action: #selector(handleModeSwitch), for: .touchUpInside)
+
+        symbolsButton = makeControlButton(title: "#+=")
+        symbolsButton?.addTarget(self, action: #selector(handleSymbolsSwitch), for: .touchUpInside)
+
+        deleteButton = makeControlButton(title: "⌫")
+        deleteButton?.addTarget(self, action: #selector(deleteTouchDown), for: .touchDown)
+        deleteButton?.addTarget(self, action: #selector(deleteTouchUp), for: [.touchUpInside, .touchCancel, .touchDragExit, .touchUpOutside])
+
+        shiftButton = makeControlButton(title: "⇧")
+        shiftButton?.addTarget(self, action: #selector(handleShiftPressed), for: .touchUpInside)
+
+        returnButton = makeControlButton(title: "return")
+        returnButton?.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
+        returnButton?.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
+
+        quickFixButton = makeControlButton(title: "Secure", background: .systemPink, text: .white)
+        quickFixButton?.addTarget(self, action: #selector(handleQuickFix), for: .touchUpInside)
+        quickFixButton?.widthAnchor.constraint(equalToConstant: 65).isActive = true
+        quickFixButton?.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
+        quickFixButton?.isEnabled = true
+    }
+
+    private func updateKeyboardForCurrentMode() {
+        // Dismiss all key previews when rebuilding keyboard
+        dismissAllKeyPreviews()
         
-        // Ensure control row has proper height to meet Apple HIG
-        controlRow.heightAnchor.constraint(equalToConstant: touchTargetHeight).isActive = true
-        
-        // Set button widths following iOS standards with Apple HIG minimums:
-        // Mode button (123/ABC): 50pt for better touch target (exceeds 44pt minimum)
-        modeButton.widthAnchor.constraint(equalToConstant: max(50, minKeyWidth)).isActive = true
-        
-        // Quick Fix button: 60pt for "Secure" text (exceeds 44pt minimum)
-        quickFixButton.widthAnchor.constraint(equalToConstant: max(60, minKeyWidth)).isActive = true
-        
-        // Return button: 50pt for "return" text (exceeds 44pt minimum)
-        returnButton.widthAnchor.constraint(equalToConstant: max(50, minKeyWidth)).isActive = true
-        
-        // Space button: Takes remaining width automatically
-        // This ensures proper proportions similar to iOS keyboard
-        spaceButton.setContentHuggingPriority(UILayoutPriority(249), for: .horizontal)
-        spaceButton.setContentCompressionResistancePriority(UILayoutPriority(749), for: .horizontal)
-        
-        keyboardStackView.addArrangedSubview(controlRow)
-        
-        print(" UpdateKeyboardForCurrentMode: Control row added")
-        print(" UpdateKeyboardForCurrentMode: Keyboard layout complete")
-        print(" UpdateKeyboardForCurrentMode: Stack view now has \(keyboardStackView.arrangedSubviews.count) rows")
-        
-        // Update mode button title
+        keyboardStackView?.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        let (top, mid, bot) = getKeysForCurrentMode()
+
+        let topRow = rowStack(for: top)
+        let midRow = rowStack(for: mid, centerNine: true)
+        let botLetters = rowStack(for: bot)
+
+        let left = ([.letters, .standard, .compact, .expanded].contains(currentMode)) ? shiftButton : symbolsButton
+        let bottomRow = UIStackView(arrangedSubviews: [left, botLetters, deleteButton].compactMap { $0 as UIView? })
+        bottomRow.axis = .horizontal
+        bottomRow.spacing = horizontalSpacing
+        bottomRow.alignment = .fill
+        bottomRow.distribution = .fill
+
+        let controlRow = controlRowStack()
+
+        keyboardStackView?.addArrangedSubview(topRow)
+        keyboardStackView?.addArrangedSubview(midRow)
+        keyboardStackView?.addArrangedSubview(bottomRow)
+        keyboardStackView?.addArrangedSubview(controlRow)
+
         updateModeButtonTitle()
+        updateShiftButtonAppearance()
+        updateSecureFixButtonState()
+        refreshKeyHitRects()
+
     }
-    
-    private func getKeysForCurrentMode() -> ([String], [String], [String]) {
-        switch currentMode {
-        case .letters:
-            return (topRowKeys, midRowKeys, botRowKeys)
-        case .numbers:
-            return (topRowNumbers, midRowNumbers, botRowNumbers)
-        case .symbols:
-            return (topRowSymbols, midRowSymbols, botRowSymbols)
-        case .compact, .expanded, .suggestion, .analysis, .settings:
-            return (topRowKeys, midRowKeys, botRowKeys)
-        }
-    }
-    
-    private func updateModeButtonTitle() {
-        switch currentMode {
-        case .letters:
-            modeButton.setTitle("123", for: .normal)
-        case .numbers:
-            modeButton.setTitle("ABC", for: .normal)
-        case .symbols:
-            modeButton.setTitle("ABC", for: .normal)
-        default:
-            modeButton.setTitle("123", for: .normal)
-        }
-        
-        // Update symbols button title based on mode
-        switch currentMode {
-        case .letters:
-            symbolsButton.setTitle("#+=", for: .normal)
-        case .numbers:
-            symbolsButton.setTitle("#+=", for: .normal)
-        case .symbols:
-            symbolsButton.setTitle("123", for: .normal)
-        default:
-            symbolsButton.setTitle("#+=", for: .normal)
-        }
-    }
-    
-    private func rowStack(for titles: [String], leftOffset: CGFloat, rightOffset: CGFloat = 0) -> UIStackView {
+
+    private func rowStack(for titles: [String], centerNine: Bool = false) -> UIStackView {
         let buttons = titles.map(makeKeyButton)
-        buttons.forEach { $0.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside) }
-        
+        buttons.forEach {
+            $0.addTarget(self, action: #selector(keyTapped(_:)), for: .touchUpInside)
+            $0.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
+            $0.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchCancel, .touchDragExit, .touchUpOutside])
+        }
         let stack = UIStackView(arrangedSubviews: buttons)
         stack.axis = .horizontal
         stack.spacing = horizontalSpacing
         stack.alignment = .fill
-        stack.distribution = .fillEqually // Use fillEqually for consistent key widths
-        stack.layoutMargins = UIEdgeInsets(top: 0, left: leftOffset + sideMargins, bottom: 0, right: rightOffset + sideMargins)
-        stack.isLayoutMarginsRelativeArrangement = true
-        
+        stack.distribution = .fillEqually
+        buttons.forEach { $0.heightAnchor.constraint(equalToConstant: touchTargetHeight).isActive = true }
+        if centerNine && titles.count == 9 {
+            stack.layoutMargins = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 20)
+            stack.isLayoutMarginsRelativeArrangement = true
+        }
         return stack
     }
-    
+
+    private func controlRowStack() -> UIStackView {
+        let arranged = [modeButton, globeButton, spaceButton, quickFixButton, returnButton].compactMap { $0 }
+        let stack = UIStackView(arrangedSubviews: arranged)
+        stack.axis = .horizontal
+        stack.spacing = horizontalSpacing
+        stack.alignment = .fill
+        stack.distribution = .fill
+        stack.layoutMargins = UIEdgeInsets(top: 0, left: sideMargins, bottom: 0, right: sideMargins)
+        stack.isLayoutMarginsRelativeArrangement = true
+
+        let screenWidth = UIScreen.main.bounds.width
+        let available = screenWidth - (2 * sideMargins) - (4 * horizontalSpacing)
+        let standardW = available * 0.15
+        let widerW = available * 0.18
+        let spaceW = available * 0.37
+
+        modeButton?.widthAnchor.constraint(equalToConstant: standardW).isActive = true
+        globeButton?.widthAnchor.constraint(equalToConstant: standardW).isActive = true
+        spaceButton?.widthAnchor.constraint(equalToConstant: spaceW).isActive = true
+        quickFixButton?.widthAnchor.constraint(equalToConstant: standardW).isActive = true
+        returnButton?.widthAnchor.constraint(equalToConstant: widerW).isActive = true
+
+        [modeButton, globeButton, spaceButton, quickFixButton, returnButton]
+            .compactMap { $0 }
+            .forEach { $0.heightAnchor.constraint(equalToConstant: touchTargetHeight).isActive = true }
+
+        return stack
+    }
+
+    // MARK: - Key Capitalization Helper
+    private func shouldCapitalizeKey(_ key: String) -> Bool {
+        return isShifted || isCapsLocked
+    }
+
+    // MARK: - Buttons
     private func makeKeyButton(title: String) -> UIButton {
-        let btn = UIButton(type: .system)
-        btn.setTitle(title, for: .normal)
-        btn.titleLabel?.font = keyFont
-        btn.backgroundColor = UIColor.keyBackground // iPhone style white keys
-        
-        // iPhone style black text
-        btn.setTitleColor(UIColor.keyText, for: .normal)
-        btn.layer.cornerRadius = keyCornerRadius
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        
-        // Apple iOS standard: 44pt minimum touch target height and width
-        btn.heightAnchor.constraint(equalToConstant: touchTargetHeight).isActive = true
-        btn.widthAnchor.constraint(greaterThanOrEqualToConstant: minKeyWidth).isActive = true
-        
-        // Use fillEqually distribution in stack view to ensure consistent sizing
-        // while maintaining minimum touch targets
-        
-        // Ensure user interaction is enabled
-        btn.isUserInteractionEnabled = true
-        
-        return btn
+        let b = ExtendedTouchButton(type: .system)
+        let display = shouldCapitalizeKey(title) ? title.uppercased() : title.lowercased()
+        b.setTitle(display, for: .normal)
+        b.accessibilityValue = title
+        applyModernKeyStyle(to: b)
+        return b
     }
-    
-    private func makeControlButton(title: String) -> UIButton {
-        let btn = ExtendedTouchButton(type: .system)
-        btn.setTitle(title, for: .normal)
-        btn.titleLabel?.font = keyFont
-        btn.backgroundColor = UIColor.specialKeyBackground // iPhone style darker gray for special keys
-        btn.setTitleColor(UIColor.keyText, for: .normal) // iPhone style black text
-        btn.layer.cornerRadius = keyCornerRadius
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        btn.heightAnchor.constraint(equalToConstant: touchTargetHeight).isActive = true // Use full 44pt for control buttons
-        
-        // Ensure user interaction is enabled
-        btn.isUserInteractionEnabled = true
-        
-        return btn
+
+    private func makeControlButton(title: String, background: UIColor = .systemGray4, text: UIColor = .label) -> UIButton {
+        let b = ExtendedTouchButton(type: .system)
+        b.setTitle(title, for: .normal)
+        b.accessibilityValue = title
+        applySpecialKeyStyle(to: b, background: background, text: text)
+        b.addTarget(self, action: #selector(specialButtonTouchDown(_:)), for: .touchDown)
+        b.addTarget(self, action: #selector(specialButtonTouchUp(_:)), for: [.touchUpInside, .touchCancel, .touchDragExit, .touchUpOutside])
+        return b
     }
-    
-    // MARK: - Mode Switching
-    
-    @objc private func handleModeSwitch() {
-        memoryMonitor.logMemoryUsage(context: "HandleModeSwitch")
-        
-        switch currentMode {
-        case .letters:
-            currentMode = .numbers
-        case .numbers:
-            currentMode = .letters  // Fixed: ABC button should go back to letters, not symbols
-        case .symbols:
-            currentMode = .letters
-        case .compact, .expanded, .suggestion, .analysis, .settings:
-            currentMode = .letters
+
+    private func applyModernKeyStyle(to b: UIButton) {
+        b.titleLabel?.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
+        b.backgroundColor = .systemGray6
+        b.setTitleColor(.label, for: .normal)
+        b.layer.cornerRadius = keyCornerRadius
+        b.translatesAutoresizingMaskIntoConstraints = false
+        b.widthAnchor.constraint(greaterThanOrEqualToConstant: minKeyWidth).isActive = true
+        b.layer.borderWidth = 0.5
+        b.layer.borderColor = UIColor.keyBorder.cgColor
+        b.layer.shadowColor = UIColor.keyShadow.cgColor
+        b.layer.shadowOffset = CGSize(width: 0, height: 1.5)
+        b.layer.shadowOpacity = 1.0
+        b.layer.shadowRadius = 1.0
+        b.layer.masksToBounds = false
+    }
+
+    private func applySpecialKeyStyle(to b: UIButton, background: UIColor, text: UIColor) {
+        b.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .semibold)
+        b.backgroundColor = background
+        b.setTitleColor(text, for: .normal)
+        b.layer.cornerRadius = keyCornerRadius
+        b.translatesAutoresizingMaskIntoConstraints = false
+        b.widthAnchor.constraint(greaterThanOrEqualToConstant: minKeyWidth).isActive = true
+        b.layer.borderWidth = 0.5
+        b.layer.borderColor = UIColor.keyBorder.cgColor
+        b.layer.shadowColor = UIColor.keyShadow.cgColor
+        b.layer.shadowOffset = CGSize(width: 0, height: 2)
+        b.layer.shadowOpacity = 1.0
+        b.layer.shadowRadius = 1.5
+        b.layer.masksToBounds = false
+    }
+
+    // MARK: - Visual/feedback
+    @objc private func buttonTouchDown(_ b: UIButton) {
+        UIDevice.current.playInputClick()
+        impact.impactOccurred(intensity: 0.7)
+        showKeyPreview(for: b)
+        UIView.animate(withDuration: 0.05) {
+            b.backgroundColor = .systemGray4
+            b.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
         }
-        updateKeyboardForCurrentMode()
     }
-    
-    @objc private func handleSymbolsSwitch() {
-        memoryMonitor.logMemoryUsage(context: "HandleSymbolsSwitch")
-        
-        switch currentMode {
-        case .letters:
-            currentMode = .symbols
-        case .numbers:
-            currentMode = .symbols
-        case .symbols:
-            currentMode = .numbers
-        case .compact, .expanded, .suggestion, .analysis, .settings:
-            currentMode = .symbols
+    @objc private func buttonTouchUp(_ b: UIButton) {
+        hideKeyPreview(for: b)
+        UIView.animate(withDuration: 0.12,
+                       delay: 0,
+                       usingSpringWithDamping: 0.9,
+                       initialSpringVelocity: 0.4) {
+            b.backgroundColor = .systemGray6
+            b.transform = .identity
         }
-        updateKeyboardForCurrentMode()
+    }
+    @objc private func specialButtonTouchDown(_ b: UIButton) {
+        UIDevice.current.playInputClick()
+        impact.impactOccurred(intensity: 0.7)
+        UIView.animate(withDuration: 0.05) {
+            b.backgroundColor = b.title(for: .normal) == "Secure" ? .systemPink.withAlphaComponent(0.85) : .systemGray3
+            b.transform = CGAffineTransform(scaleX: 0.94, y: 0.94)
+        }
+    }
+    @objc private func specialButtonTouchUp(_ b: UIButton) {
+        UIView.animate(withDuration: 0.15,
+                       delay: 0,
+                       usingSpringWithDamping: 0.9,
+                       initialSpringVelocity: 0.4) {
+            b.backgroundColor = b.title(for: .normal) == "Secure" ? .systemPink : .systemGray4
+            b.transform = .identity
+        }
+    }
+
+    // MARK: - Enhanced Key Preview Management
+    private func showKeyPreview(for button: UIButton) {
+        // First, hide any existing preview for this button
+        hideKeyPreview(for: button)
+        
+        guard let title = button.title(for: .normal), !title.isEmpty else { return }
+        
+        let preview = KeyPreview(text: title)
+        keyPreviewTable.setObject(preview, forKey: button)
+        
+        addSubview(preview)
+        let keyFrame = convert(button.bounds, from: button)
+        preview.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            preview.centerXAnchor.constraint(equalTo: leftAnchor, constant: keyFrame.midX),
+            preview.bottomAnchor.constraint(equalTo: topAnchor, constant: keyFrame.minY - 6),
+            preview.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            preview.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
+        ])
+        
+        // Animate preview appearance
+        preview.alpha = 0
+        preview.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        
+        UIView.animate(withDuration: 0.1, delay: 0, options: [.curveEaseOut]) {
+            preview.alpha = 1
+            preview.transform = .identity
+        }
+        
+        // Set up auto-dismiss timer
+        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+            self?.hideKeyPreview(for: button)
+        }
+        keyPreviewAutoDismissTimers[button] = timer
     }
     
-    // MARK: - Key Actions
+    private func hideKeyPreview(for button: UIButton) {
+        // Cancel auto-dismiss timer
+        keyPreviewAutoDismissTimers[button]?.invalidate()
+        keyPreviewAutoDismissTimers.removeValue(forKey: button)
+        
+        guard let preview = keyPreviewTable.object(forKey: button) else { return }
+        keyPreviewTable.removeObject(forKey: button)
+        
+        UIView.animate(withDuration: 0.08, animations: {
+            preview.alpha = 0
+            preview.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }) { _ in
+            preview.removeFromSuperview()
+        }
+    }
     
+    private func dismissAllKeyPreviews() {
+        // Cancel all timers
+        keyPreviewAutoDismissTimers.values.forEach { $0.invalidate() }
+        keyPreviewAutoDismissTimers.removeAll()
+        
+        // Remove all previews
+        let allPreviews = keyPreviewTable.objectEnumerator()?.allObjects as? [KeyPreview] ?? []
+        for preview in allPreviews {
+            UIView.animate(withDuration: 0.08, animations: {
+                preview.alpha = 0
+            }) { _ in
+                preview.removeFromSuperview()
+            }
+        }
+        keyPreviewTable.removeAllObjects()
+    }
+
+    // MARK: - Key input
     @objc private func keyTapped(_ sender: UIButton) {
-        guard let title = sender.title(for: .normal) else { 
-            print("❌ KeyTapped: No title found for button")
-            return 
-        }
-        
-        memoryMonitor.logMemoryUsage(context: "KeyTapped: \(title)")
-        
-        // Cancel typing animation if user starts typing
-        if isTypingAnimation {
-            cancelTypingAnimation()
-        }
-        
-        print("🎯 KeyTapped: '\(title)' button pressed")
-        print("🎯 TextDocumentProxy available: \(textDocumentProxy != nil)")
-        print("🎯 Current text before action: '\(currentText)'")
-        
-        switch title {
+        guard let proxy = textDocumentProxy else { return }
+        let original = sender.accessibilityValue ?? sender.title(for: .normal) ?? ""
+
+        switch original {
         case "⌫":
-            textDocumentProxy?.deleteBackward()
-            if !currentText.isEmpty {
-                currentText.removeLast()
-            }
-        case "space":
-            print("🎯 Space button pressed")
-            
-            // Check if we have a valid text document proxy
-            guard let proxy = textDocumentProxy else {
-                print("❌ No text document proxy available")
-                return
-            }
-            
-            print("🎯 Text proxy available, current context: '\(proxy.documentContextBeforeInput ?? "nil")'")
-            
-            // Apply spell checking to the last word before inserting space
-            SpellCheckerManager.autocorrectLastWord(using: proxy)
-            
-            // Simple space insertion
-            proxy.insertText(" ")
-            
-            // Update current text to reflect the space
-            if let updatedContext = proxy.documentContextBeforeInput {
-                currentText = updatedContext
-            }
-            
-            print("🎯 Space inserted with spell check")
-            
-            // Mark word as complete for instant tone analysis
-            isWordComplete = true
-            lastWordBoundary = Date()
-            
-            // Reset tone indicator to neutral when space is pressed
-            resetToneIndicator()
-            
-            // Update current text from the text document proxy
-            updateCurrentText()
+            proxy.deleteBackward()
+            if !currentText.isEmpty { currentText.removeLast() }
+            refreshSpellCandidates()
+            return
+        case "return":
+            commitAndCleanup()
+            proxy.insertText("\n")
+            currentText += "\n"
+            handleTextChange()
+            return
+        case "⇧":
+            handleShiftPressed()
             return
         case "123", "ABC":
             handleModeSwitch()
@@ -882,1159 +1651,908 @@ class KeyboardController: UIInputView {
         case "#+=":
             handleSymbolsSwitch()
             return
-        case "Secure":
-            handleQuickFix()
-            return
-        case "return":
-            textDocumentProxy?.insertText("\n")
-            currentText += "\n"
-            
-            // Reset tone indicator when return is pressed
-            resetToneIndicator()
-            return
-        case "⇧":
-            handleShiftPressed()
-            return
         default:
-            // Handle letter/number/symbol input
-            let character = isShifted ? title.uppercased() : title.lowercased()
-            textDocumentProxy?.insertText(character)
-            currentText += character
-            
-            // Check if this is a punctuation that ends a word
-            let wordEndingPunctuation = [".", ",", "!", "?", ";", ":"]
-            if wordEndingPunctuation.contains(character) {
-                isWordComplete = true
-                lastWordBoundary = Date()
-            } else {
-                isWordComplete = false
-            }
-            
-            // Reset shift after typing (only for letters)
-            if isShifted && !isCapsLocked && currentMode == .letters {
+            let ch: String
+            if [.letters, .standard, .compact, .expanded].contains(currentMode) {
+                ch = isShifted ? original.uppercased() : original.lowercased()
+            } else { ch = original }
+            proxy.insertText(ch)
+            currentText += ch
+
+            // auto-unshift for single letters
+            if isShifted && !isCapsLocked && [.letters, .standard, .compact, .expanded].contains(currentMode) && ![".", "!", "?"].contains(ch) {
                 isShifted = false
                 updateShiftButtonAppearance()
+                updateKeyTitlesForShiftState()
+            }
+
+            // Use enhanced punctuation handling for punctuation marks
+            if [".", ",", "!", "?", ":", ";"].contains(ch) {
+                // Remove the character we just inserted since handlePunctuationInsertion will re-insert it
+                proxy.deleteBackward()
+                currentText = String(currentText.dropLast())
+                handlePunctuationInsertion(ch)
+            } else {
+    // No autocorrect on plain character keys (mid-word)
+            refreshSpellCandidates()
+            handleTextChange()
+            }
+
             }
         }
-        
-        // Analyze text after input
-        lastTypingTime = Date()
-        handleTextChange()
-    }
-    
-    @objc private func handleQuickFix() {
-        // Handle Secure button - ONLY method that replaces/transforms the entire message
-        // 1. Clears existing text from the message field
-        // 2. Uses AI to transform text to secure communicator style
-        // 3. Types out the new text character by character so user can see the transformation
-        // 4. User can then hit send when ready, or cancel by typing
-        // Note: This is different from suggestion buttons which only add to existing text
-        
-        print(" Secure Communicator: Starting transformation...")
-        memoryMonitor.logMemoryUsage(context: "HandleQuickFix")
-        
-        // Update current text from document proxy first
-        updateCurrentText()
-        
-        // Debug: Print current state
-        print(" Current text before transformation: '\(currentText)'")
-        print(" Document before input: '\(textDocumentProxy?.documentContextBeforeInput ?? "nil")'")
-        print(" Document after input: '\(textDocumentProxy?.documentContextAfterInput ?? "nil")'")
-        
-        guard !currentText.isEmpty else {
-            print(" Secure Communicator: No text to transform")
-            // Show a quick visual feedback
-            animateQuickFixButton()
-            return
-        }
-        
-        print("🔧 Secure Communicator: Processing text: '\(currentText)'")
-        
-        // Animate button to show it's working
-        animateQuickFixButton()
-        
-        // Generate secure communicator version of current text
-        Task {
-            do {
-                let improvedText = try await generateQuickFixSuggestion(for: currentText)
-                // Apply the improved text on main thread
-                DispatchQueue.main.async {
-                    let originalText = self.currentText
-                    print(" Secure Communicator: About to replace '\(originalText)' with '\(improvedText)'")
-                    self.replaceCurrentText(with: improvedText)
-                    // Record quick fix usage
-                    self.analyticsStorage.recordQuickFixUsage(originalText: originalText, fixedText: improvedText, fixType: "secure_communicator")
-                    print(" Secure Communicator applied: '\(originalText)' → '\(improvedText)'")
-                }
-            } catch {
-                print(" Secure Communicator failed: \(error)")
-                // Fallback to showing suggestions
-                DispatchQueue.main.async {
-                    self.showSuggestionsManually()
-                }
-            }
-        }
-    }
-    
-    private func animateQuickFixButton() {
-        UIView.animate(withDuration: 0.1, animations: {
-            self.quickFixButton.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
-        }) { _ in
-            UIView.animate(withDuration: 0.1) {
-                self.quickFixButton.transform = CGAffineTransform.identity
-            }
-        }
-    }
-    
-    private func showSuggestionsManually() {
-        // Use memory-efficient inference manager for manual suggestion generation
-        print("🧠 Manual suggestions: Using SmartInferenceManager for: '\(currentText)'")
-        memoryMonitor.logMemoryUsage(context: "ShowSuggestionsManually")
-        
-        let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
-        
-        smartInferenceManager.requestSuggestion(text: currentText, emotionalState: emotionalState) { [weak self] suggestion in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                
-                if let suggestion = suggestion, !suggestion.isEmpty {
-                    // Convert single suggestion to array format
-                    self.suggestions = [suggestion]
-                    print("✅ Manual suggestions: SmartInferenceManager successful")
-                    
-                    // Reset consecutive failures on success
-                    self.consecutiveFailures = 0
-                } else {
-                    print("⚠️ Manual suggestions: SmartInferenceManager returned no results, using basic patterns")
-                    // Use basic communication patterns as fallback
-                    let basicSuggestions = self.generateBasicCommunicationSuggestions()
-                        self.suggestions = Array(basicSuggestions.prefix(3))
-                    }
-                    
-                    // Show suggestions in the suggestion bar
-                    self.updateSuggestionButtons()
-                    
-                    // Animate tone change to indicate suggestion display
-                    self.animateToneChange()
-                    
-                    print(" Manual suggestions completed: \(self.suggestions)")
-                }
-            } catch {
-                print(" Manual suggestions: Local AI failed: \(error)")
-                self.consecutiveFailures += 1
-                
-                await MainActor.run {
-                    // Fallback to basic communication patterns
-                    let basicSuggestions = self.generateBasicCommunicationSuggestions()
-                    self.suggestions = Array(basicSuggestions.prefix(3))
-                    
-                    // Show suggestions in the suggestion bar
-                    self.updateSuggestionButtons()
-                    
-                    // Animate tone change to indicate suggestion display
-                    self.animateToneChange()
-                    
-                    print(" Manual suggestions: Using fallback basic patterns due to Local AI failure")
-                }
-            }
-        }
-    }
-    
-    /// Applies a suggestion by adding it to the current text (not replacing)
-    private func applySuggestion(_ suggestion: String) {
-        // Add suggestion to current text instead of replacing
-        textDocumentProxy?.insertText(" " + suggestion)
-        currentText += " " + suggestion
-        
-        // Reset tone indicator after applying suggestion
-        resetToneIndicator()
-    }
-    
-    // MARK: - Text Input Delegate Methods
-    
-    func textWillChange(_ textInput: UITextInput?) {
-        print(" KeyboardController textWillChange")
-    }
-    
-    func textDidChange(_ textInput: UITextInput?) {
-        print(" KeyboardController textDidChange")
-        memoryMonitor.logMemoryUsage(context: "TextDidChange")
-        updateCurrentText()
-        handleTextChange()
-    }
-    
-    // MARK: - Enhanced Tone Analysis
-    
-    private func handleTextChange() {
-        print("🔄 handleTextChange called for text: '\(currentText)'")
-        memoryMonitor.logMemoryUsage(context: "HandleTextChange")
-        
-        // Cancel previous analysis to prevent lag
-        toneAnalysisWorkItem?.cancel()
-        
-        // Check if we should trigger instant analysis
-        let shouldAnalyzeInstantly = isWordComplete || isAtWordBoundary() || hasSignificantChange()
-        
-        print("🔄 Should analyze instantly: \(shouldAnalyzeInstantly) (word complete: \(isWordComplete), at boundary: \(isAtWordBoundary()), significant change: \(hasSignificantChange()))")
-        
-        if shouldAnalyzeInstantly {
-            // Instant analysis for word completion, spaces, and significant changes
-            performInstantToneAnalysis()
-            print("⚡ Instant tone analysis triggered")
-        } else {
-            // For mid-word typing, use a short delay to avoid excessive analysis
-            scheduleDelayedAnalysis()
-        }
-        
-        // Reset word complete flag
-        isWordComplete = false
-    }
-    
-    private func performInstantToneAnalysis() {
-        print("🔍 performInstantToneAnalysis: Starting for text: '\(currentText)'")
-        memoryMonitor.logMemoryUsage(context: "PerformInstantToneAnalysis")
-        
-        // Update tracking
-        lastAnalyzedText = currentText
-        lastAnalysisTime = Date()
-        
-        // Use memory-efficient tone analysis
-        print("🔍 Starting tone analysis with SmartInferenceManager for: '\(currentText)'")
-        
-        let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
-        
-        smartInferenceManager.requestSuggestion(text: currentText, emotionalState: emotionalState) { [weak self] suggestion in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                
-                // For now, derive tone status from suggestion availability
-                let status: ToneStatus = suggestion != nil ? .neutral : .warning
-                let analysisResult = ToneAnalysis(status: status, confidence: 0.8, suggestions: [])
-                
-                self.updateToneIndicator(with: analysisResult)
-                self.currentToneStatus = status
-                
-                print("✅ SmartInferenceManager tone analysis complete: '\(currentText)' → \(status)")
-                
-                // Reset consecutive failures on success
-            consecutiveFailures = 0
-            
-        } catch {
-            print("❌ Local AI tone analysis failed: \(error)")
-            consecutiveFailures += 1
-            
-            // Fallback to neutral tone if Local AI fails
-            let fallbackResult = ToneAnalysis(status: .neutral, confidence: 0.5, suggestions: [])
-            updateToneIndicator(with: fallbackResult)
-            currentToneStatus = .neutral
-        }
-        
-        // Generate suggestions using Local AI if text is substantial
-        if currentText.count >= 3 {
-            generateLocalAISuggestions()
-        }
-        
-        // Generate suggestions in background if text is substantial
-        if currentText.count >= 5 {
-            generateSuggestionsInBackground()
-        }
-        
-        // Log analysis performance
-        logAnalysisPerformance()
-    }
-    
-    private func scheduleDelayedAnalysis() {
-        // Short delay for mid-word changes to avoid excessive analysis
-        let delay: TimeInterval = 0.1 // 100ms delay for smoother typing experience
-        
-        toneAnalysisWorkItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
-            self.performInstantToneAnalysis()
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: toneAnalysisWorkItem!)
-    }
-    
-    private func isAtWordBoundary() -> Bool {
-        // Check if we just added a space, punctuation, or word-ending character
-        guard !currentText.isEmpty else { return false }
-        
-        let lastChar = currentText.last!
-        let wordBoundaryChars = CharacterSet(charactersIn: " .,!?;:-()[]{}\"'")
-        
-        return wordBoundaryChars.contains(lastChar.unicodeScalars.first!)
-    }
-    
-    private func hasSignificantChange() -> Bool {
-        // Check if the text has changed significantly since last analysis
-        let textChanged = lastAnalyzedText != currentText
-        let hasMinimumLength = currentText.count >= 3
-        
-        // Analyze if we've added/removed a complete word
-        let wordCountDifference = abs(currentText.components(separatedBy: .whitespaces).count - 
-                                    lastAnalyzedText.components(separatedBy: .whitespaces).count)
-        
-        return textChanged && hasMinimumLength && wordCountDifference > 0
-    }
-    
-    private func generateSuggestionsInBackground() {
-        // Use memory-efficient inference manager for background suggestions
-        print("🧠 Generating background suggestions with SmartInferenceManager for: '\(currentText)'")
-        memoryMonitor.logMemoryUsage(context: "GenerateSuggestionsInBackground")
-        
-        let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
-        
-        smartInferenceManager.requestSuggestion(text: currentText, emotionalState: emotionalState) { [weak self] suggestion in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                
-                if let suggestion = suggestion, !suggestion.isEmpty {
-                    self.suggestions = [suggestion]
-                    // Only update suggestion buttons if suggestion bar is visible
-                    if self.isSuggestionBarVisible {
-                        self.updateSuggestionButtons()
-                    }
-                    print("✅ SmartInferenceManager background suggestions successful: \(suggestion)")
-                    
-                    // Reset consecutive failures on success
-                    self.consecutiveFailures = 0
-                } else {
-                    print("⚠️ SmartInferenceManager returned no suggestions, using fallback")
-                    // Use basic communication patterns as fallback
-                    let fallbackSuggestions = self.generateBasicCommunicationSuggestions()
-                    self.suggestions = Array(fallbackSuggestions.prefix(3))
-                    if self.isSuggestionBarVisible {
-                        self.updateSuggestionButtons()
-                    }
-                }
-            }
-        }
-    }
-    
-    private func generateLocalAISuggestions() {
-        // Use memory-efficient inference manager for suggestions
-        print("🧠 Generating SmartInferenceManager suggestions for: '\(currentText)'")
-        memoryMonitor.logMemoryUsage(context: "GenerateLocalAISuggestions")
-        
-        let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
-        
-        smartInferenceManager.requestSuggestion(text: currentText, emotionalState: emotionalState) { [weak self] suggestion in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                
-                if let suggestion = suggestion, !suggestion.isEmpty {
-                    self.suggestions = [suggestion]
-                    self.updateSuggestionButtons()
-                    print("✅ SmartInferenceManager suggestions generated successfully: \(suggestion)")
-                    
-                    // Reset consecutive failures on success
-                    self.consecutiveFailures = 0
-                } else {
-                    print("⚠️ SmartInferenceManager returned no suggestions, using basic patterns")
-                    // Fallback to basic communication patterns
-                    let fallbackSuggestions = self.generateBasicCommunicationSuggestions()
-                    self.suggestions = Array(fallbackSuggestions.prefix(3))
-                    self.updateSuggestionButtons()
-                }
-            }
-        }
-    }
-    
-    private func generateBasicCommunicationSuggestions() -> [String] {
-        // Provide basic communication-focused suggestions when no other suggestions are available
-        // These are contextual phrases that help with communication, not spelling corrections
-        
-        let text = currentText.lowercased()
-        
-        // Handle negative emotions with secure communication alternatives
-        if text.contains("hate") {
-            return ["I'm frustrated", "I'm upset", "I disagree"]
-        }
-        
-        if text.contains("angry") || text.contains("mad") {
-            return ["I'm frustrated", "I need to discuss this", "I feel upset"]
-        }
-        
-        if text.contains("stupid") || text.contains("dumb") {
-            return ["I disagree with this", "This is challenging", "I see it differently"]
-        }
-        
-        if text.contains("shut up") || text.contains("leave me alone") {
-            return ["I need space", "I need a moment", "Let me think"]
-        }
-        
-        // Common communication starters
-        if text.isEmpty || text.hasSuffix(" ") {
-            return ["I understand", "Thank you", "I appreciate"]
-        }
-        
-        // Response patterns based on current text
-        if text.contains("sorry") || text.contains("apologize") {
-            return ["I understand", "Thank you for", "I appreciate"]
-        }
-        
-        if text.contains("thank") {
-            return ["you're welcome", "my pleasure", "anytime"]
-        }
-        
-        if text.contains("how") && text.contains("you") {
-            return ["I'm doing well", "Thank you for asking", "I'm good"]
-        }
-        
-        if text.contains("help") {
-            return ["I'd be happy to", "Of course", "Absolutely"]
-        }
-        
-        if text.contains("what") && text.contains("think") {
-            return ["I believe", "In my opinion", "I feel that"]
-        }
-        
-        // General positive communication phrases
-        return ["I understand", "That sounds good", "I appreciate"]
-    }
-    
-    private func updateSuggestions(with result: ToneAnalysis) {
-        // Update suggestions based on tone analysis result
-        suggestions = result.suggestions
-        
-        // Only update suggestion buttons if suggestion bar is visible
-        if isSuggestionBarVisible {
-            updateSuggestionButtons()
-        }
-    }
-    
-    private func logAnalysisPerformance() {
-        analysisCount += 1
-        
-        // Log performance metrics every 10 analyses
-        if analysisCount % 10 == 0 {
-            let elapsed = Date().timeIntervalSince(lastPerformanceLog)
-            print(" Analysis performance: \(analysisCount) analyses, avg time: \(elapsed * 1000 / 10) ms")
-            lastPerformanceLog = Date()
-        }
-    }
-    
-    private func updateToneIndicator(with result: ToneAnalysis) {
-        print("🎨 updateToneIndicator called with status: \(result.status)")
-        
-        // Update tone indicator color based on analysis result
-        let color = result.status.color
-        print("🎨 Setting tone indicator color to: \(color)")
-        
-        // Check if tone indicator exists
-        guard let toneIndicator = toneIndicator else {
-            print("❌ Tone indicator is nil!")
-            return
-        }
-        
-        print("🎨 Tone indicator current background: \(toneIndicator.backgroundColor?.description ?? "nil")")
-        
-        // Animate tone change
-        UIView.animate(withDuration: toneChangeAnimationDuration) {
-            self.toneIndicator.backgroundColor = color
-            print("🎨 Animation: Setting background to \(color)")
-        }
-        
-        // Update pulse animation for clear tone
-        if result.status == .clear {
-            startTonePulseAnimation()
-        } else {
-            stopTonePulseAnimation()
-        }
-        
-        print("🎨 Tone indicator update completed")
-    }
-    
-    private func startTonePulseAnimation() {
-        guard let toneIndicator = toneIndicator else { return }
-        
-        let pulseLayer = CAShapeLayer()
-        pulseLayer.path = UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: 40, height: 40)).cgPath
-        pulseLayer.fillColor = UIColor.white.cgColor
-        pulseLayer.opacity = 0.0
-        
-        toneIndicator.layer.addSublayer(pulseLayer)
-        
-        // Animate pulse effect
-        let animation = CABasicAnimation(keyPath: "opacity")
-        animation.fromValue = 0.8
-        animation.toValue = 0.0
-        animation.duration = toneChangeAnimationDuration
-        animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        animation.repeatCount = .infinity
-        animation.autoreverses = true
-        
-        pulseLayer.add(animation, forKey: "pulse")
-    }
-    
-    private func stopTonePulseAnimation() {
-        // Remove all pulse layers from tone indicator
-        toneIndicator?.layer.sublayers?.forEach { layer in
-            if layer is CAShapeLayer {
-                layer.removeFromSuperlayer()
-            }
-        }
-    }
-    
-    private func updateSuggestionButtons() {
-        print("📱 updateSuggestionButtons called with \(suggestions.count) suggestions: \(suggestions)")
-        
-        // Remove existing buttons
-        suggestionButtons.forEach { $0.removeFromSuperview() }
-        suggestionButtons.removeAll()
-        
-        // Only show the first (best) suggestion
-        if let bestSuggestion = suggestions.first {
-            let button = makeSuggestionButton(title: bestSuggestion)
-            button.addTarget(self, action: #selector(suggestionTapped(_:)), for: .touchUpInside)
-            button.isHidden = !isSuggestionBarVisible // Hide if suggestion bar is not visible
-            suggestionButtons.append(button)
-            suggestionBar.addSubview(button)
-            
-            print("📱 Added best suggestion button: \(bestSuggestion)")
-            
-            // Layout the single suggestion button
-            layoutSuggestionButtons()
-        }
-        
-        print(" Finished updating suggestion buttons")
-    }
-    
-    private func makeSuggestionButton(title: String) -> UIButton {
-        let btn = UIButton(type: .system)
-        
-        // Clean the title to ensure only plain text is shown (no metadata or explanations)
-        let cleanTitle = cleanSuggestionText(title)
-        btn.setTitle(cleanTitle, for: .normal)
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .medium)
-        btn.titleLabel?.numberOfLines = 1  // Only one line initially
-        btn.titleLabel?.lineBreakMode = .byTruncatingTail  // Add ... if text is too long
-        btn.titleLabel?.textAlignment = .center
-        
-        // Store the full clean text for expansion
-        btn.accessibilityHint = cleanTitle  // Store full text in accessibility hint
-        
-        // Single tap to expand/collapse
-        btn.addTarget(self, action: #selector(suggestionTapped(_:)), for: .touchUpInside)
-        
-        // Solid white background for better readability
-        btn.backgroundColor = UIColor.white
-        btn.setTitleColor(UIColor.black, for: .normal)
-        
-        // Add subtle border and shadow
-        btn.layer.cornerRadius = 8
-        btn.layer.borderWidth = 1
-        btn.layer.borderColor = UIColor.lightGray.cgColor
-        btn.layer.shadowColor = UIColor.black.cgColor
-        btn.layer.shadowOffset = CGSize(width: 0, height: 2)
-        btn.layer.shadowOpacity = 0.2
-        btn.layer.shadowRadius = 4
-        
-        // Make the button meet Apple HIG minimum touch target (44×44pt)
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        btn.heightAnchor.constraint(equalToConstant: touchTargetHeight).isActive = true
-        
-        // Add padding for better text appearance
-        btn.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
-        
-        btn.isUserInteractionEnabled = true
-        btn.isHidden = false
-        
-        // Bring to front so it can overlap other elements
-        btn.layer.zPosition = 10
-        
-        print(" Created suggestion button: \(title)")
-        return btn
-    }
-    
-    private func layoutSuggestionButtons() {
-        guard let suggestionButton = suggestionButtons.first else { return }
-        
-        // Make the suggestion button span the remaining width after the tone indicator
-        let logoWidth: CGFloat = 62  // Updated for new larger logo container size (52 + 10 margin)
-        let rightMargin: CGFloat = 10
-        
-        print("📱 Laying out single suggestion button")
-        
-        // Position the button centered vertically within the suggestion bar
-        NSLayoutConstraint.activate([
-            suggestionButton.leadingAnchor.constraint(equalTo: suggestionBar.leadingAnchor, constant: logoWidth),
-            suggestionButton.trailingAnchor.constraint(equalTo: suggestionBar.trailingAnchor, constant: -rightMargin),
-            suggestionButton.centerYAnchor.constraint(equalTo: suggestionBar.centerYAnchor), // Center in suggestion bar
-        ])
-    }
-    
-    /// Cleans suggestion text to ensure only plain text is displayed
-    private func cleanSuggestionText(_ text: String) -> String {
-        var cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Remove common metadata patterns
-        cleanText = cleanText.replacingOccurrences(of: "Suggestion: ", with: "")
-        cleanText = cleanText.replacingOccurrences(of: "Alternative: ", with: "")
-        cleanText = cleanText.replacingOccurrences(of: "Try: ", with: "")
-        
-        // Remove explanatory text in parentheses or brackets
-        cleanText = cleanText.replacingOccurrences(of: #"\([^)]*\)"#, with: "", options: .regularExpression)
-        cleanText = cleanText.replacingOccurrences(of: #"\[[^\]]*\]"#, with: "", options: .regularExpression)
-        
-        // Remove repair scripts or technical terms
-        cleanText = cleanText.replacingOccurrences(of: "Script:", with: "")
-        cleanText = cleanText.replacingOccurrences(of: "Command:", with: "")
-        cleanText = cleanText.replacingOccurrences(of: "Fix:", with: "")
-        
-        // Remove multiple spaces and trim again
-        cleanText = cleanText.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-        cleanText = cleanText.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        return cleanText.isEmpty ? text : cleanText // Return original if cleaning resulted in empty string
-    }
-    
-    // MARK: - Animations
-    
-    /// Animates tone change transitions
-    private func animateToneChange() {
-        // Simple animation for tone change
-        UIView.animate(withDuration: self.toneChangeAnimationDuration) {
-            self.toneIndicator.alpha = 0.8
-        } completion: { _ in
-            UIView.animate(withDuration: self.toneChangeAnimationDuration) {
-                self.toneIndicator.alpha = 1.0
-            }
-        }
-    }
-    
-    // MARK: - Suggestion Display Toggle
-    
-    @objc private func toggleSuggestionsDisplay() {
-        memoryMonitor.logMemoryUsage(context: "ToggleSuggestionsDisplay")
-        
-        // Toggle the visibility of the suggestion advice buttons (advice-only, no text insertion)
-        isSuggestionBarVisible.toggle()
-        UIView.animate(withDuration: 0.3) {
-            self.suggestionButtons.forEach { button in
-                button.isHidden = !self.isSuggestionBarVisible
-            }
-        }
-        if isSuggestionBarVisible {
-            // Generate fresh tone-based advice suggestions when tone indicator is tapped
-            generateToneBasedSuggestions()
-            animateToneChange()
-        }
+
+
+    // MARK: - Enhanced Space Handling
+    private var lastSpaceTapTime: TimeInterval = 0
+    private let doubleSpaceWindow: TimeInterval = 0.35 // tune if you support double-space="."
+
+    @objc private func handleSpaceKey() {
+        handleSpaceTap()
     }
 
-    private func generateToneBasedSuggestions() {
-        // Always prioritize Local AI for tone-based advice generation (advice-only display)
-        print("📱 Tone-based advice: Using Local AI first for: '\(currentText)'")
-        memoryMonitor.logMemoryUsage(context: "GenerateToneBasedSuggestions")
-        
-        Task {
-            let currentText = self.currentText
-            
-            do {
-                // Generate advice suggestions using SmartInferenceManager as primary method
-                let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
-                
-                smartInferenceManager.requestSuggestion(text: currentText, emotionalState: emotionalState) { [weak self] suggestion in
-                    DispatchQueue.main.async {
-                        guard let self = self else { return }
-                        
-                        if let suggestion = suggestion, !suggestion.isEmpty {
-                            // Store SmartInferenceManager advice suggestions
-                            self.suggestions = [suggestion]
-                            self.updateSuggestionButtons()
-                            print("✅ Tone-based suggestions: SmartInferenceManager successful: \(suggestion)")
-                            
-                            // Reset consecutive failures on success
-                            self.consecutiveFailures = 0
-                        } else {
-                            print("⚠️ Tone-based suggestions: SmartInferenceManager returned no results, using basic patterns")
-                            // Fallback to basic communication patterns
-                            let fallbackSuggestions = self.generateBasicCommunicationSuggestions()
-                            self.suggestions = Array(fallbackSuggestions.prefix(3))
-                            self.updateSuggestionButtons()
-                        }
-                    }
-                }
-            } catch {
-                print(" Tone-based suggestions: Local AI failed: \(error)")
-                self.consecutiveFailures += 1
-                
-                await MainActor.run {
-                    // Fallback to basic communication patterns
-                    let fallbackSuggestions = self.generateBasicCommunicationSuggestions()
-                    self.suggestions = Array(fallbackSuggestions.prefix(3))
-                    self.updateSuggestionButtons()
-                    print(" Tone-based suggestions: Using fallback basic patterns due to Local AI failure")
-                }
+    private func handleSpaceTap() {
+        guard let proxy = textDocumentProxy else { return }
+
+        // (A) If you implement your OWN double-space-to-period, detect it *here*.
+        // Otherwise, leave this block out entirely.
+        let now = CACurrentMediaTime()
+        let isDoubleSpace = (now - lastSpaceTapTime) < doubleSpaceWindow
+        lastSpaceTapTime = now
+
+        if isDoubleSpace {
+            // Replace the previous space with ". "
+            proxy.deleteBackward()           // remove prior space
+            proxy.insertText(". ")
+            currentText = String(currentText.dropLast()) + ". "
+            autocorrectLastWordIfNeeded(afterTyping: ".")
+            handleTextChange()
+            return
+        }
+
+        // (B) Insert exactly ONE space
+        proxy.insertText(" ")
+        currentText += " "
+        autocorrectLastWordIfNeeded(afterTyping: " ")
+
+        // (C) Normalize "!. " or "?. " → "! " / "? " and ".. " → ". "
+        // This cleans up the system's auto-period if it sneaks in
+        let before = proxy.documentContextBeforeInput ?? ""
+
+        if before.hasSuffix("!. ") {
+            proxy.deleteBackward() // space
+            proxy.deleteBackward() // period
+            proxy.insertText(" ")
+            // Update currentText to match
+            if currentText.hasSuffix("!. ") {
+                currentText = String(currentText.dropLast(2)) + " "
+            }
+        } else if before.hasSuffix("?. ") {
+            proxy.deleteBackward()
+            proxy.deleteBackward()
+            proxy.insertText(" ")
+            // Update currentText to match
+            if currentText.hasSuffix("?. ") {
+                currentText = String(currentText.dropLast(2)) + " "
+            }
+        } else if before.hasSuffix(".. ") {
+            proxy.deleteBackward() // space
+            proxy.deleteBackward() // extra "."
+            proxy.insertText(" ")
+            // Update currentText to match
+            if currentText.hasSuffix(".. ") {
+                currentText = String(currentText.dropLast(2)) + " "
             }
         }
+
+        // Don't run heavy autocorrect on every space - save for commit/send
+        refreshSpellCandidates()
+        handleTextChange()
     }
 
-    // MARK: - Shift Handling
+    @objc private func handleGlobeKey() {
+        parentInputVC?.advanceToNextInputMode()
+    }
+
     @objc private func handleShiftPressed() {
-        isShifted.toggle()
+        let now = CACurrentMediaTime()
+        if now - lastShiftTapAt < 0.35 {
+            // double-tap → caps lock
+            isCapsLocked.toggle()
+            isShifted = isCapsLocked
+        } else {
+            if isCapsLocked {
+                // exiting caps lock
+                isCapsLocked = false
+                isShifted = false
+            } else {
+                isShifted.toggle()
+            }
+        }
+        lastShiftTapAt = now
         updateShiftButtonAppearance()
+        updateKeyTitlesForShiftState()
     }
 
     private func updateShiftButtonAppearance() {
-        shiftButton.setTitle("⇧", for: .normal)
-        if isShifted {
-            shiftButton.backgroundColor = roseColor // Keep rose when activated
-            shiftButton.setTitleColor(.white, for: .normal)
+        guard let shiftButton = shiftButton else { return }
+        if isCapsLocked {
+            shiftButton.backgroundColor = .systemBlue
+        } else if isShifted {
+            shiftButton.backgroundColor = .keyboardRose
         } else {
-            shiftButton.backgroundColor = UIColor.specialKeyBackground // iPhone style darker gray
-            shiftButton.setTitleColor(UIColor.keyText, for: .normal) // iPhone style black text
+            shiftButton.backgroundColor = .systemGray4
         }
     }
 
-    // MARK: - Local AI Quick Fix
-    func generateQuickFixSuggestion(for text: String) async throws -> String {
-        // Use SmartInferenceManager as primary option for quick fix suggestions
-        print("🔧 SmartInferenceManager Quick Fix: Processing text: '\(text)'")
-        memoryMonitor.logMemoryUsage(context: "GenerateQuickFixSuggestion")
+    private func updateKeyTitlesForShiftState() {
+        let now = Date()
+        guard now.timeIntervalSince(lastShiftUpdateTime) > 0.1 else { return }
+        lastShiftUpdateTime = now
+        guard [.letters, .standard, .compact, .expanded].contains(currentMode),
+              let stack = keyboardStackView else { return }
+        updateKeysInStackView(stack)
+    }
+
+    private func updateKeysInStackView(_ stack: UIStackView) {
+        for sub in stack.arrangedSubviews {
+            if let button = sub as? UIButton,
+               let original = button.accessibilityValue,
+               original.count == 1,
+               original.rangeOfCharacter(from: .letters) != nil {
+                let display = shouldCapitalizeKey(original) ? original.uppercased() : original.lowercased()
+                button.setTitle(display, for: .normal)
+            } else if let nested = sub as? UIStackView {
+                updateKeysInStackView(nested)
+            }
+        }
+    }
+
+    private func getKeysForCurrentMode() -> ([String], [String], [String]) {
+        switch currentMode {
+        case .letters, .standard, .compact, .expanded: return (topRowKeys, midRowKeys, botRowKeys)
+        case .numbers: return (topRowNumbers, midRowNumbers, botRowNumbers)
+        case .symbols: return (topRowSymbols, midRowSymbols, botRowSymbols)
+        }
+    }
+
+    private func updateModeButtonTitle() {
+        switch currentMode {
+        case .letters, .standard, .compact, .expanded:
+            modeButton?.setTitle("123", for: .normal)
+            symbolsButton?.setTitle("#+=", for: .normal)
+        case .numbers:
+            modeButton?.setTitle("ABC", for: .normal)
+            symbolsButton?.setTitle("#+=", for: .normal)
+        case .symbols:
+            modeButton?.setTitle("ABC", for: .normal)
+            symbolsButton?.setTitle("123", for: .normal)
+        }
+    }
+
+    @objc private func handleModeSwitch() {
+        triggerHapticFeedback()
+        currentMode = ([.letters, .standard, .compact, .expanded].contains(currentMode)) ? .numbers : .letters
+        updateKeyboardForCurrentMode()
+    }
+
+    @objc private func handleSymbolsSwitch() {
+        triggerHapticFeedback()
+        currentMode = (currentMode == .symbols) ? .numbers : .symbols
+        updateKeyboardForCurrentMode()
+    }
+
+    // MARK: - Delete repeat
+    @objc private func deleteTouchDown() {
+        deletePressBeganAt = CACurrentMediaTime()
+        deleteDidRepeat = false
+
+        // Start repeating only after a short delay (feels native ~0.45s)
+        deleteInitialTimer?.invalidate()
+        deleteInitialTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            self.deleteDidRepeat = true
+            self.startDeleteRepeat() // begins fast ticks
+            self.triggerHapticFeedback() // subtle long-press haptic
+        }
+    }
+    @objc private func deleteTouchUp() {
+        deleteInitialTimer?.invalidate()
+        deleteInitialTimer = nil
+
+        if deleteDidRepeat {
+            stopDeleteRepeat()
+        } else {
+            // Treat as a tap → delete once
+            performDeleteTick()
+        }
+    }
+    private func startDeleteRepeat() {
+        deleteInterval = 0.12
+        deleteTimer?.invalidate()
+        deleteTimer = Timer.scheduledTimer(timeInterval: deleteInterval,
+                                           target: self,
+                                           selector: #selector(handleDeleteRepeat),
+                                           userInfo: nil,
+                                           repeats: true)
+    }
+    
+    @objc private func handleDeleteRepeat() {
+        performDeleteTick()
+        // gentle acceleration; don't go too fast
+        deleteInterval = max(0.06, deleteInterval * 0.92)
+        deleteTimer?.invalidate()
+        deleteTimer = Timer.scheduledTimer(timeInterval: deleteInterval,
+                                           target: self,
+                                           selector: #selector(handleDeleteRepeat),
+                                           userInfo: nil,
+                                           repeats: true)
+    }
+    private func performDeleteTick() {
+        guard let proxy = textDocumentProxy else { return }
+        if UndoManagerLite.shared.tryUndo(in: proxy) { 
+            refreshSpellCandidates()
+            return
+        }
+        proxy.deleteBackward()
+        if !currentText.isEmpty { currentText.removeLast() }
+        refreshSpellCandidates()
+    }
+    private func stopDeleteRepeat() {
+        deleteTimer?.invalidate()
+        deleteTimer = nil
+        deleteInterval = 0.12
+    }
+
+    // MARK: - Trackpad on space bar
+    @objc private func handleSpacePan(_ gr: UIPanGestureRecognizer) {
+        guard let proxy = textDocumentProxy else { return }
+        let translation = gr.translation(in: self)
+        switch gr.state {
+        case .began:
+            cursorAccumulator = 0
+        case .changed:
+            cursorAccumulator += translation.x
+            let step: CGFloat = 6 // ~6pts per char feels close to iOS
+            while abs(cursorAccumulator) >= step {
+                let dir = cursorAccumulator > 0 ? 1 : -1
+                proxy.adjustTextPosition(byCharacterOffset: dir)
+                cursorAccumulator -= step * CGFloat(dir)
+            }
+            gr.setTranslation(.zero, in: self)
+        default:
+            cursorAccumulator = 0
+        }
+    }
+
+    // MARK: - Secure Fix
+    @objc private func handleQuickFix() {
+        updateCurrentText()
+        guard let proxy = textDocumentProxy else { return }
+        let before = proxy.documentContextBeforeInput ?? ""
+        let after = proxy.documentContextAfterInput ?? ""
+        let fullText = (before + after).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !fullText.isEmpty, fullText.count <= 300 else { return }
         
-        let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
+        // Use OpenAI directly for secure communication fix
+        let securePrompt = "Rewrite this message to be more professional, secure, and appropriate for workplace communication. Remove any informal language, emotional content, or potentially problematic phrasing. Make it clear, respectful, and business-appropriate: \(fullText)"
         
-        return await withCheckedContinuation { continuation in
-            smartInferenceManager.requestSuggestion(text: text, emotionalState: emotionalState) { [weak self] suggestion in
-                if let suggestion = suggestion, !suggestion.isEmpty {
-                    print("✅ SmartInferenceManager Quick Fix successful: '\(suggestion)'")
-                    continuation.resume(returning: suggestion)
+        callOpenAI(text: securePrompt) { [weak self] result in
+            guard let self = self, let proxy = self.textDocumentProxy, let fixedText = result else { return }
+            
+            DispatchQueue.main.async {
+                self.replaceAllText(with: fixedText, on: proxy)
+                self.refreshSpellCandidates()
+                self.handleTextChange()
+            }
+        }
+    }
+
+    private func updateSecureFixButtonState() {
+        let available = !openAIAPIKey.isEmpty
+        quickFixButton?.isEnabled = available
+        quickFixButton?.alpha = available ? 1.0 : 0.5
+    }
+
+    // MARK: - ToneSuggestionDelegate
+    func didUpdateSuggestions(_ suggestions: [String]) {
+        logger.debug("🎯 didUpdateSuggestions called with: \(suggestions)")
+        logger.debug("📊 Current state - suggestionChip exists: \(suggestionChip != nil), isSuggestionBarVisible: \(isSuggestionBarVisible)")
+        
+        let one = suggestions.first.map { [$0] } ?? []
+        self.suggestions = one
+
+        if isSuggestionBarVisible {
+            if let s = one.first {
+                logger.debug("💬 Showing suggestion chip with text: '\(s)'")
+                showSuggestionChip(text: s, toneString: coordinator?.getCurrentToneStatus())
+                lastDisplayedSuggestions = one
+            } else {
+                logger.debug("📭 No suggestions in array")
+                // Use hysteresis: keep showing last suggestion if still within sticky window
+                let now = Date().timeIntervalSince1970
+                if now < suggestionStickyUntil, let lastSuggestion = lastSuggestionText {
+                    // Keep showing last suggestion during sticky period
+                    logger.debug("⏰ Keeping last suggestion during sticky period: '\(lastSuggestion)' (sticky until: \(self.suggestionStickyUntil), now: \(now))")
+                    showSuggestionChip(text: lastSuggestion, toneString: coordinator?.getCurrentToneStatus())
                 } else {
-                    print("⚠️ SmartInferenceManager Quick Fix failed, using fallback")
-                    // Fallback to basic secure transformations if SmartInferenceManager fails
-                    let fallbackResult = self?.applySecureTransformations(to: text) ?? text
-                    continuation.resume(returning: fallbackResult)
+                    // Only hide if we don't have a current suggestion visible
+                    if suggestionChip == nil {
+                        logger.debug("🫥 Hiding suggestion chip - no suggestions available and no sticky period")
+                        hideSuggestionChip()
+                        spellStrip.isHidden = false
+                        lastDisplayedSuggestions = []
+                    } else {
+                        logger.debug("👀 Not hiding suggestion chip - current chip still visible")
+                    }
                 }
             }
-        }
-    }
-    // MARK: - Settings Handling
-    
-    func loadSettings() {
-        // Load settings from user defaults
-        enableSuggestions = userDefaults.bool(forKey: "enableSuggestions")
-        enableToneAnalysis = userDefaults.bool(forKey: "enableToneAnalysis")
-        enableInsights = userDefaults.bool(forKey: "enableInsights")
-        suggestionsEnabled = userDefaults.bool(forKey: "suggestionsEnabled")
-        feedbackEnabled = userDefaults.bool(forKey: "feedbackEnabled")
-    }
-    
-    func updateKeyboardSessionStatus(isActive: Bool) {
-        // Update the keyboard session status in the analytics storage
-        if isActive {
-            analyticsStorage.startSession()
         } else {
-            analyticsStorage.endSession()
+            logger.debug("🚫 Suggestion bar not visible - skipping suggestions")
         }
     }
-    // MARK: - Data Synchronization
-    
-    /// Sync personality data from main app to keyboard extension
-    private func syncPersonalityData() {
-        print(" Syncing personality data for LocalAI...")
+
+    func didUpdateToneStatus(_ status: String) {
+        logger.debug("didUpdateToneStatus called with: '\(status)'")
         
-        // Note: Personality data is now handled internally by LocalAI
-        // The keyboard no longer needs to manage attachment styles, communication preferences, etc.
-        // LocalAI accesses this data directly through PersonalityDataManager
+        guard let iv = logoImageView else { return }
+        let tint: UIColor = {
+            switch status {
+            case "neutral": return .keyboardRose
+            case "alert": return .systemRed
+            case "caution": return .systemYellow
+            case "clear": return .systemGreen
+            default: return .keyboardRose
+            }
+        }()
+        UIView.animate(withDuration: 0.15, animations: { iv.alpha = 0.3 }) { _ in
+            iv.tintColor = tint
+            UIView.animate(withDuration: 0.25) { iv.alpha = 1.0 }
+        }
         
-        PersonalityDataManager.shared.syncFromMainApp()
-        print(" Personality data sync completed - LocalAI will handle context internally")
+        // Update chip theme live when tone changes
+        suggestionChip?.updateTone(chipTone(from: status))
     }
-    // MARK: - Local Tone Analysis Only
-        
-    /// Analyzes tone using SmartInferenceManager only
-    func analyzeWithLocalOnly(text: String) -> ToneStatus {
-        print("🧠 SmartInferenceManager tone analysis for: '\(text)'")
-        
-        let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
-        
-        // For sync function, return a default and update async
-        smartInferenceManager.requestSuggestion(text: text, emotionalState: emotionalState) { [weak self] suggestion in
-            DispatchQueue.main.async {
-                // Update tone based on suggestion availability
-                let status: ToneStatus = suggestion != nil ? .neutral : .warning
-                self?.currentToneStatus = status
-                print("✅ SmartInferenceManager tone result: \(status)")
+
+    func didUpdateSecureFixButtonState() { updateSecureFixButtonState() }
+    func getTextDocumentProxy() -> UITextDocumentProxy? { textDocumentProxy }
+
+    // MARK: - Smart sentence boundary detection
+    private func lastCompletedSentence(in text: String) -> String? {
+        let before = text.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespaces)
+        guard !before.isEmpty else { return nil }
+        let terms: Set<Character> = [".","!","?"]
+        guard let last = before.last, terms.contains(last) else { return nil }
+        let scalars = Array(before.unicodeScalars)
+        var i = max(0, scalars.count - 2)
+        while i >= 0 {
+            let c = Character(scalars[i])
+            if terms.contains(c) { break }
+            i -= 1
+            if i < 0 { break }
+        }
+        let start = max(0, i + 1)
+        let sentence = String(String.UnicodeScalarView(scalars[start..<scalars.count])).trimmingCharacters(in: .whitespaces)
+        return sentence.isEmpty ? nil : sentence
+    }
+
+    private func lastNaturalClause(in text: String) -> String? {
+        var before = text
+        if before.contains("\n") {
+            let parts = before.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            if let last = parts.last?.trimmingCharacters(in: .whitespaces), !last.isEmpty { return last }
+        }
+        if before.contains("  ") {
+            let parts = before.components(separatedBy: "  ").filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            if let last = parts.last?.trimmingCharacters(in: .whitespaces), !last.isEmpty { return last }
+        }
+        let joiners = [" but ", " because ", " and then ", " however ", " therefore ", " though ", " although "]
+        let lower = before.lowercased()
+        for j in joiners {
+            if let r = lower.range(of: j, options: .backwards) {
+                let idx = before.index(before.startIndex, offsetBy: lower.distance(from: lower.startIndex, to: r.upperBound))
+                let tail = String(before[idx...]).trimmingCharacters(in: .whitespaces)
+                if !tail.isEmpty { return tail }
             }
         }
-        
-        // Return current status immediately
-        return currentToneStatus
+        if let _ = before.range(of: "[,;:\\-—–]+\\s*", options: .regularExpression) {
+            let parts = before
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .components(separatedBy: CharacterSet(charactersIn: ",;:-—–"))
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            if let last = parts.last, !last.isEmpty { return last }
+        }
+        let trimmed = before.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? nil : trimmed
     }
-    // MARK: - AI Suggestion Generation
-        
-    /// Generates AI-powered suggestions using SmartInferenceManager only
-    func generateAISuggestions(for text: String, toneStatus: ToneStatus) async throws -> [AdvancedSuggestion] {
-        // Skip AI suggestions for very short text
-        guard text.count >= 3 else {
-            return generateFallbackSuggestions(for: toneStatus)
-        }
-        
-        print("🧠 Generating SmartInferenceManager suggestions for: '\(text)' with tone: \(toneStatus)")
-        
-        let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
-        
-        return await withCheckedContinuation { continuation in
-            smartInferenceManager.requestSuggestion(text: text, emotionalState: emotionalState) { suggestion in
-                if let suggestion = suggestion, !suggestion.isEmpty {
-                    // Convert to AdvancedSuggestion format
-                    let advancedSuggestion = AdvancedSuggestion(
-                        text: suggestion,
-                        type: .toneImprovement,
-                        priority: .medium,
-                attachmentStyleSpecific: true, // LocalAI determines this internally
-                reasoning: "Generated by Local AI processor",
-                expectedOutcome: "Improved communication"
-            )
-        }
-        
-        print(" Generated \(advancedSuggestions.count) Local AI suggestions")
-        return advancedSuggestions
+
+    private func meetsThresholds(_ sentence: String) -> Bool {
+        if sentence.count < minCharsForAnalysis { return false }
+        let words = sentence.split { $0.isWhitespace }
+        return words.count >= minWordsForAnalysis
     }
-    // Applies secure communicator transformations to the given text
-    func applySecureTransformations(to text: String) -> String {
-        var improvedText = text
-        
-        // Apply secure communicator transformations
-        for transformation in secureTransformations {
-            let regex = try? NSRegularExpression(pattern: transformation.pattern, options: [.caseInsensitive])
-            let range = NSRange(location: 0, length: improvedText.count)
-            improvedText = regex?.stringByReplacingMatches(in: improvedText, options: [], range: range, withTemplate: transformation.replacement) ?? improvedText
+
+    private func scheduleAnalysis(for sentence: String, delay: TimeInterval) {
+        guard sentence != lastAnalyzedSentence else { return }
+        analysisTimer?.invalidate()
+        analysisTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            self.lastAnalyzedSentence = sentence
+            self.coordinator?.analyzeFinalSentence(sentence)
         }
-        
-        // Clean up extra spaces from removals
-        improvedText = improvedText.replacingOccurrences(of: "  ", with: " ")
-        improvedText = improvedText.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Ensure proper capitalization
-        if let firstChar = improvedText.first, firstChar.isLowercase {
-            improvedText = improvedText.prefix(1).uppercased() + improvedText.dropFirst()
-        }
-        
-        print(" Secure communicator transformation: '\(text)' → '\(improvedText)'")
-        return improvedText
     }
-    
-    /// Generates fallback suggestions when AI is unavailable
-    func generateFallbackSuggestions(for toneStatus: ToneStatus) -> [AdvancedSuggestion] {
-        print(" Using Local AI fallback suggestions")
+
+    // MARK: - Tone Reset
+    private func resetToneIndicatorToNeutral() {
+        didUpdateToneStatus("neutral")
+        // Don't automatically hide suggestion chip here - let the stickiness handle it
+        // hideSuggestionChip(animated: false)
+        // spellStrip.isHidden = false
+        // suggestions = []
+        // lastDisplayedSuggestions = []
+    }
+
+    // MARK: - Suggestion Chip Management
+    private func chipTone(from status: String) -> SuggestionChipView.Tone {
+        switch status {
+        case "alert":   return .alert
+        case "caution": return .caution
+        case "clear":   return .clear
+        default:        return .neutral
+        }
+    }
+
+    private func showSuggestionChip(text: String, toneString: String? = nil) {
+        guard let bar = suggestionBar, let toneBtn = toneIndicator else { return }
+
+        logger.debug("showSuggestionChip called with text: '\(text)'")
+
+        // Set stickiness for this suggestion
+        let now = Date().timeIntervalSince1970
+        suggestionStickyUntil = now + minSuggestionShowTime
+        lastSuggestionText = text
+
+        logger.debug("Set suggestion stickiness until: \(self.suggestionStickyUntil) (now: \(now))")
+
+        // remove old
+        suggestionChip?.dismiss(animated: false)
+        suggestionChip = nil
+
+        let chip = SuggestionChipView()
+        chip.configure(text: text, tone: chipTone(from: toneString ?? (coordinator?.getCurrentToneStatus() ?? "neutral")))
+        chip.onTap = { [weak self] in
+            self?.applySuggestionText(text)
+        }
+        chip.onCTATap = { [weak self] in
+            self?.applySuggestionText(text)
+        }
+        chip.onDismiss = { [weak self] in
+            self?.suggestionChip = nil
+            self?.spellStrip.isHidden = false
+        }
+        suggestionChip = chip
+
+        spellStrip.isHidden = true
+        chip.translatesAutoresizingMaskIntoConstraints = false
+        bar.addSubview(chip)
         
-        // Use SmartInferenceManager for fallback suggestions too
-        let emotionalState = PersonalityDataManager.shared.getCurrentEmotionalState() ?? "neutral"
+        let trailingAnchor = undoButtonRef?.leadingAnchor ?? bar.trailingAnchor
+        let trailingConstant: CGFloat = -8
         
-        smartInferenceManager.requestSuggestion(text: currentText, emotionalState: emotionalState) { [weak self] suggestion in
-            // This is async, so we don't return from here
-            if let suggestion = suggestion, !suggestion.isEmpty {
-                print("✅ SmartInferenceManager fallback suggestion: \(suggestion)")
+        NSLayoutConstraint.activate([
+            chip.leadingAnchor.constraint(equalTo: toneBtn.trailingAnchor, constant: 8),
+            chip.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: trailingConstant),
+            chip.centerYAnchor.constraint(equalTo: bar.centerYAnchor)
+        ])
+        chip.present(in: bar, from: 0)
+        
+        logger.debug("Suggestion chip presented successfully")
+    }
+
+    private func hideSuggestionChip(animated: Bool = true) {
+        logger.debug("hideSuggestionChip called (animated: \(animated))")
+        
+        // Only clear stickiness if we're explicitly hiding (not just replacing)
+        if animated {
+            suggestionStickyUntil = 0
+            lastSuggestionText = nil
+        }
+        
+        suggestionChip?.dismiss(animated: animated)
+        suggestionChip = nil
+        spellStrip.isHidden = false
+        
+        logger.debug("Suggestion chip hidden")
+    }
+
+    private func applySuggestionText(_ text: String) {
+        guard let proxy = textDocumentProxy else { return }
+        triggerHapticFeedback()
+        proxy.insertText(text + " ")
+        hideSuggestionChip()
+        handleTextChange()
+    }
+
+    // MARK: - Toggle suggestions vs. spell candidates
+    @objc private func toggleChipOrStrip() {
+        logger.debug("🔘 Tone indicator button tapped")
+        
+        // Keep the bar visible; just swap chip <-> strip
+        if suggestionChip != nil {
+            logger.debug("📱 Hiding suggestion chip, showing spell strip")
+            hideSuggestionChip(animated: false)
+            spellStrip.isHidden = false
+            coordinator?.requestSuggestions() // refresh strip content
+        } else {
+            if let s = suggestions.first {
+                logger.debug("💬 Showing suggestion chip with existing text: '\(s)'")
+                showSuggestionChip(text: s, toneString: coordinator?.getCurrentToneStatus())
+            } else {
+                logger.debug("🔍 No suggestions available, forcing analysis")
+                // No chip content yet—kick analysis so we surface something
+                forceAnalysis()
+                
+                // TEMPORARY: Show a test suggestion if no real suggestions are available
+                // This helps debug the chip display mechanism
+                logger.debug("🧪 Testing: Showing test suggestion chip")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    if self?.suggestionChip == nil && self?.suggestions.isEmpty == true {
+                        self?.logger.debug("🧪 Displaying test suggestion since no real suggestions appeared")
+                        self?.showSuggestionChip(text: "Test suggestion - tap me!", toneString: self?.coordinator?.getCurrentToneStatus())
+                    }
+                }
             }
-        }
-        
-        // Return basic suggestions for immediate use
-                expectedOutcome: "Improved communication"estions()
-            )sicSuggestions.enumerated().map { index, text in
-        }dvancedSuggestion(
-    }       text: text,
-            type: .toneImprovement,
-    /// Replaces the current text with improved version using animated typing: index + 1) ?? .medium,
-    func replaceCurrentText(with newText: String) {
-        guard let proxy = textDocumentProxy else {
-                expectedOutcome: "Improved communication"
-            )
+            spellStrip.isHidden = true
         }
     }
-    
-    /// Replaces the current text with improved version using animated typing
-    func replaceCurrentText(with newText: String) {
-        guard let proxy = textDocumentProxy else {
-            print(" Secure Communicator: No text document proxy available")
+
+    // Optional: still allow fully hiding the bar with a long-press
+    @objc private func toggleSuggestionsDisplayLongPress(_ gr: UILongPressGestureRecognizer) {
+        guard gr.state == .began else { return }
+        isSuggestionBarVisible.toggle()
+        if isSuggestionBarVisible {
+            if let s = suggestions.first {
+                showSuggestionChip(text: s, toneString: coordinator?.getCurrentToneStatus())
+            } else {
+                spellStrip.isHidden = false
+                coordinator?.requestSuggestions()
+            }
+        } else {
+            hideSuggestionChip(animated: false)
+            spellStrip.isHidden = true
+        }
+    }
+
+    @objc private func toggleSuggestionsDisplay() {
+        isSuggestionBarVisible.toggle()
+        if isSuggestionBarVisible {
+            if let s = suggestions.first {
+                showSuggestionChip(text: s, toneString: coordinator?.getCurrentToneStatus())
+            } else {
+                spellStrip.isHidden = true
+                hideSuggestionChip(animated: false)
+                coordinator?.requestSuggestions()
+            }
+        } else {
+            hideSuggestionChip()
+            coordinator?.resetState()
+            refreshSpellCandidates()
+        }
+    }
+
+    @objc private func forceAnalysisTap() { forceAnalysis() }
+    private func forceAnalysis() {
+        logger.debug("🔍 forceAnalysis() called")
+        
+        guard let proxy = textDocumentProxy else { 
+            logger.debug("❌ No textDocumentProxy available")
+            return 
+        }
+        
+        let before = proxy.documentContextBeforeInput ?? ""
+        logger.debug("📝 Text before cursor: '\(before)'")
+        
+        let candidate = lastCompletedSentence(in: before) ?? lastNaturalClause(in: before)
+        logger.debug("🎯 Analysis candidate: '\(candidate ?? "nil")'")
+        
+        if let s = candidate, meetsThresholds(s) {
+            logger.debug("✅ Text meets thresholds, analyzing: '\(s)'")
+            analysisTimer?.invalidate()
+            lastAnalyzedSentence = s
+            coordinator?.analyzeFinalSentence(s)
+        } else {
+            logger.debug("❌ Text doesn't meet thresholds or is nil")
+            if let s = candidate {
+                logger.debug("   - Text length: \(s.count) (min: \(minCharsForAnalysis))")
+                logger.debug("   - Word count: \(s.split { $0.isWhitespace }.count) (min: \(minWordsForAnalysis))")
+            }
+            
+            // If no suitable text found, try to request suggestions anyway
+            logger.debug("🔄 Requesting suggestions directly from coordinator")
+            coordinator?.requestSuggestions()
+        }
+    }
+
+    // MARK: - Tone/analysis hook
+    func textDidChange() { handleTextChange() }
+    private func handleTextChange() {
+        updateCurrentText()
+        refreshSpellCandidates()
+
+        // If the entire document is effectively empty, snap tone back to neutral.
+        let beforeCtx = textDocumentProxy?.documentContextBeforeInput ?? ""
+        let afterCtx  = textDocumentProxy?.documentContextAfterInput ?? ""
+        let fullText = beforeCtx + afterCtx
+        
+        logger.debug("handleTextChange called. Text: '\(beforeCtx)' isSuggestionBarVisible: \(self.isSuggestionBarVisible)")
+        
+        if beforeCtx.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+           afterCtx.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            resetToneIndicatorToNeutral()
+            analysisTimer?.invalidate()
+            lastAnalyzedSentence = ""
+            return
+        }
+
+        lastInputAt = Date().timeIntervalSince1970
+        let before = beforeCtx
+        if let sentence = lastCompletedSentence(in: before), meetsThresholds(sentence) {
+            logger.debug("Found completed sentence: '\(sentence)'")
+            scheduleAnalysis(for: sentence, delay: boundaryDebounce)
             return
         }
         
-        print(" Secure Communicator: Starting animated text replacement")
-        memoryMonitor.logMemoryUsage(context: "ReplaceCurrentText")
-        
-        // Get the current text context
-        let beforeInput = proxy.documentContextBeforeInput ?? ""
-        let afterInput = proxy.documentContextAfterInput ?? ""
-        let fullText = beforeInput + afterInput
-        
-        print("   Before cursor: '\(beforeInput)'")
-        print("   After cursor: '\(afterInput)'")
-        print("   Full text: '\(fullText)'")
-        print("   New text: '\(newText)'")
-        
-        // Step 1: Clear all existing text
-        clearAllText(proxy: proxy, beforeInput: beforeInput, afterInput: afterInput, fullText: fullText)
-        
-        // Step 2: Brief pause before starting to type (makes it feel more natural)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            // Step 3: Animate typing the new text
-            self.animateTyping(newText: newText, proxy: proxy)
-        }
-        
-        // Update our current text tracking
-        currentText = newText
-        
-        // Reset tone indicator to neutral after text replacement
-        resetToneIndicator()
-        
-        print("✨ Secure Communicator: Animated replacement initiated")
-    }
-    
-    /// Clears all existing text from the input field
-    func clearAllText(proxy: UITextDocumentProxy, beforeInput: String, afterInput: String, fullText: String) {
-        // Update button to show clearing in progress
-        quickFixButton.setTitle("Clearing...", for: .normal)
-        quickFixButton.backgroundColor = UIColor.systemOrange
-        quickFixButton.isEnabled = false
-        
-        if afterInput.isEmpty {
-            // Simple case: only text before cursor
-            for _ in beforeInput {
-                proxy.deleteBackward()
-            }
+        // Also try analyzing without punctuation if we have enough content
+        let candidate = lastNaturalClause(in: before) ?? before.trimmingCharacters(in: .whitespacesAndNewlines)
+        if meetsThresholds(candidate) {
+            logger.debug("Found natural clause: '\(candidate)'")
+            scheduleAnalysis(for: candidate, delay: idleDebounceNoPunct)
         } else {
-            // Complex case: text exists after cursor
-            // Move cursor to the beginning
-            proxy.adjustTextPosition(byCharacterOffset: -beforeInput.count)
-            
-            // Delete all text character by character
-            for _ in fullText {
-                proxy.deleteBackward()
-            }
+            logger.debug("Text doesn't meet analysis thresholds. Length: \(candidate.count), words: \(candidate.split { $0.isWhitespace }.count)")
         }
-        
-        print(" Cleared all existing text")
-    }
-    
-    /// Animates typing the new text character by character
-    func animateTyping(newText: String, proxy: UITextDocumentProxy) {
-        let characters = Array(newText)
-        let typingSpeed: TimeInterval = 0.05 // 50ms per character for natural typing feel
-        
-        print(" Starting animated typing for \(characters.count) characters")
-        memoryMonitor.logMemoryUsage(context: "AnimateTyping")
-        
-        // Cancel any existing typing animation
-        typingAnimationWorkItem?.cancel()
-        isTypingAnimation = true
-        
-        // Update button appearance to show typing in progress
-        updateSecureButtonForTyping(isTyping: true)
-        
-        func typeNextCharacter(index: Int) {
-            guard index < characters.count && isTypingAnimation else {
-                print(" Animated typing completed or cancelled")
-                // Reset button appearance when done
-                isTypingAnimation = false
-                updateSecureButtonForTyping(isTyping: false)
-                return
-            }
-            
-            let character = String(characters[index])
-            proxy.insertText(character)
-            
-            // Create work item for next character
-            typingAnimationWorkItem = DispatchWorkItem {
-                typeNextCharacter(index: index + 1)
-            }
-            
-            // Schedule next character
-            DispatchQueue.main.asyncAfter(deadline: .now() + typingSpeed, execute: typingAnimationWorkItem!)
-        }
-        
-        // Start typing the first character
-        typeNextCharacter(index: 0)
-    }
-    
-    /// Cancels the current typing animation
-    @objc private func cancelTypingAnimation() {
-        if isTypingAnimation {
-            typingAnimationWorkItem?.cancel()
-            isTypingAnimation = false
-            updateSecureButtonForTyping(isTyping: false)
-            print(" Typing animation cancelled")
-        }
-    }
-    
-    /// Updates the Secure button appearance during typing animation
-    func updateSecureButtonForTyping(isTyping: Bool) {
-        if isTyping {
-            quickFixButton.setTitle("Typing...", for: .normal)
-            quickFixButton.backgroundColor = UIColor.systemBlue
-            quickFixButton.isEnabled = false
-        } else {
-            quickFixButton.setTitle("Secure", for: .normal)
-            quickFixButton.backgroundColor = roseColor
-            quickFixButton.isEnabled = true
-        }
-    }
-    
-    /// Resets the tone indicator to neutral state
-    @objc func resetToneIndicator() {
-        // Reset to neutral tone
-        currentToneStatus = .neutral
-        
-        // Create neutral analysis result
-        let neutralAnalysis = ToneAnalysis(status: .neutral, confidence: 0.5, suggestions: [])
-        
-        // Update tone indicator
-        updateToneIndicator(with: neutralAnalysis)
-        
-        // Clear suggestions
-        suggestions = []
-        updateSuggestionButtons()
-        
-        print(" Tone indicator reset to neutral")
     }
 
-    // MARK: - Personality Data Integration
-    
-    // Note: All personality context (attachment styles, relationship context, etc.) 
-    // is now handled internally by LocalAI. The keyboard just passes text and receives results.
-
-    // MARK: - Text Update Methods
-    
-    /// Updates the current text from the text document proxy
-    func updateCurrentText() {
-        // If we have a selection, we need to be more careful
-        if let selectedText = textDocumentProxy?.selectedText, !selectedText.isEmpty {
-            // For now, use just the before input since selection handling is complex
-            currentText = textDocumentProxy?.documentContextBeforeInput ?? ""
-        } else {
-            currentText = textDocumentProxy?.documentContextBeforeInput ?? ""
+    private func updateCurrentText() {
+        let before = textDocumentProxy?.documentContextBeforeInput ?? ""
+        let after = textDocumentProxy?.documentContextAfterInput ?? ""
+        currentText = before + after
+        if currentText.count > 1000 {
+            currentText = String(currentText.suffix(1000))
         }
     }
-    
-    // MARK: - Debugging
-    
-    func printCurrentState() {
-        Swift.print(" Current Text: \(currentText)")
-        Swift.print(" Suggestions: \(suggestions)")
-        Swift.print(" Current Tone Status: \(currentToneStatus)")
-    }
-    
-    @objc private func suggestionTapped(_ sender: UIButton) {
-        print(" SuggestionTapped called!")
-        memoryMonitor.logMemoryUsage(context: "SuggestionTapped")
-        
-        // Toggle expansion of the suggestion button
-        if expandedSuggestionButton == sender {
-            // Collapse the button
-            collapseSuggestionButton(sender)
-        } else {
-            // Expand the button  
-            expandSuggestionButton(sender)
-        }
 
-        guard let suggestion = sender.title(for: .normal) else { 
-        print("No suggestion title found")
-            return 
-        }
-        print(" Suggestion advice viewed: \(suggestion)")
-        
-        // Note: Suggestion buttons now only display advice - they do not modify the message text
-        // Only the secure fix button replaces the entire message
-        // No text insertion - this is advice-only display
-        
-        // Record suggestion viewing (not insertion)
-        let interaction = KeyboardInteraction(
-            timestamp: Date(),
-            textBefore: currentText,
-            textAfter: currentText, // Text remains unchanged
-            toneStatus: currentToneStatus,
-            suggestionAccepted: false, // Not accepted since no text was inserted
-            suggestionText: suggestion,
-            analysisTime: 0.1,
-            context: "suggestion_viewed",
-            interactionType: .suggestion,
-            userAcceptedSuggestion: false // Viewed but not applied
-        )
-        analyticsStorage.recordInteraction(interaction)
-    }
-
-    private func collapseSuggestionButton(_ button: UIButton) {
-        guard let fullText = button.accessibilityHint else { return }
-        
-        // Mark as collapsed
-        expandedSuggestionButton = nil
-        
-        // Truncate text for collapsed state
-        let truncatedText = String(fullText.prefix(30)) + (fullText.count > 30 ? "..." : "")
-        
-        // Update button appearance for collapsed state
-        UIView.animate(withDuration: 0.3) {
-            button.titleLabel?.numberOfLines = 1
-            if let titleLabel = button.titleLabel {
-                titleLabel.lineBreakMode = .byTruncatingTail
+    // MARK: - Spell strip integration
+    private func refreshSpellCandidates() {
+        let before = textDocumentProxy?.documentContextBeforeInput ?? ""
+        spellChecker.quickSpellCheckAsync(text: before) { [weak self] suggestions in
+            guard let self = self else { return }
+            self.spellStrip.setSuggestions(suggestions) { [weak self] candidate in
+                self?.applySpellCandidate(candidate)
             }
-            button.setTitle(truncatedText, for: .normal)
-            button.layer.borderWidth = 1
-            button.layer.borderColor = UIColor.lightGray.cgColor
-            button.transform = CGAffineTransform.identity
         }
-        
-        Swift.print("📱 Suggestion collapsed: \(truncatedText)")
+        updateUndoButtonVisibility()
     }
+
+    private func applySpellCandidate(_ candidate: String) {
+        guard let proxy = textDocumentProxy else { return }
+        let before = proxy.documentContextBeforeInput ?? ""
+        guard let currentWord = LightweightSpellChecker.lastToken(in: before), !currentWord.isEmpty else { return }
+        replaceLastWordPreservingBoundary(with: candidate, expectCurrent: currentWord)
+        spellChecker.applyInlineCorrection(candidate, originalWord: currentWord)
+        refreshSpellCandidates()
+    }
+
+    private func autocorrectLastWordIfNeeded(afterTyping boundary: Character) {
+    // Only run on commit boundaries; never during mid-word typing
+    guard correctionBoundaries.contains(boundary) else { return }
+    guard let proxy = textDocumentProxy else { return }
+
+    // Look only at text before cursor
+    let before = proxy.documentContextBeforeInput ?? ""
+    guard !before.isEmpty else { return }
+
+    // We just typed the boundary; work on the token before it
+    // Remove the just-typed boundary so we can fetch the last token cleanly
+    let core = String(before.dropLast())
+
+    // Grab last token
+    guard let lastWord = LightweightSpellChecker.lastToken(in: core),
+          !lastWord.isEmpty
+    else { return }
+
+    // Skip handles you don’t want to autocorrect (URLs, @mentions, #tags, hex codes)
+    let lw = lastWord.lowercased()
+    if lw.hasPrefix("@") || lw.hasPrefix("#") || lw.contains("http") { return }
+    if lw.contains("/") || lw.contains("_") { return } // often IDs/paths
+
+    // Respect your checker’s heuristics
+    guard spellChecker.shouldAutoCorrect(lastWord) else { return }
+    guard let correction = spellChecker.getAutoCorrection(for: lastWord),
+          correction != lastWord
+    else { return }
+
+    // Replace the last word, then reinsert the boundary
+    proxy.deleteBackward()                  // remove boundary
+    for _ in 0..<lastWord.count { proxy.deleteBackward() }
+    proxy.insertText(correction)
+    proxy.insertText(String(boundary))
+
+    // Track for undo / intentional typing
+    spellChecker.applyInlineCorrection(correction, originalWord: lastWord)
+    spellChecker.recordAutocorrection(lastWord)
     
-    private func expandSuggestionButton(_ button: UIButton) {
-        guard let fullText = button.accessibilityHint else { return }
-        
-        // Mark as expanded
-        expandedSuggestionButton = button
-        
-        // Update button appearance for expanded state
-        UIView.animate(withDuration: 0.3) {
-            button.titleLabel?.numberOfLines = 0  // Allow multiple lines
-            button.setTitle(fullText, for: .normal)
-            button.layer.borderWidth = 2
-            button.layer.borderColor = UIColor.systemBlue.cgColor
-            button.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
-            button.layoutIfNeeded()
-        }
-        
-        Swift.print("📱 Suggestion expanded: \(fullText)")
-    }
+    // Record with UndoManagerLite for backspace undo
+    UndoManagerLite.shared.record(original: lastWord, corrected: correction)
 }
 
-// MARK: - Suggestion Button Expansion
+    private func replaceLastWordPreservingBoundary(with newWord: String, expectCurrent: String? = nil) {
+        guard let proxy = textDocumentProxy else { return }
+        let before = proxy.documentContextBeforeInput ?? ""
+        guard !before.isEmpty else { return }
+        let boundarySet = CharacterSet(charactersIn: " \n\t.,!?;:")
+        let scalars = before.unicodeScalars
+        var boundaryCount = 0
+        var idx = scalars.index(before: scalars.endIndex)
+        while idx >= scalars.startIndex && boundarySet.contains(scalars[idx]) {
+            boundaryCount += 1
+            if idx == scalars.startIndex { break }
+            idx = scalars.index(before: idx)
+        }
+        let boundarySuffix = String(String.UnicodeScalarView(scalars.suffix(boundaryCount)))
+        let core = String(String.UnicodeScalarView(scalars.dropLast(boundaryCount)))
+        guard let last = LightweightSpellChecker.lastToken(in: core) else { return }
+        if let expect = expectCurrent, last.lowercased() != expect.lowercased() { return }
+        for _ in 0..<boundaryCount { proxy.deleteBackward() }
+        for _ in 0..<last.count { proxy.deleteBackward() }
+        proxy.insertText(newWord + boundarySuffix)
+    }
 
-extension KeyboardController {
-    @objc private func expandSuggestion(_ gesture: UITapGestureRecognizer) {
-        guard let button = gesture.view as? UIButton,
-              let fullText = button.accessibilityHint else { return }
-        
-        // Toggle between expanded and collapsed states
-        if button.titleLabel?.numberOfLines == 1 {
-            // Expand to show full text
-            button.titleLabel?.numberOfLines = 0  // Allow multiple lines
-            button.setTitle(fullText, for: .normal)
-            
-            // Animate the expansion
-            UIView.animate(withDuration: 0.3) {
-                button.layoutIfNeeded()
+    // MARK: - Undo
+    @objc private func undoButtonTapped() {
+        undoLastCorrection()
+    }
+    private func updateUndoButtonVisibility() {
+        guard let suggestionBar = suggestionBar,
+              let undoButton = suggestionBar.viewWithTag(999) else { return }
+        undoButton.isHidden = !spellChecker.canUndoLastCorrection()
+    }
+    private func undoLastCorrection() {
+        guard let proxy = textDocumentProxy,
+              let last = spellChecker.getUndoCorrection() else { return }
+        let before = proxy.documentContextBeforeInput ?? ""
+
+        if let token = LightweightSpellChecker.lastToken(in: before),
+           token == last.corrected {
+            var boundarySuffix = ""
+            var core = before
+            while let lastChar = core.last,
+                  " \n\t.,!?;:".contains(lastChar) {
+                boundarySuffix = String(lastChar) + boundarySuffix
+                proxy.deleteBackward()
+                core.removeLast()
             }
+            for _ in 0..<token.count { proxy.deleteBackward() }
+            proxy.insertText(last.original + boundarySuffix)
         } else {
-            // Collapse back to one line
-            button.titleLabel?.numberOfLines = 1
-            button.setTitle(fullText, for: .normal)  // This will auto-truncate
-            
-            // Animate the collapse
-            UIView.animate(withDuration: 0.3) {
-                button.layoutIfNeeded()
-            }
+            proxy.insertText(last.original)
+        }
+
+        spellChecker.recordIntentionalWord(last.original)
+        spellChecker.clearUndoHistory()
+        updateUndoButtonVisibility()
+    }
+    
+    // MARK: - Enhanced Punctuation and Mode Helpers
+    private func handlePunctuationInsertion(_ punctuation: String) {
+        guard let proxy = textDocumentProxy else { return }
+        proxy.insertText(punctuation)
+        currentText += punctuation
+        
+        // For sentence-ending punctuation, add space and switch to alphabetic mode
+        if [".", "!", "?"].contains(punctuation) {
+            if let b = punctuation.first { autocorrectLastWordIfNeeded(afterTyping: b) }
+            proxy.insertText(" ")
+            currentText += " "
+            switchToAlphabeticKeyboard()
+        } else if [",", ";", ":"].contains(punctuation) {
+            if let b = punctuation.first { autocorrectLastWordIfNeeded(afterTyping: b) }
+            proxy.insertText(" ")
+            currentText += " "
+        }
+        
+         // Don't run autocorrect on every punctuation keystroke - save for commit/send
+        refreshSpellCandidates()
+        handleTextChange()
+    }
+    
+    private func switchToAlphabeticKeyboard() {
+        if [.numbers, .symbols].contains(currentMode) {
+            triggerHapticFeedback()
+            currentMode = .letters
+            updateKeyboardForCurrentMode()
         }
     }
     
-    @objc private func delaySingleTap(_ gesture: UITapGestureRecognizer) {
-        // Delay to allow for potential double tap
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            guard let button = gesture.view as? UIButton else { return }
-            self.suggestionTapped(button)
+    // MARK: - Autocorrect Helper Functions
+    func shouldCommitNow(before: String?, after: String?) -> Bool {
+        // commit when the char just typed was space/punct or after is nil/space/punct
+        let boundaryChars = CharacterSet.whitespaces.union(.punctuationCharacters)
+        if let last = before?.last, boundaryChars.contains(last.unicodeScalars.first!) { return true }
+        if let a = after, a.isEmpty || boundaryChars.contains(a.unicodeScalars.first!) { return true }
+        return false
+    }
+    
+    func applyTextReplacements(_ text: String) -> String {
+        let pairs = UserDefaults.standard.array(forKey: "TextReplacements") as? [[String:String]] ?? []
+        var out = text
+        for map in pairs {
+            guard let from = map["from"], let to = map["to"] else { continue }
+            let pat = "\\b\(NSRegularExpression.escapedPattern(for: from))\\b"
+            out = out.replacingOccurrences(of: pat, with: to, options: .regularExpression)
         }
+        return out
+    }
+    
+    func typographicNormalize(_ s: String) -> String {
+        var t = s
+        t = t.replacingOccurrences(of: "...", with: "…")
+        t = t.replacingOccurrences(of: "--",  with: "—")
+        t = t.replacingOccurrences(of: " \"", with: " \"")
+        t = t.replacingOccurrences(of: "\" ", with: "\" ")
+        t = t.replacingOccurrences(of: " 1/2", with: " ½")
+        return t
+    }
+    
+    func shouldCapNext(_ before: String) -> Bool {
+        guard let last = before.last else { return true }
+        let enders = ".!?\"')"
+        return enders.contains(last)
+    }
+    
+    // MARK: - Commit and Cleanup
+    private func commitAndCleanup() {
+        guard let proxy = textDocumentProxy else { return }
+        guard var text = proxy.documentContextBeforeInput else { return }
+        
+        // Run your LightweightSpellChecker cleanup once, here:
+        text = LightweightSpellChecker.shared.applyPunctuationRules(to: text)
+        
+        // Replace the existing text with the cleaned version
+        let originalLength = (proxy.documentContextBeforeInput ?? "").count
+        for _ in 0..<originalLength {
+            proxy.deleteBackward()
+        }
+        
+        // Insert the cleaned text
+        proxy.insertText(text)
+        
+        // Update our local text cache
+        currentText = text
+    }
+    
+    private func triggerHapticFeedback() {
+        impact.impactOccurred(intensity: 0.5)
+    }
+
+// MARK: - ExtendedTouchButton (bigger touch target)
+private final class ExtendedTouchButton: UIButton {
+    private let mainTouchTargetSize: CGFloat = 46.0
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        let w = max(0, mainTouchTargetSize - bounds.width)
+        let h = max(0, mainTouchTargetSize - bounds.height)
+        let expanded = bounds.insetBy(dx: -w/2, dy: -h/2)
+        return expanded.contains(point)
     }
 }
+}
+private extension CGRect {
+    var center: CGPoint { CGPoint(x: midX, y: midY) }
+}
 
-
-// MARK: - Keyboard Mode
+private extension CGPoint {
+    func distance(to other: CGPoint) -> CGFloat {
+        let dx = x - other.x
+        let dy = y - other.y
+        return sqrt(dx*dx + dy*dy)
+    }
+}

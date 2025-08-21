@@ -141,25 +141,51 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _loadPartnerProfile() {
-    // Mock partner data - in real app this would come from database
-    setState(() {
-      hasPartner =
-          false; // Set to false to show invite card instead of connected partner
-      partnerProfile = {
-        'name': 'Sarah Johnson',
-        'email': 'sarah.j@example.com',
-        'phone': '+1 (555) 123-4567',
-        'personality_type': 'A',
-        'personality_label': 'Secure Attachment',
-        'relationship_duration': '2 years, 3 months',
-        'communication_style': 'Thoughtful and caring',
-        'last_analysis': DateTime.now().subtract(const Duration(hours: 3)),
-        'profile_image': null,
-        'test_completed': true,
-        'joined_date': DateTime.now().subtract(const Duration(days: 45)),
-      };
-    });
+  void _loadPartnerProfile() async {
+    // Load real partner data from storage service
+    try {
+      final partnerData = await _storageService.getPartnerProfile();
+      setState(() {
+        if (partnerData != null && partnerData.isNotEmpty) {
+          hasPartner = true;
+          partnerProfile = partnerData;
+        } else {
+          hasPartner = false; // Show invite card when no partner data
+          partnerProfile = {
+            'name': 'No Partner Connected',
+            'email': '',
+            'phone': '',
+            'personality_type': '',
+            'personality_label': 'Invite your partner to get started',
+            'relationship_duration': '',
+            'communication_style': '',
+            'last_analysis': null,
+            'profile_image': null,
+            'test_completed': false,
+            'joined_date': null,
+          };
+        }
+      });
+    } catch (e) {
+      print('Error loading partner profile: $e');
+      setState(() {
+        hasPartner = false;
+        partnerProfile = {
+          'name': 'Error Loading Partner',
+          'email': '',
+          'phone': '',
+          'personality_type': '',
+          'personality_label': 'Please try again',
+          'relationship_duration': '',
+          'communication_style': '',
+          'last_analysis': null,
+          'profile_image': null,
+          'test_completed': false,
+          'joined_date': null,
+        };
+      });
+    }
+  }
   }
 
   void _invitePartner() {
@@ -1093,18 +1119,26 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: CustomPaint(painter: MiniPieChartPainter(personalityData)),
       ),
-      onTap: () {
-        List<String> mockAnswers = [];
-        personalityData.forEach((type, count) {
-          for (int i = 0; i < count; i++) {
-            mockAnswers.add(type);
+      onTap: () async {
+        // Use real personality data from storage
+        try {
+          final results = await _storageService.getPersonalityTestResults();
+          if (results != null && results.isNotEmpty) {
+            // Navigate with real test results
+            Navigator.pushNamed(
+              context,
+              '/personality_results',
+              arguments: results['answers'] ?? [],
+            );
+          } else {
+            // Navigate to test if no results exist
+            Navigator.pushNamed(context, '/personality_test_modern');
           }
-        });
-        Navigator.pushNamed(
-          context,
-          '/personality_results',
-          arguments: mockAnswers,
-        );
+        } catch (e) {
+          print('Error accessing personality results: $e');
+          // Fallback to test screen
+          Navigator.pushNamed(context, '/personality_test_modern');
+        }
       },
     );
   }
@@ -1658,18 +1692,26 @@ class _HomeScreenState extends State<HomeScreen> {
             Align(
               alignment: Alignment.centerLeft,
               child: GestureDetector(
-                onTap: () {
-                  List<String> mockAnswers = [];
-                  personalityData.forEach((type, count) {
-                    for (int i = 0; i < count; i++) {
-                      mockAnswers.add(type);
+                onTap: () async {
+                  // Use real personality data from storage
+                  try {
+                    final results = await _storageService.getPersonalityTestResults();
+                    if (results != null && results.isNotEmpty) {
+                      // Navigate with real test results
+                      Navigator.pushNamed(
+                        context,
+                        '/personality_results',
+                        arguments: results['answers'] ?? [],
+                      );
+                    } else {
+                      // Navigate to test if no results exist
+                      Navigator.pushNamed(context, '/personality_test_modern');
                     }
-                  });
-                  Navigator.pushNamed(
-                    context,
-                    '/personality_results',
-                    arguments: mockAnswers,
-                  );
+                  } catch (e) {
+                    print('Error accessing personality results: $e');
+                    // Fallback to test screen
+                    Navigator.pushNamed(context, '/personality_test_modern');
+                  }
                 },
                 child: Text(
                   'View Full Report',
@@ -1747,18 +1789,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        List<String> mockAnswers = [];
-                        personalityData.forEach((type, count) {
-                          for (int i = 0; i < count; i++) {
-                            mockAnswers.add(type);
+                      onTap: () async {
+                        // Use real personality data from storage  
+                        try {
+                          final results = await _storageService.getPersonalityTestResults();
+                          if (results != null && results.isNotEmpty) {
+                            // Navigate with real test results
+                            Navigator.pushNamed(
+                              context,
+                              '/personality_results',
+                              arguments: results['answers'] ?? [],
+                            );
+                          } else {
+                            // Navigate to test if no results exist
+                            Navigator.pushNamed(context, '/personality_test_modern');
                           }
-                        });
-                        Navigator.pushNamed(
-                          context,
-                          '/personality_results',
-                          arguments: mockAnswers,
-                        );
+                        } catch (e) {
+                          print('Error accessing personality results: $e');
+                          // Fallback to test screen
+                          Navigator.pushNamed(context, '/personality_test_modern');
+                        }
+                      },
                       },
                       child: Container(
                         width: 60,

@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "notes": "User-specific tuning applied after system defaults and context boosts.",
+  "defaults": {
+    "applyAfter": ["context_classifier", "intensity_modifiers"],
+    "cooldown_ms": 500
+  },
+  "categories": {
+    "boundary": 0.10,
+    "validation": 0.10,
+    "de-escalation": 0.05
+  },
+  "toneOverrides": {
+    "alert": -0.05,
+    "caution": 0.00,
+    "clear": 0.05
+  },
+  "attachmentAdjustments": {
+    "anxious": { "validation": 0.15, "boundary": -0.05 },
+    "avoidant": { "boundary": 0.20, "de-escalation": -0.05 },
+    "secure": { "validation": 0.05 },
+    "disorganized": { "boundary": 0.10, "de-escalation": 0.10 }
+  },
+  "profiles": {
+    "high_sensitivity": { "boostMultiplier": 1.2 },
+    "low_reactivity":   { "boostMultiplier": 0.8 }
+  }
+}
