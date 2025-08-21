@@ -3,7 +3,18 @@ node_modules
 .next
 .vercel
 
-# iOS/Swift files (not needed for API deployment)
+# iOS/Flutter App (deploy separately - not needed for backend API)
+Unsaid/
+lib/
+test/
+web/
+ios/
+android/
+pubspec.yaml
+pubspec.lock
+analysis_options.yaml
+
+# iOS/Swift files
 *.swift
 *.pbxproj
 *.xcodeproj
@@ -13,11 +24,18 @@ Podfile*
 Runner/
 Flutter/
 
-# Development files
+# Data files (not needed for serverless functions)
+data/
+services/
+public/
+
+# Development and documentation files
 .env.local
 .env.development
 *.log
 *.tmp
+*.md
+test-ml-integration.js
 
 # Version control
 .git
@@ -27,15 +45,3 @@ Flutter/
 .vscode
 .idea
 *.swp
-
-# Flutter/Dart files (not needed for Node.js API)
-lib/
-test/
-web/
-pubspec.yaml
-pubspec.lock
-analysis_options.yaml
-
-# README and docs
-README.md
-docs/
