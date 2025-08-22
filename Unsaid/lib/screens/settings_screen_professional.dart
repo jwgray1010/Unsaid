@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io' show Platform;
 import '../theme/app_theme.dart';
 import '../services/settings_manager.dart';
 import '../services/cloud_backup_service.dart';
@@ -14,6 +16,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreenProfessional extends StatefulWidget {
   final double sensitivity;
@@ -45,6 +48,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   bool _autoBackupEnabled = true;
   double _fontSize = 14.0;
   String _selectedLanguage = 'English';
+  bool _isLoading = true;
 
   // Services
   final SettingsManager _settingsManager = SettingsManager();
@@ -52,13 +56,35 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   final DataManagerService _dataManager = DataManagerService();
   final KeyboardManager _keyboardManager = KeyboardManager();
 
+  // Debouncing
+  Timer? _sensDebounce;
+
+  // Search functionality
+  final _sectionKeys = <String, GlobalKey>{
+    'AI Analysis': GlobalKey(),
+    'Keyboard Extension': GlobalKey(),
+    'Notifications': GlobalKey(),
+    'Appearance': GlobalKey(),
+    'Privacy': GlobalKey(),
+    'Account': GlobalKey(),
+    'Support': GlobalKey(),
+    'Data Management': GlobalKey(),
+    'Backup & Sync': GlobalKey(),
+    'Language & Accessibility': GlobalKey(),
+  };
+
   @override 
   void initState() {
     super.initState();
     _sensitivity = widget.sensitivity;
     _tone = widget.tone;
-    _initializeServices();
-    _loadSettings();
+    _bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _sensDebounce?.cancel();
+    super.dispose();
   }
 
   @override
@@ -68,150 +94,280 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)],
+        child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)],
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppTheme.spaceLG),
+                        child: Row(
+                          children: [
+                            Icon(Icons.settings, color: Colors.white, size: 28),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Settings',
+                              style: theme.textTheme.headlineLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppTheme.spaceLG),
-                    child: Row(
-                      children: [
-                        Icon(Icons.settings, color: Colors.white, size: 28),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Settings',
-                          style: theme.textTheme.headlineLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+
+                  // Search bar
+                  Container(
+                    margin: const EdgeInsets.all(AppTheme.spaceLG),
+                    child: Autocomplete<String>(
+                      optionsBuilder: (textEditingValue) {
+                        final query = textEditingValue.text.toLowerCase();
+                        if (query.isEmpty) return const Iterable<String>.empty();
+                        return _sectionKeys.keys.where((section) => 
+                          section.toLowerCase().contains(query));
+                      },
+                      onSelected: _jumpTo,
+                      fieldViewBuilder: (_, controller, focusNode, onFieldSubmitted) => TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurfaceVariant),
+                          hintText: 'Search settings',
+                          hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: theme.colorScheme.outline),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: theme.colorScheme.outline),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: theme.colorScheme.primary),
                           ),
                         ),
+                        onSubmitted: (value) {
+                          final match = _sectionKeys.keys.firstWhere(
+                            (section) => section.toLowerCase().contains(value.toLowerCase()), 
+                            orElse: () => '',
+                          );
+                          if (match.isNotEmpty) _jumpTo(match);
+                        },
+                      ),
+                    ),
+                  ),
+                  
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.all(AppTheme.spaceLG),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // AI Analysis Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['AI Analysis']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('AI Analysis', Icons.psychology),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildAnalysisSettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Keyboard Extension Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Keyboard Extension']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Keyboard Extension', Icons.keyboard),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildKeyboardExtensionSettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Notification Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Notifications']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Notifications', Icons.notifications),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildNotificationSettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Appearance Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Appearance']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Appearance', Icons.palette),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildAppearanceSettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Privacy Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Privacy']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Privacy', Icons.privacy_tip),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildPrivacySettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Account Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Account']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Account', Icons.account_circle),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildAccountSettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Support Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Support']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Support', Icons.help),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildSupportSettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        // Admin Settings (only visible to admins)
+                        if (AdminService.instance.isCurrentUserAdmin) ...[
+                          const SizedBox(height: AppTheme.spaceXL),
+                          _buildSectionHeader('Admin Controls', Icons.admin_panel_settings),
+                          const SizedBox(height: AppTheme.spaceMD),
+                          _buildAdminSettings(),
+                        ],
+                        
+                        // Debug Controls (always visible in debug mode)
+                        if (kDebugMode && !AdminService.instance.isCurrentUserAdmin) ...[
+                          const SizedBox(height: AppTheme.spaceXL),
+                          _buildSectionHeader('Debug Controls', Icons.bug_report),
+                          const SizedBox(height: AppTheme.spaceMD),
+                          _buildDebugControls(),
+                        ],
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Data Management Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Data Management']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Data Management', Icons.storage),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildDataManagementSettings(),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: AppTheme.spaceXL),
+
+                        // Danger Zone
+                        _buildDangerZone(),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Backup & Sync Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Backup & Sync']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Backup & Sync', Icons.cloud),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildBackupSettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
+                        
+                        // Language & Accessibility Settings
+                        KeyedSubtree(
+                          key: _sectionKeys['Language & Accessibility']!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('Language & Accessibility', Icons.accessibility),
+                              const SizedBox(height: AppTheme.spaceMD),
+                              _buildLanguageAccessibilitySettings(),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: AppTheme.spaceXL),
                       ],
                     ),
                   ),
-                ),
+                ],
               ),
-              
-              // Content
-              Padding(
-                padding: const EdgeInsets.all(AppTheme.spaceLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // AI Analysis Settings
-                    _buildSectionHeader('AI Analysis', Icons.psychology),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildAnalysisSettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Keyboard Extension Settings
-                    _buildSectionHeader('Keyboard Extension', Icons.keyboard),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildKeyboardExtensionSettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Notification Settings
-                    _buildSectionHeader('Notifications', Icons.notifications),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildNotificationSettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Appearance Settings
-                    _buildSectionHeader('Appearance', Icons.palette),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildAppearanceSettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Privacy Settings
-                    _buildSectionHeader('Privacy', Icons.privacy_tip),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildPrivacySettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Account Settings
-                    _buildSectionHeader('Account', Icons.account_circle),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildAccountSettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Support Settings
-                    _buildSectionHeader('Support', Icons.help),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildSupportSettings(),
-                    
-                    // Admin Settings (only visible to admins)
-                    if (AdminService.instance.isCurrentUserAdmin) ...[
-                      const SizedBox(height: AppTheme.spaceXL),
-                      _buildSectionHeader('Admin Controls', Icons.admin_panel_settings),
-                      const SizedBox(height: AppTheme.spaceMD),
-                      _buildAdminSettings(),
-                    ],
-                    
-                    // Debug Controls (always visible in debug mode)
-                    if (kDebugMode && !AdminService.instance.isCurrentUserAdmin) ...[
-                      const SizedBox(height: AppTheme.spaceXL),
-                      _buildSectionHeader('Debug Controls', Icons.bug_report),
-                      const SizedBox(height: AppTheme.spaceMD),
-                      _buildDebugControls(),
-                    ],
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Data Management Settings
-                    _buildSectionHeader('Data Management', Icons.storage),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildDataManagementSettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Backup & Sync Settings
-                    _buildSectionHeader('Backup & Sync', Icons.cloud),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildBackupSettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                    
-                    // Language & Accessibility Settings
-                    _buildSectionHeader('Language & Accessibility', Icons.accessibility),
-                    const SizedBox(height: AppTheme.spaceMD),
-                    _buildLanguageAccessibilitySettings(),
-                    
-                    const SizedBox(height: AppTheme.spaceXL),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
       ),
     );
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {
+    final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF7B61FF), size: 24),
+        Icon(icon, color: theme.colorScheme.primary, size: 24),
         const SizedBox(width: 8),
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ],
@@ -219,6 +375,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   }
 
   Widget _buildAnalysisSettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -230,15 +387,16 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             // Sensitivity Slider
             Text(
               'Analysis Sensitivity',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: AppTheme.spaceSM),
             Text(
               'Adjust how detailed the tone analysis should be',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: AppTheme.spaceMD),
@@ -249,11 +407,17 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                   _sensitivity = value;
                 });
                 widget.onSensitivityChanged(value);
-                _updateKeyboardSettings();
+                
+                // Debounced save
+                _sensDebounce?.cancel();
+                _sensDebounce = Timer(const Duration(milliseconds: 250), () async {
+                  await _settingsManager.setSensitivity(value);
+                  await _updateKeyboardSettings();
+                });
               },
               divisions: 10,
               label: '${(_sensitivity * 100).round()}%',
-              activeColor: const Color(0xFF7B61FF),
+              activeColor: theme.colorScheme.primary,
             ),
             
             const SizedBox(height: AppTheme.spaceLG),
@@ -261,15 +425,16 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             // Default Tone
             Text(
               'Default Tone',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: AppTheme.spaceSM),
             Text(
               'Choose your preferred communication tone',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: AppTheme.spaceMD),
@@ -286,13 +451,15 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 DropdownMenuItem(value: 'Neutral', child: Text('Neutral')),
               ],
               onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _tone = value;
-                  });
-                  widget.onToneChanged(value);
-                  _updateKeyboardSettings();
-                }
+                if (value == null) return;
+                _setAndSave(
+                  () => _tone = value,
+                  () async {
+                    widget.onToneChanged(value);
+                    await _settingsManager.setTone(value);
+                    await _updateKeyboardSettings();
+                  },
+                );
               },
             ),
             
@@ -300,28 +467,48 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             
             // AI Analysis Toggle
             SwitchListTile(
-              title: const Text('AI Analysis Enabled'),
-              subtitle: const Text('Enable AI-powered communication analysis'),
+              title: Text('AI Analysis Enabled', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Enable AI-powered communication analysis', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _aiAnalysisEnabled,
-              onChanged: (value) {
-                setState(() {
-                  _aiAnalysisEnabled = value;
-                });
-              },
-              activeColor: const Color(0xFF7B61FF),
+              onChanged: (value) => _setAndSave(
+                () => _aiAnalysisEnabled = value,
+                () => _settingsManager.setAIAnalysisEnabled(value),
+              ),
+              activeColor: theme.colorScheme.primary,
             ),
             
             // Real-time Analysis Toggle
             SwitchListTile(
-              title: const Text('Real-time Analysis'),
-              subtitle: const Text('Analyze messages as you type'),
+              title: Text('Real-time Analysis', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Analyze messages as you type', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _realTimeAnalysis,
-              onChanged: (value) {
-                setState(() {
-                  _realTimeAnalysis = value;
-                });
-              },
-              activeColor: const Color(0xFF7B61FF),
+              onChanged: (value) => _setAndSave(
+                () => _realTimeAnalysis = value,
+                () => _settingsManager.setRealTimeAnalysis(value),
+              ),
+              activeColor: theme.colorScheme.primary,
+            ),
+
+            // Reset to defaults
+            const SizedBox(height: AppTheme.spaceMD),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () async {
+                  await _settingsManager.resetAnalysisDefaults();
+                  if (!mounted) return;
+                  setState(() {
+                    _sensitivity = 0.5;
+                    _tone = 'Neutral';
+                    _aiAnalysisEnabled = true;
+                    _realTimeAnalysis = false;
+                  });
+                  widget.onSensitivityChanged(_sensitivity);
+                  widget.onToneChanged(_tone);
+                  await _updateKeyboardSettings();
+                },
+                child: Text('Reset to defaults', style: TextStyle(color: theme.colorScheme.primary)),
+              ),
             ),
           ],
         ),
@@ -330,6 +517,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   }
 
   Widget _buildKeyboardExtensionSettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -342,7 +530,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               children: [
                 Icon(
                   Icons.keyboard,
-                  color: const Color(0xFF7B61FF),
+                  color: theme.colorScheme.primary,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -352,15 +540,16 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                     children: [
                       Text(
                         'Unsaid Keyboard',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Get real-time tone analysis while typing in any app',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -374,10 +563,10 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF7B61FF).withOpacity(0.1),
+                color: theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFF7B61FF).withOpacity(0.3),
+                  color: theme.colorScheme.primary.withOpacity(0.3),
                 ),
               ),
               child: Column(
@@ -386,14 +575,14 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                     children: [
                       Icon(
                         Icons.stars,
-                        color: const Color(0xFF7B61FF),
+                        color: theme.colorScheme.primary,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Premium Feature',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: const Color(0xFF7B61FF),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -402,8 +591,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                   const SizedBox(height: 8),
                   Text(
                     'Transform any keyboard into an intelligent communication assistant. Get tone suggestions, relationship-aware responses, and real-time analysis across all your messaging apps.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[700],
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -415,8 +604,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                           icon: const Icon(Icons.download, size: 18),
                           label: const Text('Setup Keyboard Extension'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7B61FF),
-                            foregroundColor: Colors.white,
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -440,13 +629,15 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                   children: [
                     Icon(
                       Icons.check_circle,
-                      color: Colors.green,
+                      color: theme.colorScheme.primary,
                       size: 16,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       feature,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ],
                 ),
@@ -459,6 +650,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   }
 
   Widget _buildNotificationSettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -467,25 +659,41 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             SwitchListTile(
-              title: const Text('Push Notifications'),
-              subtitle: const Text('Receive notifications for insights and tips'),
+              title: Text('Push Notifications', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Receive notifications for insights and tips · ${_notificationsEnabled ? "On" : "Off"}', 
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _notificationsEnabled,
-              onChanged: (value) {
-                setState(() {
-                  _notificationsEnabled = value;
-                });
-              },
-              activeColor: const Color(0xFF7B61FF),
+              onChanged: (value) => _setAndSave(
+                () => _notificationsEnabled = value,
+                () => _settingsManager.setNotificationsEnabled(value),
+              ),
+              activeColor: theme.colorScheme.primary,
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.schedule),
-              title: const Text('Notification Schedule'),
-              subtitle: const Text('Configure when to receive notifications'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.schedule, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Notification Schedule', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Configure when to receive notifications', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showNotificationScheduleDialog();
               },
+            ),
+
+            // Reset to defaults
+            const SizedBox(height: AppTheme.spaceMD),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () async {
+                  await _settingsManager.resetNotificationDefaults();
+                  if (!mounted) return;
+                  setState(() {
+                    _notificationsEnabled = true;
+                  });
+                },
+                child: Text('Reset to defaults', style: TextStyle(color: theme.colorScheme.primary)),
+              ),
             ),
           ],
         ),
@@ -494,6 +702,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   }
 
   Widget _buildAppearanceSettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -502,25 +711,43 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             SwitchListTile(
-              title: const Text('Dark Mode'),
-              subtitle: const Text('Enable dark theme'),
+              title: Text('Dark Mode', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Enable dark theme · ${_darkModeEnabled ? "On" : "Off"}', 
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _darkModeEnabled,
-              onChanged: (value) {
-                setState(() {
-                  _darkModeEnabled = value;
-                });
-              },
-              activeColor: const Color(0xFF7B61FF),
+              onChanged: (value) => _setAndSave(
+                () => _darkModeEnabled = value,
+                () => _settingsManager.setDarkModeEnabled(value),
+              ),
+              activeColor: theme.colorScheme.primary,
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.font_download),
-              title: const Text('Font Size'),
-              subtitle: const Text('Adjust text size'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.font_download, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Font Size', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Adjust text size · Current: ${_fontSize.round()}pt', 
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showFontSizeDialog();
               },
+            ),
+
+            // Reset to defaults
+            const SizedBox(height: AppTheme.spaceMD),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () async {
+                  await _settingsManager.resetAppearanceDefaults();
+                  if (!mounted) return;
+                  setState(() {
+                    _darkModeEnabled = false;
+                    _fontSize = 14.0;
+                  });
+                },
+                child: Text('Reset to defaults', style: TextStyle(color: theme.colorScheme.primary)),
+              ),
             ),
           ],
         ),
@@ -529,6 +756,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   }
 
   Widget _buildPrivacySettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -537,32 +765,32 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             SwitchListTile(
-              title: const Text('Share Analytics'),
-              subtitle: const Text('Help improve the app by sharing anonymous usage data'),
+              title: Text('Share Analytics', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Help improve the app by sharing anonymous usage data · ${_shareAnalytics ? "On" : "Off"}', 
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _shareAnalytics,
-              onChanged: (value) {
-                setState(() {
-                  _shareAnalytics = value;
-                });
-              },
-              activeColor: const Color(0xFF7B61FF),
+              onChanged: (value) => _setAndSave(
+                () => _shareAnalytics = value,
+                () => _settingsManager.setShareAnalytics(value),
+              ),
+              activeColor: theme.colorScheme.primary,
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.security),
-              title: const Text('Privacy Policy'),
-              subtitle: const Text('Review our privacy policy'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.security, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Privacy Policy', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Review our privacy policy', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _openPrivacyPolicy();
               },
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.data_usage),
-              title: const Text('Data Usage'),
-              subtitle: const Text('View your data usage statistics'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.data_usage, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Data Usage', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('View your data usage statistics', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showDataUsageDialog();
               },
@@ -574,6 +802,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   }
 
   Widget _buildAccountSettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -582,29 +811,29 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Profile'),
-              subtitle: const Text('Edit your profile information'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Profile', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Edit your profile information', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showProfileDialog();
               },
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.lock),
-              title: const Text('Change Password'),
-              subtitle: const Text('Update your account password'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.lock, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Change Password', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Update your account password', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showChangePasswordDialog();
               },
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-              subtitle: const Text('Sign out of your account'),
+              leading: Icon(Icons.logout, color: theme.colorScheme.error),
+              title: Text('Sign Out', style: TextStyle(color: theme.colorScheme.error)),
+              subtitle: Text('Sign out of your account', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               onTap: () {
                 _showSignOutDialog(context);
               },
@@ -616,6 +845,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   }
 
   Widget _buildSupportSettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -624,30 +854,30 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             ListTile(
-              leading: const Icon(Icons.help_outline),
-              title: const Text('Help Center'),
-              subtitle: const Text('Get help and support'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.help_outline, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Help Center', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Get help and support', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _openHelpCenter();
               },
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.feedback),
-              title: const Text('Send Feedback'),
-              subtitle: const Text('Share your thoughts and suggestions'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.feedback, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Send Feedback', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Share your thoughts and suggestions', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _openFeedbackForm();
               },
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.info),
-              title: const Text('About'),
-              subtitle: const Text('App version and information'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.info, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('About', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('App version and information', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showAboutDialog(context);
               },
@@ -693,26 +923,32 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog(BuildContext context) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final theme = Theme.of(context);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About Unsaid'),
-        content: const Column(
+        title: Text('About Unsaid', style: TextStyle(color: theme.colorScheme.onSurface)),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Version: 1.0.0'),
-            SizedBox(height: 8),
-            Text('AI-powered communication analysis for better relationships.'),
-            SizedBox(height: 8),
-            Text('© 2025 Unsaid. All rights reserved.'),
+            Text('Version: ${packageInfo.version} (${packageInfo.buildNumber})',
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            Text('AI-powered communication analysis for better relationships.',
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            Text('© 2025 Unsaid. All rights reserved.',
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text('Close', style: TextStyle(color: theme.colorScheme.primary)),
           ),
         ],
       ),
@@ -734,31 +970,108 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
     }
   }
 
-  // Initialize services
-  Future<void> _initializeServices() async {
-    await _settingsManager.initialize();
-    await _backupService.initialize();
+  // Safe bootstrap to avoid race conditions
+  Future<void> _bootstrap() async {
+    try {
+      await _settingsManager.initialize();
+      await _backupService.initialize();
+      
+      // Load after services ready
+      final settings = (
+        sensitivity: _settingsManager.getSensitivity(),
+        tone: _settingsManager.getTone(),
+        notifications: _settingsManager.getNotificationsEnabled(),
+        dark: _settingsManager.getDarkModeEnabled(),
+        ai: _settingsManager.getAIAnalysisEnabled(),
+        realtime: _settingsManager.getRealTimeAnalysis(),
+        share: _settingsManager.getShareAnalytics(),
+        hc: _settingsManager.getHighContrastMode(),
+        backup: _settingsManager.getBackupEnabled(),
+        font: _settingsManager.getFontSize(),
+        lang: _settingsManager.getLanguage(),
+      );
+      
+      if (!mounted) return;
+      setState(() {
+        _sensitivity = settings.sensitivity;
+        _tone = settings.tone;
+        _notificationsEnabled = settings.notifications;
+        _darkModeEnabled = settings.dark;
+        _aiAnalysisEnabled = settings.ai;
+        _realTimeAnalysis = settings.realtime;
+        _shareAnalytics = settings.share;
+        _highContrastMode = settings.hc;
+        _autoBackupEnabled = settings.backup;
+        _fontSize = settings.font;
+        _selectedLanguage = settings.lang;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar('Couldn\'t load settings');
+      }
+    }
   }
 
-  // Load settings from storage
-  Future<void> _loadSettings() async {
-    setState(() {
-      _sensitivity = _settingsManager.getSensitivity();
-      _tone = _settingsManager.getTone();
-      _notificationsEnabled = _settingsManager.getNotificationsEnabled();
-      _darkModeEnabled = _settingsManager.getDarkModeEnabled();
-      _aiAnalysisEnabled = _settingsManager.getAIAnalysisEnabled();
-      _realTimeAnalysis = _settingsManager.getRealTimeAnalysis();
-      _shareAnalytics = _settingsManager.getShareAnalytics();
-      _highContrastMode = _settingsManager.getHighContrastMode();
-      _autoBackupEnabled = _settingsManager.getBackupEnabled();
-      _fontSize = _settingsManager.getFontSize();
-      _selectedLanguage = _settingsManager.getLanguage();
-    });
+  // Helper for setting and saving in one go
+  Future<void> _setAndSave<T>(void Function() setLocal, Future<void> Function() persist) async {
+    setState(setLocal);
+    try { 
+      await persist(); 
+    } catch (_) { 
+      _showSnackBar('Failed to save'); 
+    }
   }
 
-  // Data Management Settings
+  // Jump to section with smooth scrolling
+  Future<void> _jumpTo(String title) async {
+    final key = _sectionKeys[title];
+    if (key?.currentContext != null) {
+      await Scrollable.ensureVisible(
+        key!.currentContext!,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  // Danger zone widget
+  Widget _buildDangerZone() {
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.errorContainer.withOpacity(0.12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spaceLG),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warning_amber, color: theme.colorScheme.error),
+                const SizedBox(width: 8),
+                Text('Danger Zone', style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.error, 
+                  fontWeight: FontWeight.w700,
+                )),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Icon(Icons.clear_all, color: theme.colorScheme.error),
+              title: Text('Clear All Data', style: TextStyle(color: theme.colorScheme.error)),
+              subtitle: const Text('Permanently delete all conversation history'),
+              onTap: _showClearAllDataDialog,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDataManagementSettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -767,33 +1080,26 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             ListTile(
-              leading: const Icon(Icons.analytics),
-              title: const Text('Data Usage'),
-              subtitle: const Text('View your data usage statistics'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.analytics, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Data Usage', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('View your data usage statistics', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showDataUsageDialog(),
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.download),
-              title: const Text('Export Data'),
-              subtitle: const Text('Download your conversation insights'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.download, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Export Data', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Download your conversation insights', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showExportDataDialog(),
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.delete_sweep, color: Colors.orange),
-              title: const Text('Clear Old Data'),
-              subtitle: const Text('Remove data older than 90 days'),
+              leading: Icon(Icons.delete_sweep, color: theme.colorScheme.primary),
+              title: Text('Clear Old Data', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Remove data older than 90 days', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               onTap: () => _showClearOldDataDialog(),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.clear_all, color: Colors.red),
-              title: const Text('Clear All Data', style: TextStyle(color: Colors.red)),
-              subtitle: const Text('Permanently delete all conversation history'),
-              onTap: () => _showClearAllDataDialog(),
             ),
           ],
         ),
@@ -803,6 +1109,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
 
   // Backup & Sync Settings
   Widget _buildBackupSettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -811,8 +1118,9 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             SwitchListTile(
-              title: const Text('Auto Backup'),
-              subtitle: const Text('Automatically backup your data daily'),
+              title: Text('Auto Backup', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Automatically backup your data daily · ${_autoBackupEnabled ? "On" : "Off"}', 
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _autoBackupEnabled,
               onChanged: (value) async {
                 setState(() {
@@ -825,34 +1133,36 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                   await _backupService.disableAutoBackup();
                 }
               },
-              activeColor: const Color(0xFF7B61FF),
+              activeColor: theme.colorScheme.primary,
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.cloud_upload),
-              title: const Text('Backup Now'),
-              subtitle: Text(_backupService.isBackingUp ? 'Backing up...' : 'Manually backup your data'),
+              leading: Icon(Icons.cloud_upload, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Backup Now', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(_backupService.isBackingUp ? 'Backing up...' : 'Manually backup your data',
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               trailing: _backupService.isBackingUp 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator())
-                : const Icon(Icons.arrow_forward_ios),
+                ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: theme.colorScheme.primary))
+                : Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: _backupService.isBackingUp ? null : () => _performBackup(),
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.cloud_download),
-              title: const Text('Sync from Cloud'),
-              subtitle: Text(_backupService.isSyncing ? 'Syncing...' : 'Download latest data from cloud'),
+              leading: Icon(Icons.cloud_download, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Sync from Cloud', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(_backupService.isSyncing ? 'Syncing...' : 'Download latest data from cloud',
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               trailing: _backupService.isSyncing 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator())
-                : const Icon(Icons.arrow_forward_ios),
+                ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: theme.colorScheme.primary))
+                : Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: _backupService.isSyncing ? null : () => _performSync(),
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.import_export),
-              title: const Text('Import/Export Settings'),
-              subtitle: const Text('Backup or restore your app settings'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.import_export, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Import/Export Settings', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Backup or restore your app settings', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showImportExportDialog(),
             ),
           ],
@@ -863,6 +1173,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
 
   // Language & Accessibility Settings
   Widget _buildLanguageAccessibilitySettings() {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -871,40 +1182,57 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             ListTile(
-              leading: const Icon(Icons.language),
-              title: const Text('Language'),
-              subtitle: Text('Current: $_selectedLanguage'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.language, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Language', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Current: $_selectedLanguage', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showLanguageDialog(),
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.text_fields),
-              title: const Text('Font Size'),
-              subtitle: Text('Current: ${_fontSize.round()}pt'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.text_fields, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Font Size', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Current: ${_fontSize.round()}pt', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showFontSizeDialog(),
             ),
             const Divider(),
             SwitchListTile(
-              title: const Text('High Contrast Mode'),
-              subtitle: const Text('Improve visibility for better accessibility'),
+              title: Text('High Contrast Mode', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Improve visibility for better accessibility · ${_highContrastMode ? "On" : "Off"}', 
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _highContrastMode,
-              onChanged: (value) async {
-                setState(() {
-                  _highContrastMode = value;
-                });
-                await _settingsManager.setHighContrastMode(value);
-              },
-              activeColor: const Color(0xFF7B61FF),
+              onChanged: (value) => _setAndSave(
+                () => _highContrastMode = value,
+                () => _settingsManager.setHighContrastMode(value),
+              ),
+              activeColor: theme.colorScheme.primary,
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.accessibility_new),
-              title: const Text('Accessibility Settings'),
-              subtitle: const Text('Screen reader and navigation options'),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.accessibility_new, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Accessibility Settings', style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Screen reader and navigation options', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showAccessibilityDialog(),
+            ),
+
+            // Reset to defaults
+            const SizedBox(height: AppTheme.spaceMD),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () async {
+                  await _settingsManager.resetAccessibilityDefaults();
+                  if (!mounted) return;
+                  setState(() {
+                    _selectedLanguage = 'English';
+                    _fontSize = 14.0;
+                    _highContrastMode = false;
+                  });
+                },
+                child: Text('Reset to defaults', style: TextStyle(color: theme.colorScheme.primary)),
+              ),
             ),
           ],
         ),
@@ -1477,29 +1805,80 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   /// Open keyboard signup sheet
   void _openKeyboardSignup() async {
     try {
-      // Open iOS Settings app directly to Keyboard settings
-      const url = 'App-Prefs:General&path=Keyboard';
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(
-          Uri.parse(url),
-          mode: LaunchMode.externalApplication,
-        );
-      } else {
-        // Fallback to general settings if the specific keyboard path doesn't work
-        const fallbackUrl = 'App-Prefs:';
-        if (await canLaunchUrl(Uri.parse(fallbackUrl))) {
-          await launchUrl(
-            Uri.parse(fallbackUrl),
-            mode: LaunchMode.externalApplication,
-          );
-          _showSnackBar('Please navigate to Settings > General > Keyboard > Keyboards > Add New Keyboard > Unsaid');
+      if (Platform.isAndroid) {
+        // Deep link to Android input settings
+        final url = 'intent://settings/action/INPUT_METHOD_SETTINGS#Intent;scheme=android-app;end';
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         } else {
-          _showSnackBar('Please open Settings > General > Keyboard > Keyboards to add Unsaid keyboard');
+          _showKeyboardInstructionsSheet();
         }
+      } else {
+        // Show instruction sheet for iOS
+        _showKeyboardInstructionsSheet();
       }
     } catch (e) {
-      _showSnackBar('Please manually open Settings > General > Keyboard > Keyboards to add Unsaid keyboard');
+      _showKeyboardInstructionsSheet();
     }
+  }
+
+  void _showKeyboardInstructionsSheet() {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurfaceVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Enable Unsaid Keyboard',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                Platform.isIOS
+                  ? 'Settings → General → Keyboard → Keyboards → Add New Keyboard → Unsaid'
+                  : 'Settings → System → Languages & input → Virtual keyboard → Manage keyboards → Add Unsaid',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Got it'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Show notification schedule dialog

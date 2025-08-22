@@ -2,93 +2,125 @@
 //  AppDelegate.swift
 //  Unsaid
 //
-//  Simplified App delegate for Unsaid app with web API integration
-//  Removed local trial management, access control, and subscription management
-//  All user authentication and feature gating now handled by web API
+//  Host app AppDelegate with Flutter channels, no HostAppAIService dependency.
+//  Uses App Group to read/write keyboard data and a handshake for enable/full-access.
 //
 
 import Flutter
 import UIKit
+import os.log
+
+// MARK: - Shared App Group
+enum AppGroup {
+    static let id = "group.com.unsaid.shared" // <- use this EXACT ID in BOTH targets' entitlements
+    static var defaults: UserDefaults {
+        guard let ud = UserDefaults(suiteName: id) else {
+            fatalError("App Group not configured: \(id)")
+        }
+        return ud
+    }
+}
+
+// MARK: - Keyboard status handshake (what the keyboard writes)
+struct KeyboardStatus {
+    let enabled: Bool
+    let fullAccess: Bool
+
+    static func read() -> KeyboardStatus {
+        let ud = AppGroup.defaults
+        let lastSeen = ud.double(forKey: "kb_last_seen")
+        let full = ud.bool(forKey: "kb_full_access_ok")
+        let enabled = lastSeen > 0 && Date(timeIntervalSince1970: lastSeen)
+            .timeIntervalSinceNow > -(7 * 24 * 60 * 60)
+        return .init(enabled: enabled, fullAccess: full)
+    }
+}
+
+// MARK: - Minimal helper for settings + keyboard bridge
+enum UnsaidKeyboardHelper {
+    static func openAppSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    /// Optional: write a payload for the keyboard to read, then ping via Darwin notify.
+    static func sendDataToKeyboard(_ payload: [String: Any], key: String = "host_to_kb_payload") {
+        let ud = AppGroup.defaults
+        ud.set(payload, forKey: key)
+        ud.set(Date().timeIntervalSince1970, forKey: "\(key)_ts")
+        // ping (foreground-only optimization; won't wake a suspended extension)
+        postDarwinNotify("com.unsaid.keyboard.hostping")
+    }
+
+    static func storeUserEmail(_ email: String) {
+        AppGroup.defaults.set(email, forKey: "user_email")
+        AppGroup.defaults.set(Date().timeIntervalSince1970, forKey: "user_email_ts")
+    }
+    static func clearUserEmail() {
+        AppGroup.defaults.removeObject(forKey: "user_email")
+        AppGroup.defaults.removeObject(forKey: "user_email_ts")
+    }
+
+    private static func postDarwinNotify(_ name: String) {
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterPostNotification(center, CFNotificationName(name as CFString), nil, nil, true)
+    }
+}
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-    
-    // MARK: - Constants
-    private let appGroupId = "group.com.example.unsaid.shared"
-    
-    // MARK: - Throttling Properties
-    private var lastInsightsCall: Date = Date.distantPast
-    private let insightsThrottleInterval: TimeInterval = 5.0 // Only allow insights calls every 5 seconds
+
+    // MARK: - Throttling / Cache for Insights
+    private var lastInsightsCall: Date = .distantPast
+    private let insightsThrottleInterval: TimeInterval = 5.0
     private var cachedInsights: [String: Any]?
-    private var cacheTimestamp: Date = Date.distantPast
-    private let cacheTimeout: TimeInterval = 30.0 // Cache for 30 seconds
-    
+    private var cacheTimestamp: Date = .distantPast
+    private let cacheTimeout: TimeInterval = 30.0
+    // MARK: - App lifecycle
     override func application(
         _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
     ) -> Bool {
-        
+
         GeneratedPluginRegistrant.register(with: self)
-        
-        // Register KeyboardDataSyncBridge for safe data retrieval
-        KeyboardDataSyncBridge.register(with: registrar(forPlugin: "KeyboardDataSyncBridge")!)
-        
+
+        // If you have a custom plugin:
+        if let reg = registrar(forPlugin: "KeyboardDataSyncBridge") {
+            KeyboardDataSyncBridge.register(with: reg)
+        }
+
         guard let controller = window?.rootViewController as? FlutterViewController else {
             return super.application(application, didFinishLaunchingWithOptions: launchOptions)
         }
-        
-        // Setup admin credentials for keyboard extension (DEBUG only)
-        #if DEBUG
-        UnsaidKeyboardHelper.setupAdminCredentialsForKeyboard()
-        
-        // Test API integration (development only)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            HostAppAIService.shared.debugTestAPIConnectivity()
-        }
-        #endif
-        
-        // Setup Flutter channels
+
+        // Channels
         setupKeyboardAnalyticsChannel(controller: controller)
         setupWebAPIChannel(controller: controller)
         setupKeyboardExtensionChannel(controller: controller)
         setupPersonalityDataChannel(controller: controller)
         setupUserEmailChannel(controller: controller)
-        
-        // Read keyboard extension data once when app opens (no constant polling)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self else { return }
-            let keyboardData = HostAppAIService.shared.readKeyboardDataOnDemand()
-            if !keyboardData.isEmpty {
-                HostAppAIService.shared.sendInsightsToFlutter()
-            }
-        }
-        
-        #if DEBUG
-        // Test keyboard data bridge connectivity (DEBUG only)
-        testKeyboardDataBridge()
-        #endif
-        
+
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
     
-    // MARK: - Channel Setup Methods
+    // MARK: - Channels
+
     private func setupKeyboardAnalyticsChannel(controller: FlutterViewController) {
-        let keyboardChannel = FlutterMethodChannel(
-            name: "com.unsaid/keyboard_analytics",
-            binaryMessenger: controller.binaryMessenger
-        )
-        
-        keyboardChannel.setMethodCallHandler { [weak self] (call, result) in
-            guard let self = self else { return }
-            let userDefaults = UserDefaults(suiteName: self.appGroupId)
-            
+        let ch = FlutterMethodChannel(name: "com.unsaid/keyboard_analytics",
+                                      binaryMessenger: controller.binaryMessenger)
+
+        ch.setMethodCallHandler { [weak self] (call, result) in
+            guard let self else { return }
+            let ud = AppGroup.defaults
+
             switch call.method {
             case "getKeyboardAnalytics":
-                if let data = userDefaults?.data(forKey: "keyboard_analytics"),
-                   let analytics = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    result(analytics)
+                if let data = ud.data(forKey: "keyboard_analytics"),
+                   let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    result(obj)
                 } else {
-                    let defaultAnalytics: [String: Any] = [
+                    result([
                         "totalKeystrokes": 0,
                         "totalSessions": 0,
                         "averageSessionLength": 0.0,
@@ -96,38 +128,36 @@ import UIKit
                         "quickFixUsageCount": 0,
                         "toneChanges": 0,
                         "lastUpdated": Date().timeIntervalSince1970
-                    ]
-                    result(defaultAnalytics)
+                    ])
                 }
-                
+
             case "getKeyboardInteractions":
-                if let data = userDefaults?.data(forKey: "keyboard_interactions"),
-                   let interactions = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-                    result(interactions)
+                if let data = ud.data(forKey: "keyboard_interactions"),
+                   let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                    result(arr)
                 } else {
                     result([])
                 }
-                
+
             case "getKeyboardInsights":
                 DispatchQueue.main.async {
                     let now = Date()
-                    if now.timeIntervalSince(self.lastInsightsCall) < self.insightsThrottleInterval {
-                        if let cached = self.cachedInsights,
-                           now.timeIntervalSince(self.cacheTimestamp) < self.cacheTimeout {
-                            result(cached)
-                            return
-                        }
+                    // throttle
+                    if now.timeIntervalSince(self.lastInsightsCall) < self.insightsThrottleInterval,
+                       let cached = self.cachedInsights,
+                       now.timeIntervalSince(self.cacheTimestamp) < self.cacheTimeout {
+                        result(cached)
+                        return
                     }
-                    
                     self.lastInsightsCall = now
-                    
-                    if let data = userDefaults?.data(forKey: "keyboard_insights"),
+
+                    if let data = ud.data(forKey: "keyboard_insights"),
                        let insights = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         self.cachedInsights = insights
                         self.cacheTimestamp = now
                         result(insights)
                     } else {
-                        let defaultInsights: [String: Any] = [
+                        let defaults: [String: Any] = [
                             "dominantTone": "neutral",
                             "toneTrend": "stable",
                             "improvementScore": 0.0,
@@ -139,27 +169,27 @@ import UIKit
                             "communicationStyle": "balanced",
                             "relationshipContextUsage": [:]
                         ]
-                        self.cachedInsights = defaultInsights
+                        self.cachedInsights = defaults
                         self.cacheTimestamp = now
-                        result(defaultInsights)
+                        result(defaults)
                     }
                 }
-                
+
             case "generateKeyboardInsights":
-                userDefaults?.set(true, forKey: "should_generate_insights")
-                userDefaults?.set(Date().timeIntervalSince1970, forKey: "insights_generation_requested")
+                ud.set(true, forKey: "should_generate_insights")
+                ud.set(Date().timeIntervalSince1970, forKey: "insights_generation_requested")
                 result(true)
-                
+
             case "syncChildrenNames":
-                if let arguments = call.arguments as? [String: Any],
-                   let names = arguments["names"] as? [String] {
-                    userDefaults?.set(names, forKey: "children_names")
-                    userDefaults?.set(arguments["timestamp"], forKey: "children_names_timestamp")
+                if let args = call.arguments as? [String: Any],
+                   let names = args["names"] as? [String] {
+                    ud.set(names, forKey: "children_names")
+                    ud.set(args["timestamp"], forKey: "children_names_timestamp")
                     result(true)
                 } else {
                     result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid children names data", details: nil))
                 }
-                
+
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -167,16 +197,14 @@ import UIKit
     }
     
     private func setupWebAPIChannel(controller: FlutterViewController) {
-        let apiChannel = FlutterMethodChannel(
-            name: "com.unsaid/web_api",
-            binaryMessenger: controller.binaryMessenger
-        )
-        
-        apiChannel.setMethodCallHandler { (call, result) in
+        let ch = FlutterMethodChannel(name: "com.unsaid/web_api",
+                                      binaryMessenger: controller.binaryMessenger)
+
+        ch.setMethodCallHandler { (call, result) in
             #if DEBUG
             switch call.method {
             case "checkTrialStatus":
-                let testTrialData: [String: Any] = [
+                result([
                     "success": true,
                     "userId": "test-admin-user",
                     "trial": [
@@ -185,16 +213,19 @@ import UIKit
                         "isAdmin": true,
                         "availableFeatures": ["tone-analysis", "spell-check", "suggestions"]
                     ]
-                ]
-                result(testTrialData)
-                
+                ])
+
             case "startTrial", "checkFeatureAccess", "upgradeToPremium":
                 result(true)
-                
+
             case "getAPIStatus":
-                let status = HostAppAIService.shared.getAPIStatus()
-                result(status)
-                
+                // Simple stub since HostAppAIService was removed
+                result([
+                    "reachable": true,
+                    "env": "debug",
+                    "timestamp": Date().timeIntervalSince1970
+                ])
+
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -205,80 +236,76 @@ import UIKit
     }
     
     private func setupKeyboardExtensionChannel(controller: FlutterViewController) {
-        let keyboardExtensionChannel = FlutterMethodChannel(
-            name: "com.unsaid/keyboard_extension",
-            binaryMessenger: controller.binaryMessenger
-        )
-        
-        keyboardExtensionChannel.setMethodCallHandler { (call, result) in
+        let ch = FlutterMethodChannel(name: "com.unsaid/keyboard_extension",
+                                      binaryMessenger: controller.binaryMessenger)
+
+        ch.setMethodCallHandler { (call, result) in
             switch call.method {
             case "isKeyboardEnabled":
-                let isEnabled = UnsaidKeyboardHelper.appearsKeyboardEnabled()
-                result(isEnabled)
-                
+                let s = KeyboardStatus.read()
+                result(s.enabled)
+
             case "openKeyboardSettings":
-                UnsaidKeyboardHelper.openKeyboardSettings()
+                UnsaidKeyboardHelper.openAppSettings()
                 result(true)
-                
+
             case "sendToneAnalysis", "sendRealtimeToneAnalysis":
                 if let payload = call.arguments as? [String: Any] {
-                    UnsaidKeyboardHelper.sendDataToKeyboard(payload)
+                    UnsaidKeyboardHelper.sendDataToKeyboard(payload, key: "tone_payload")
                     result(true)
                 } else {
                     result(false)
                 }
-                
+
             default:
                 result(FlutterMethodNotImplemented)
             }
         }
-        
-        // Additional channel for bulk keyboard data
-        let keyboardDataChannel = FlutterMethodChannel(
-            name: "com.unsaid/keyboard_data",
-            binaryMessenger: controller.binaryMessenger
-        )
-        
-        keyboardDataChannel.setMethodCallHandler { (call, result) in
+
+        // Bulk keyboard data channel (reads straight from App Group)
+        let dataCh = FlutterMethodChannel(name: "com.unsaid/keyboard_data",
+                                          binaryMessenger: controller.binaryMessenger)
+
+        dataCh.setMethodCallHandler { (call, result) in
+            let ud = AppGroup.defaults
+            func readDict(_ key: String) -> [String: Any] {
+                if let data = ud.data(forKey: key),
+                   let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    return obj
+                }
+                return [:]
+            }
+            func readArray(_ key: String) -> [[String: Any]] {
+                if let data = ud.data(forKey: key),
+                   let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                    return arr
+                }
+                return []
+            }
+
             switch call.method {
-            case "getKeyboardEvents":
-                result(HostAppAIService.shared.getKeyboardEvents())
-                
-            case "getUserProfile":
-                result(HostAppAIService.shared.getUserProfile())
-                
-            case "getCurrentAnalysis":
-                result(HostAppAIService.shared.getCurrentAnalysis())
-                
-            case "getSessionAnalytics":
-                result(HostAppAIService.shared.getSessionAnalytics())
-                
-            case "getSuggestionAcceptanceAnalytics":
-                result(HostAppAIService.shared.getSuggestionAcceptanceAnalytics())
-                
-            case "getKeyboardCoachingSettings":
-                result(HostAppAIService.shared.getKeyboardCoachingSettings())
-                
-            case "getSuggestionResponse":
-                result(HostAppAIService.shared.getSuggestionResponse())
-                
-            case "getConversationHistory":
-                result(HostAppAIService.shared.getConversationHistory())
-                
+            case "getKeyboardEvents":                result(readArray("keyboard_events"))
+            case "getUserProfile":                   result(readDict("user_profile"))
+            case "getCurrentAnalysis":               result(readDict("current_analysis"))
+            case "getSessionAnalytics":              result(readDict("session_analytics"))
+            case "getSuggestionAcceptanceAnalytics": result(readDict("suggestion_acceptance_analytics"))
+            case "getKeyboardCoachingSettings":      result(readDict("keyboard_coaching_settings"))
+            case "getSuggestionResponse":            result(readDict("suggestion_response"))
+            case "getConversationHistory":           result(readArray("conversation_history"))
             case "getComprehensiveKeyboardData":
-                let comprehensiveData: [String: Any] = [
-                    "keyboard_events": HostAppAIService.shared.getKeyboardEvents(),
-                    "user_profile": HostAppAIService.shared.getUserProfile(),
-                    "current_analysis": HostAppAIService.shared.getCurrentAnalysis(),
-                    "session_analytics": HostAppAIService.shared.getSessionAnalytics(),
-                    "suggestion_acceptance_analytics": HostAppAIService.shared.getSuggestionAcceptanceAnalytics(),
-                    "keyboard_coaching_settings": HostAppAIService.shared.getKeyboardCoachingSettings(),
-                    "suggestion_response": HostAppAIService.shared.getSuggestionResponse(),
-                    "conversation_history": HostAppAIService.shared.getConversationHistory(),
+                let bundle: [String: Any] = [
+                    "keyboard_events": readArray("keyboard_events"),
+                    "user_profile": readDict("user_profile"),
+                    "current_analysis": readDict("current_analysis"),
+                    "session_analytics": readDict("session_analytics"),
+                    "suggestion_acceptance_analytics": readDict("suggestion_acceptance_analytics"),
+                    "keyboard_coaching_settings": readDict("keyboard_coaching_settings"),
+                    "suggestion_response": readDict("suggestion_response"),
+                    "conversation_history": readArray("conversation_history"),
                     "last_updated": Date().timeIntervalSince1970
                 ]
-                result(comprehensiveData)
-                
+                result(bundle)
+
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -286,40 +313,35 @@ import UIKit
     }
     
     private func setupPersonalityDataChannel(controller: FlutterViewController) {
-        let personalityChannel = FlutterMethodChannel(
-            name: "com.unsaid/personality_data",
-            binaryMessenger: controller.binaryMessenger
-        )
-        
-        personalityChannel.setMethodCallHandler { (call, result) in
-            let personalityManager = PersonalityDataManager.shared
-            
+        let ch = FlutterMethodChannel(name: "com.unsaid/personality_data",
+                                      binaryMessenger: controller.binaryMessenger)
+
+        ch.setMethodCallHandler { (call, result) in
+            let m = PersonalityDataManager.shared
             switch call.method {
             case "storePersonalityData":
                 if let data = call.arguments as? [String: Any] {
-                    personalityManager.storePersonalityDataFromFlutter(data)
-                    result(true)
+                    m.storePersonalityDataFromFlutter(data); result(true)
                 } else {
                     result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid personality data format", details: nil))
                 }
-                
+
             case "storePersonalityTestResults":
                 if let data = call.arguments as? [String: Any] {
-                    personalityManager.storePersonalityTestResults(data)
-                    result(true)
+                    m.storePersonalityTestResults(data); result(true)
                 } else {
                     result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid personality test results format", details: nil))
                 }
-                
+
             case "storePersonalityComponents":
-                if let arguments = call.arguments as? [String: Any],
-                   let attachmentStyle = arguments["attachmentStyle"] as? String,
-                   let communicationPattern = arguments["communicationPattern"] as? String,
-                   let conflictResolution = arguments["conflictResolution"] as? String,
-                   let primaryPersonalityType = arguments["primaryPersonalityType"] as? String,
-                   let typeLabel = arguments["typeLabel"] as? String,
-                   let scores = arguments["scores"] as? [String: Int] {
-                    personalityManager.storePersonalityComponents(
+                if let args = call.arguments as? [String: Any],
+                   let attachmentStyle = args["attachmentStyle"] as? String,
+                   let communicationPattern = args["communicationPattern"] as? String,
+                   let conflictResolution = args["conflictResolution"] as? String,
+                   let primaryPersonalityType = args["primaryPersonalityType"] as? String,
+                   let typeLabel = args["typeLabel"] as? String,
+                   let scores = args["scores"] as? [String: Int] {
+                    m.storePersonalityComponents(
                         attachmentStyle: attachmentStyle,
                         communicationPattern: communicationPattern,
                         conflictResolution: conflictResolution,
@@ -331,66 +353,33 @@ import UIKit
                 } else {
                     result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid personality components data", details: nil))
                 }
-                
-            case "getPersonalityData":
-                result(personalityManager.getPersonalityDataForFlutter())
-                
-            case "getPersonalityTestResults":
-                result(personalityManager.getPersonalityTestResults())
-                
-            case "getDominantPersonalityType":
-                result(personalityManager.getDominantPersonalityType())
-                
-            case "getPersonalityTypeLabel":
-                result(personalityManager.getPersonalityTypeLabel())
-                
-            case "getPersonalityScores":
-                result(personalityManager.getPersonalityScores())
-                
-            case "isPersonalityTestComplete":
-                result(personalityManager.isPersonalityTestComplete())
-                
-            case "generatePersonalityContext":
-                result(personalityManager.generatePersonalityContext())
-                
-            case "generatePersonalityContextDictionary":
-                result(personalityManager.generatePersonalityContextDictionary())
-                
-            case "clearPersonalityData":
-                personalityManager.clearPersonalityData()
-                result(true)
-                
-            case "debugPrintPersonalityData":
-                personalityManager.debugPrintPersonalityData()
-                result(true)
-                
-            case "setTestPersonalityData":
-                personalityManager.setTestPersonalityData()
-                result(true)
-                
+
+            case "getPersonalityData":            result(m.getPersonalityDataForFlutter())
+            case "getPersonalityTestResults":     result(m.getPersonalityTestResults())
+            case "getDominantPersonalityType":    result(m.getDominantPersonalityType())
+            case "getPersonalityTypeLabel":       result(m.getPersonalityTypeLabel())
+            case "getPersonalityScores":          result(m.getPersonalityScores())
+            case "isPersonalityTestComplete":     result(m.isPersonalityTestComplete())
+            case "generatePersonalityContext":    result(m.generatePersonalityContext())
+            case "generatePersonalityContextDictionary": result(m.generatePersonalityContextDictionary())
+            case "clearPersonalityData":          m.clearPersonalityData(); result(true)
+            case "debugPrintPersonalityData":     m.debugPrintPersonalityData(); result(true)
+            case "setTestPersonalityData":        m.setTestPersonalityData(); result(true)
             case "setUserEmotionalState":
-                if let arguments = call.arguments as? [String: Any],
-                   let state = arguments["state"] as? String,
-                   let bucket = arguments["bucket"] as? String,
-                   let label = arguments["label"] as? String {
-                    personalityManager.setUserEmotionalState(state: state, bucket: bucket, label: label)
+                if let args = call.arguments as? [String: Any],
+                   let state = args["state"] as? String,
+                   let bucket = args["bucket"] as? String,
+                   let label = args["label"] as? String {
+                    m.setUserEmotionalState(state: state, bucket: bucket, label: label)
                     result(true)
                 } else {
                     result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid emotional state data", details: nil))
                 }
-                
-            case "getUserEmotionalState":
-                result(personalityManager.getUserEmotionalState())
-                
-            case "getUserEmotionalBucket":
-                result(personalityManager.getUserEmotionalBucket())
-                
-            case "getUserEmotionalStateLabel":
-                result(personalityManager.getUserEmotionalStateLabel())
-                
-            case "isEmotionalStateFresh":
-                result(personalityManager.isEmotionalStateFresh())
-                
+            case "getUserEmotionalState":         result(m.getUserEmotionalState())
+            case "getUserEmotionalBucket":        result(m.getUserEmotionalBucket())
+            case "getUserEmotionalStateLabel":    result(m.getUserEmotionalStateLabel())
+            case "isEmotionalStateFresh":         result(m.isEmotionalStateFresh())
+
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -398,51 +387,27 @@ import UIKit
     }
     
     private func setupUserEmailChannel(controller: FlutterViewController) {
-        let userEmailChannel = FlutterMethodChannel(
-            name: "com.unsaid/user_email",
-            binaryMessenger: controller.binaryMessenger
-        )
-        
-        userEmailChannel.setMethodCallHandler { (call, result) in
+        let ch = FlutterMethodChannel(name: "com.unsaid/user_email",
+                                      binaryMessenger: controller.binaryMessenger)
+
+        ch.setMethodCallHandler { (call, result) in
             switch call.method {
             case "storeUserEmail":
-                if let arguments = call.arguments as? [String: Any],
-                   let email = arguments["email"] as? String {
+                if let args = call.arguments as? [String: Any],
+                   let email = args["email"] as? String {
                     UnsaidKeyboardHelper.storeUserEmail(email)
                     result(true)
                 } else {
                     result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid email data", details: nil))
                 }
-                
+
             case "clearUserEmail":
                 UnsaidKeyboardHelper.clearUserEmail()
                 result(true)
-                
+
             default:
                 result(FlutterMethodNotImplemented)
             }
         }
-    }
-    
-    // MARK: - Debug Methods
-    private func testKeyboardDataBridge() {
-        #if DEBUG
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in
-            guard let self = self else { return }
-            if let controller = self.window?.rootViewController as? FlutterViewController {
-                let testChannel = FlutterMethodChannel(
-                    name: "com.unsaid/keyboard_data",
-                    binaryMessenger: controller.binaryMessenger
-                )
-                testChannel.invokeMethod("getKeyboardEvents") { result in
-                    if let events = result as? [[String: Any]] {
-                        print("✅ Keyboard data bridge test successful: \(events.count) events")
-                    } else {
-                        print("❌ Keyboard data bridge test failed: \(String(describing: result))")
-                    }
-                }
-            }
-        }
-        #endif
     }
 }

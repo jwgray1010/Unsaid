@@ -224,18 +224,30 @@ final class KeyPreview: UIView {
 
 // MARK: - Polished Single-Suggestion Chip (fixed)
 final class SuggestionChipView: UIControl {
-    // API
+    // MARK: - Public API
     var onTap: (() -> Void)?
     var onDismiss: (() -> Void)?
     var onCTATap: (() -> Void)?
+    var onSwipeToNext: (() -> Void)?
+    var onSwipeToPrevious: (() -> Void)?
+    
+    // MARK: - Analytics hooks
+    var onSurfaced: (() -> Void)?
+    var onExpanded: (() -> Void)?
+    var onApplied: (() -> Void)?
+    var onDismissed: (() -> Void)?
+    var onTimeout: (() -> Void)?
 
     enum Tone { case neutral, alert, caution, clear }
 
+    // MARK: - UI Components
     private let iconView = UIImageView()
     private let titleLabel = UILabel()
     private let closeButton = UIButton(type: .system)
     private let chevronButton = UIButton(type: .system)
     private let ctaButton = UIButton(type: .system)
+    private let pagerView = UIView()
+    private var pagerDots: [UIView] = []
 
     private let content = UIView()
     private let impact = UIImpactFeedbackGenerator(style: .light)
@@ -243,21 +255,78 @@ final class SuggestionChipView: UIControl {
     private var isExpanded = false
     private var expandedConstraints: [NSLayoutConstraint] = []
     private var compactConstraints: [NSLayoutConstraint] = []
-    private var keyButtons: [UIButton] = []
-    private var keyHitRects: [UIButton: CGRect] = [:]   // in self coords
-
+    
+    // MARK: - Multi-suggestion support
+    private var suggestions: [String] = []
+    private var currentIndex: Int = 0
+    private var autoHideTimer: Timer?
+    private var lastInteractionTime: Date = Date()
+    
+    // MARK: - Text hash for stickiness
+    private var associatedTextHash: String = ""
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        isAccessibilityElement = true
-        accessibilityTraits.insert(.button)
+        setupAccessibility()
         setupUI()
+        setupGestures()
     }
+    
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        setupAccessibility()
+        setupUI()
+        setupGestures()
+    }
+    
+    private func setupAccessibility() {
         isAccessibilityElement = true
         accessibilityTraits.insert(.button)
-        setupUI()
+        accessibilityHint = "Double-tap to apply; swipe up to dismiss; tap chevron to expand."
+    }
+    
+    private func setupGestures() {
+        // Swipe left/right for multiple suggestions
+        let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeLeft))
+        swipeLeft.direction = .left
+        addGestureRecognizer(swipeLeft)
+        
+        let swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeRight))
+        swipeRight.direction = .right
+        addGestureRecognizer(swipeRight)
+        
+        // Swipe up to dismiss
+        let swipeUp = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeUp))
+        swipeUp.direction = .up
+        addGestureRecognizer(swipeUp)
+    }
+    
+    @objc private func handleSwipeLeft() {
+        guard suggestions.count > 1 else { return }
+        impact.impactOccurred()
+        nextSuggestion()
+        onSwipeToNext?()
+        updateLastInteraction()
+    }
+    
+    @objc private func handleSwipeRight() {
+        guard suggestions.count > 1 else { return }
+        impact.impactOccurred()
+        previousSuggestion()
+        onSwipeToPrevious?()
+        updateLastInteraction()
+    }
+    
+    @objc private func handleSwipeUp() {
+        impact.impactOccurred()
+        onDismissed?()
+        dismiss(animated: true)
+        updateLastInteraction()
+    }
+    
+    private func updateLastInteraction() {
+        lastInteractionTime = Date()
+        resetAutoHideTimer()
     }
 
     private func setupUI() {
@@ -291,12 +360,16 @@ final class SuggestionChipView: UIControl {
         iconView.preferredSymbolConfiguration = .init(pointSize: 14, weight: .bold)
         iconView.setContentCompressionResistancePriority(.required, for: .horizontal)
 
-        // Title
+        // Title with better compression resistance
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
         titleLabel.numberOfLines = 2
         titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        // Pager dots container
+        pagerView.translatesAutoresizingMaskIntoConstraints = false
+        pagerView.isHidden = true
 
         // Chevron/expand button
         chevronButton.translatesAutoresizingMaskIntoConstraints = false
@@ -307,7 +380,7 @@ final class SuggestionChipView: UIControl {
         }, for: .touchUpInside)
         chevronButton.setContentCompressionResistancePriority(.required, for: .horizontal)
 
-        // CTA button (initially hidden)
+        // CTA button (initially hidden) - will hide automatically when space is tight
         ctaButton.translatesAutoresizingMaskIntoConstraints = false
         ctaButton.setTitle("Apply", for: .normal)
         ctaButton.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
@@ -316,10 +389,11 @@ final class SuggestionChipView: UIControl {
         ctaButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
         ctaButton.accessibilityLabel = "Apply suggestion"
         ctaButton.addAction(UIAction { [weak self] _ in
+            self?.onApplied?()
             self?.onCTATap?()
         }, for: .touchUpInside)
         ctaButton.alpha = 0
-        ctaButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+        ctaButton.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
 
         // Close
         var xConfig = UIButton.Configuration.plain()
@@ -329,12 +403,27 @@ final class SuggestionChipView: UIControl {
         closeButton.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
         closeButton.accessibilityLabel = "Dismiss suggestion"
         closeButton.addAction(UIAction { [weak self] _ in
+            self?.onDismissed?()
             self?.dismiss(animated: true)
         }, for: .touchUpInside)
         closeButton.setContentCompressionResistancePriority(.required, for: .horizontal)
 
+        // Main content stack
+        let mainStack = UIStackView(arrangedSubviews: [iconView, titleLabel])
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        mainStack.axis = .horizontal
+        mainStack.alignment = .center
+        mainStack.spacing = 10
+
+        // Control stack (pager, chevron, close)
+        let controlStack = UIStackView(arrangedSubviews: [pagerView, chevronButton, closeButton])
+        controlStack.translatesAutoresizingMaskIntoConstraints = false
+        controlStack.axis = .horizontal
+        controlStack.alignment = .center
+        controlStack.spacing = 8
+
         // Compact layout (default)
-        let compactStack = UIStackView(arrangedSubviews: [iconView, titleLabel, chevronButton, closeButton])
+        let compactStack = UIStackView(arrangedSubviews: [mainStack, controlStack])
         compactStack.translatesAutoresizingMaskIntoConstraints = false
         compactStack.axis = .horizontal
         compactStack.alignment = .center
@@ -349,7 +438,8 @@ final class SuggestionChipView: UIControl {
             compactStack.topAnchor.constraint(equalTo: content.topAnchor, constant: 6),
             compactStack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -6),
             iconView.widthAnchor.constraint(equalToConstant: 18),
-            iconView.heightAnchor.constraint(equalToConstant: 18)
+            iconView.heightAnchor.constraint(equalToConstant: 18),
+            pagerView.widthAnchor.constraint(lessThanOrEqualToConstant: 40)
         ]
 
         expandedConstraints = [
@@ -361,7 +451,8 @@ final class SuggestionChipView: UIControl {
             ctaButton.centerYAnchor.constraint(equalTo: content.centerYAnchor),
             ctaButton.heightAnchor.constraint(equalToConstant: 24),
             iconView.widthAnchor.constraint(equalToConstant: 18),
-            iconView.heightAnchor.constraint(equalToConstant: 18)
+            iconView.heightAnchor.constraint(equalToConstant: 18),
+            pagerView.widthAnchor.constraint(lessThanOrEqualToConstant: 40)
         ]
 
         // Start with compact layout
@@ -372,13 +463,22 @@ final class SuggestionChipView: UIControl {
             guard let self else { return }
             self.impact.impactOccurred()
             self.animateTap()
+            self.updateLastInteraction()
             self.onTap?()
         }, for: .touchUpInside)
+        
+        // Start auto-hide timer
+        startAutoHideTimer()
     }
 
     private func toggleExpanded() {
         isExpanded.toggle()
         impact.impactOccurred()
+        updateLastInteraction()
+        
+        if isExpanded {
+            onExpanded?()
+        }
         
         // Update chevron rotation immediately for better UX
         UIView.animate(withDuration: 0.2) {
@@ -394,8 +494,8 @@ final class SuggestionChipView: UIControl {
                 // Deactivate compact constraints first
                 NSLayoutConstraint.deactivate(self.compactConstraints)
                 
-                // Make the text smaller for better fit when expanded
-                self.titleLabel.font = .systemFont(ofSize: 11, weight: .medium)
+                // Allow line wrapping in expanded mode - up to 4 lines when space permits
+                self.titleLabel.font = .systemFont(ofSize: 13, weight: .medium)
                 self.titleLabel.numberOfLines = 4
                 
                 // Show CTA button
@@ -425,14 +525,141 @@ final class SuggestionChipView: UIControl {
         chevronButton.accessibilityLabel = isExpanded ? "Collapse suggestion" : "Expand suggestion"
     }
 
-    func configure(text: String, tone: Tone) {
-        titleLabel.text = text
-        accessibilityLabel = text
+    // MARK: - Multi-suggestion support
+    func configureSuggestions(_ suggestions: [String], tone: Tone, textHash: String = "") {
+        self.suggestions = suggestions
+        self.currentIndex = 0
+        self.associatedTextHash = textHash
+        
+        updatePagerDots()
+        updateCurrentSuggestion()
         applyTone(tone, animated: false)
+        
+        // Analytics
+        onSurfaced?()
+    }
+    
+    func updateSuggestions(_ suggestions: [String], tone: Tone, textHash: String = "") {
+        let previousTextHash = self.associatedTextHash
+        self.suggestions = suggestions
+        self.associatedTextHash = textHash
+        
+        // Smart stickiness: only keep current index if text context is similar
+        if previousTextHash != textHash {
+            self.currentIndex = 0
+        } else {
+            // Keep current index if valid, otherwise reset
+            if currentIndex >= suggestions.count {
+                currentIndex = 0
+            }
+        }
+        
+        updatePagerDots()
+        updateCurrentSuggestion()
+        applyTone(tone, animated: true)
+    }
+    
+    private func updatePagerDots() {
+        // Remove existing dots
+        pagerDots.forEach { $0.removeFromSuperview() }
+        pagerDots.removeAll()
+        
+        guard suggestions.count > 1 else {
+            pagerView.isHidden = true
+            return
+        }
+        
+        pagerView.isHidden = false
+        
+        // Create dots for each suggestion (max 5 dots to avoid overcrowding)
+        let maxDots = min(suggestions.count, 5)
+        for i in 0..<maxDots {
+            let dot = UIView()
+            dot.translatesAutoresizingMaskIntoConstraints = false
+            dot.backgroundColor = UIColor.white.withAlphaComponent(i == currentIndex ? 0.8 : 0.3)
+            dot.layer.cornerRadius = 2
+            dot.widthAnchor.constraint(equalToConstant: 4).isActive = true
+            dot.heightAnchor.constraint(equalToConstant: 4).isActive = true
+            pagerDots.append(dot)
+        }
+        
+        let stackView = UIStackView(arrangedSubviews: pagerDots)
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.axis = .horizontal
+        stackView.spacing = 4
+        stackView.alignment = .center
+        
+        pagerView.subviews.forEach { $0.removeFromSuperview() }
+        pagerView.addSubview(stackView)
+        
+        NSLayoutConstraint.activate([
+            stackView.centerXAnchor.constraint(equalTo: pagerView.centerXAnchor),
+            stackView.centerYAnchor.constraint(equalTo: pagerView.centerYAnchor),
+            stackView.leadingAnchor.constraint(greaterThanOrEqualTo: pagerView.leadingAnchor),
+            stackView.trailingAnchor.constraint(lessThanOrEqualTo: pagerView.trailingAnchor)
+        ])
+    }
+    
+    private func updateCurrentSuggestion() {
+        guard currentIndex < suggestions.count else { return }
+        titleLabel.text = suggestions[currentIndex]
+        accessibilityLabel = suggestions[currentIndex]
+        
+        // Update pager dots opacity
+        for (i, dot) in pagerDots.enumerated() {
+            dot.backgroundColor = UIColor.white.withAlphaComponent(i == currentIndex ? 0.8 : 0.3)
+        }
+    }
+    
+    private func nextSuggestion() {
+        guard suggestions.count > 1 else { return }
+        currentIndex = (currentIndex + 1) % suggestions.count
+        updateCurrentSuggestion()
+    }
+    
+    private func previousSuggestion() {
+        guard suggestions.count > 1 else { return }
+        currentIndex = (currentIndex - 1 + suggestions.count) % suggestions.count
+        updateCurrentSuggestion()
+    }
+    
+    // MARK: - Auto-hide timer management
+    private func startAutoHideTimer() {
+        resetAutoHideTimer()
+    }
+    
+    private func resetAutoHideTimer() {
+        autoHideTimer?.invalidate()
+        // Only auto-hide if not expanded - user interaction shows intent
+        guard !isExpanded else { return }
+        
+        autoHideTimer = Timer.scheduledTimer(withTimeInterval: 18.0, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            // Check if user has been inactive
+            let timeSinceLastInteraction = Date().timeIntervalSince(self.lastInteractionTime)
+            if timeSinceLastInteraction >= 15.0 {
+                self.onTimeout?()
+                self.dismiss(animated: true)
+            }
+        }
+    }
+    
+    // MARK: - Text relevance checking
+    func isRelevantToText(_ textHash: String) -> Bool {
+        return associatedTextHash == textHash && !associatedTextHash.isEmpty
+    }
+
+    func configure(text: String, tone: Tone) {
+        configureSuggestions([text], tone: tone)
     }
 
     func updateTone(_ tone: Tone) {
         applyTone(tone, animated: true)
+    }
+    
+    func getCurrentSuggestion() -> String? {
+        guard currentIndex < suggestions.count else { return nil }
+        return suggestions[currentIndex]
     }
 
     private func applyTone(_ tone: Tone, animated: Bool) {
@@ -445,6 +672,13 @@ final class SuggestionChipView: UIControl {
             self.closeButton.tintColor = iconColor.withAlphaComponent(0.9)
             self.chevronButton.tintColor = iconColor.withAlphaComponent(0.8)
             self.ctaButton.setTitleColor(textColor, for: .normal)
+            
+            // Update pager dots color
+            for dot in self.pagerDots {
+                dot.backgroundColor = iconColor.withAlphaComponent(
+                    dot.backgroundColor?.cgColor.alpha == 0.8 ? 0.8 : 0.3
+                )
+            }
         }
         if animated {
             UIView.transition(with: content, duration: 0.15, options: [.transitionCrossDissolve], animations: apply)
@@ -484,9 +718,13 @@ final class SuggestionChipView: UIControl {
             self.alpha = 1
             self.transform = .identity
         }
+        startAutoHideTimer()
     }
 
     func dismiss(animated: Bool) {
+        autoHideTimer?.invalidate()
+        autoHideTimer = nil
+        
         let work = {
             self.alpha = 0
             self.transform = CGAffineTransform(translationX: 0, y: 6)
@@ -506,13 +744,17 @@ final class SuggestionChipView: UIControl {
             done(true)
         }
     }
+    
+    deinit {
+        autoHideTimer?.invalidate()
+    }
 }
 
 // MARK: - Keyboard Controller
 final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputViewAudioFeedback, UIGestureRecognizerDelegate {
 
     // MARK: - Services
-    private let logger = Logger(subsystem: "com.example.unsaid.keyboard", category: "KeyboardController")
+    private let logger = Logger(subsystem: "com.example.unsaid.UnsaidKeyboard", category: "KeyboardController")
     private var coordinator: ToneSuggestionCoordinator?
     
     // MARK: - OpenAI Configuration
@@ -603,8 +845,19 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
 
     // Suggestion stickiness / hysteresis
     private var suggestionStickyUntil: TimeInterval = 0
-    private let minSuggestionShowTime: TimeInterval = 10.0 // Increased to 10 seconds minimum display
+    private let minSuggestionShowTime: TimeInterval = 8.0 // Smart stickiness - reduced from 10s
     private var lastSuggestionText: String?
+    private var lastTextHash: String = ""
+    
+    // MARK: - Analytics tracking
+    private var analyticsCounters: [String: Int] = [
+        "suggestions_surfaced": 0,
+        "suggestions_expanded": 0,
+        "suggestions_applied": 0,
+        "suggestions_dismissed": 0,
+        "suggestions_timeout": 0,
+        "suggestions_swiped": 0
+    ]
 
     // MARK: - Parent VC
     private weak var parentInputVC: UIInputViewController?
@@ -743,7 +996,12 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
 
     // MARK: - Public lifecycle
     override var intrinsicContentSize: CGSize {
-        CGSize(width: UIView.noIntrinsicMetric, height: 396)
+        // DYNAMIC: Return parent's height if available to avoid layout conflicts
+        if let superView = superview, superView.bounds.height > 0 {
+            return CGSize(width: UIView.noIntrinsicMetric, height: superView.bounds.height)
+        }
+        // FALLBACK: Use reasonable default for initial layout
+        return CGSize(width: UIView.noIntrinsicMetric, height: 396)
     }
 
     override init(frame: CGRect, inputViewStyle: UIInputView.Style) {
@@ -841,7 +1099,7 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
 
     func configure(with inputVC: UIInputViewController) {
         parentInputVC = inputVC
-        if let lang = UserDefaults(suiteName: "group.com.example.unsaid.shared")?.string(forKey: "keyboard_language") {
+        if let lang = UserDefaults(suiteName: "group.com.unsaid.shared")?.string(forKey: "keyboard_language") {
             spellChecker.setPreferredLanguage(lang)
         }
         coordinator = ToneSuggestionCoordinator()
@@ -1152,7 +1410,7 @@ private func commit(button: UIButton) {
 
     // MARK: - Secure Fix profile builders (kept as-is)
     private func buildUserProfileForSecureFix() -> [String: Any] {
-        let shared = UserDefaults(suiteName: "group.com.example.unsaid.shared")
+        let shared = UserDefaults(suiteName: "group.com.unsaid.shared")
         var profile: [String: Any] = [:]
         if let v = shared?.string(forKey: "attachment_style") { profile["attachment_style"] = v }
         if let v = shared?.string(forKey: "currentEmotionalState") { profile["emotional_state"] = v }
@@ -1162,7 +1420,7 @@ private func commit(button: UIButton) {
         return profile
     }
     private func buildUserPersonalityProfile() -> [String: Any] {
-        let shared = UserDefaults(suiteName: "group.com.example.unsaid.shared")
+        let shared = UserDefaults(suiteName: "group.com.unsaid.shared")
         var profile: [String: Any] = [:]
         if let v = shared?.string(forKey: "attachment_style") { profile["attachment_style"] = v }
         if let v = shared?.string(forKey: "currentEmotionalState") { profile["emotional_state"] = v }
@@ -1955,44 +2213,73 @@ private func commit(button: UIButton) {
 
     // MARK: - ToneSuggestionDelegate
     func didUpdateSuggestions(_ suggestions: [String]) {
+        #if DEBUG
         logger.debug("🎯 didUpdateSuggestions called with: \(suggestions)")
         logger.debug("📊 Current state - suggestionChip exists: \(suggestionChip != nil), isSuggestionBarVisible: \(isSuggestionBarVisible)")
+        #endif
         
-        let one = suggestions.first.map { [$0] } ?? []
-        self.suggestions = one
+        let filteredSuggestions = suggestions.first.map { [$0] } ?? []
+        self.suggestions = filteredSuggestions
 
         if isSuggestionBarVisible {
-            if let s = one.first {
-                logger.debug("💬 Showing suggestion chip with text: '\(s)'")
-                showSuggestionChip(text: s, toneString: coordinator?.getCurrentToneStatus())
-                lastDisplayedSuggestions = one
+            if let suggestion = filteredSuggestions.first {
+                #if DEBUG
+                logger.debug("💬 Showing suggestion chip with text: '\(suggestion)'")
+                #endif
+                
+                // Check text relevance for smart stickiness
+                let currentTextHash = generateTextHash()
+                let isRelevant = suggestionChip?.isRelevantToText(currentTextHash) ?? false
+                
+                showSuggestionChip(text: suggestion, toneString: coordinator?.getCurrentToneStatus())
+                lastDisplayedSuggestions = filteredSuggestions
             } else {
+                #if DEBUG
                 logger.debug("📭 No suggestions in array")
-                // Use hysteresis: keep showing last suggestion if still within sticky window
+                #endif
+                
+                // Smart hysteresis: keep showing last suggestion if still within sticky window and relevant
                 let now = Date().timeIntervalSince1970
-                if now < suggestionStickyUntil, let lastSuggestion = lastSuggestionText {
-                    // Keep showing last suggestion during sticky period
-                    logger.debug("⏰ Keeping last suggestion during sticky period: '\(lastSuggestion)' (sticky until: \(self.suggestionStickyUntil), now: \(now))")
+                let currentTextHash = generateTextHash()
+                let isStillRelevant = suggestionChip?.isRelevantToText(currentTextHash) ?? false
+                
+                if now < suggestionStickyUntil, 
+                   let lastSuggestion = lastSuggestionText,
+                   isStillRelevant {
+                    #if DEBUG
+                    logger.debug("⏰ Keeping last suggestion during relevant sticky period: '\(lastSuggestion)'")
+                    #endif
                     showSuggestionChip(text: lastSuggestion, toneString: coordinator?.getCurrentToneStatus())
                 } else {
-                    // Only hide if we don't have a current suggestion visible
                     if suggestionChip == nil {
-                        logger.debug("🫥 Hiding suggestion chip - no suggestions available and no sticky period")
+                        #if DEBUG
+                        logger.debug("🫥 Hiding suggestion chip - no relevant suggestions")
+                        #endif
                         hideSuggestionChip()
                         spellStrip.isHidden = false
                         lastDisplayedSuggestions = []
                     } else {
+                        #if DEBUG
                         logger.debug("👀 Not hiding suggestion chip - current chip still visible")
+                        #endif
                     }
                 }
             }
         } else {
+            #if DEBUG
             logger.debug("🚫 Suggestion bar not visible - skipping suggestions")
+            #endif
         }
     }
 
     func didUpdateToneStatus(_ status: String) {
+        #if DEBUG
         logger.debug("didUpdateToneStatus called with: '\(status)'")
+        #endif
+        
+        // Check if this is actually a tone change for accessibility announcement
+        let previousTone = logoImageView?.accessibilityValue
+        let shouldAnnounce = previousTone != status && previousTone != nil
         
         guard let iv = logoImageView else { return }
         let tint: UIColor = {
@@ -2001,16 +2288,38 @@ private func commit(button: UIButton) {
             case "alert": return .systemRed
             case "caution": return .systemYellow
             case "clear": return .systemGreen
-            default: return .keyboardRose
+            default: 
+                #if DEBUG
+                logger.warning("⚠️ Unknown tone status received: '\(status)' - falling back to neutral")
+                #endif
+                return .keyboardRose
             }
         }()
+        
         UIView.animate(withDuration: 0.15, animations: { iv.alpha = 0.3 }) { _ in
             iv.tintColor = tint
+            iv.accessibilityValue = status // Store for comparison
             UIView.animate(withDuration: 0.25) { iv.alpha = 1.0 }
         }
         
         // Update chip theme live when tone changes
         suggestionChip?.updateTone(chipTone(from: status))
+        
+        // Accessibility announcement for tone changes
+        if shouldAnnounce {
+            let announcement: String
+            switch status {
+            case "alert": announcement = "Alert tone detected"
+            case "caution": announcement = "Caution tone detected"  
+            case "clear": announcement = "Clear tone detected"
+            case "neutral": announcement = "Neutral tone"
+            default: announcement = "Tone changed"
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                UIAccessibility.post(notification: .announcement, argument: announcement)
+            }
+        }
     }
 
     func didUpdateSecureFixButtonState() { updateSecureFixButtonState() }
@@ -2098,111 +2407,247 @@ private func commit(button: UIButton) {
         case "alert":   return .alert
         case "caution": return .caution
         case "clear":   return .clear
-        default:        return .neutral
+        case "neutral": return .neutral
+        default:        
+            logger.warning("⚠️ Unknown tone status for chip: '\(status)' - falling back to neutral")
+            return .neutral
         }
     }
 
+    // MARK: - Enhanced Suggestion Chip Management
     private func showSuggestionChip(text: String, toneString: String? = nil) {
+        showSuggestionChip(suggestions: [text], toneString: toneString)
+    }
+    
+    private func showSuggestionChip(suggestions: [String], toneString: String? = nil) {
         guard let bar = suggestionBar, let toneBtn = toneIndicator else { return }
+        guard !suggestions.isEmpty else { return }
 
-        logger.debug("showSuggestionChip called with text: '\(text)'")
+        #if DEBUG
+        logger.debug("showSuggestionChip called with \(suggestions.count) suggestions")
+        #endif
 
-        // Set stickiness for this suggestion
+        // Generate text hash for smart stickiness
+        let currentTextHash = generateTextHash()
+        
+        // Smart stickiness: reduce sticky time if user starts typing a new sentence
         let now = Date().timeIntervalSince1970
-        suggestionStickyUntil = now + minSuggestionShowTime
-        lastSuggestionText = text
-
-        logger.debug("Set suggestion stickiness until: \(self.suggestionStickyUntil) (now: \(now))")
-
-        // remove old
-        suggestionChip?.dismiss(animated: false)
-        suggestionChip = nil
-
+        let shouldCreateNew = suggestionChip == nil
+        
+        if shouldCreateNew {
+            // Create new chip
+            createSuggestionChip(in: bar, toneBtn: toneBtn)
+        }
+        
+        // Configure or update the chip
+        let tone = chipTone(from: toneString ?? (coordinator?.getCurrentToneStatus() ?? "neutral"))
+        
+        if shouldCreateNew {
+            suggestionChip?.configureSuggestions(suggestions, tone: tone, textHash: currentTextHash)
+            suggestionChip?.present(in: bar, from: 0)
+            
+            // Set stickiness for new suggestions
+            let stickyTime = isNewSentenceContext() ? minSuggestionShowTime * 0.5 : minSuggestionShowTime
+            suggestionStickyUntil = now + stickyTime
+        } else {
+            // Update existing chip
+            suggestionChip?.updateSuggestions(suggestions, tone: tone, textHash: currentTextHash)
+            
+            // Adjust stickiness based on text relevance
+            if currentTextHash != lastTextHash {
+                suggestionStickyUntil = now + minSuggestionShowTime * 0.7 // Reduced sticky time for new context
+            }
+        }
+        
+        lastSuggestionText = suggestions.first
+        lastTextHash = currentTextHash
+        spellStrip.isHidden = true
+        
+        #if DEBUG
+        logger.debug("Suggestion chip \(shouldCreateNew ? "created" : "updated") with stickiness until: \(suggestionStickyUntil)")
+        #endif
+    }
+    
+    private func createSuggestionChip(in bar: UIView, toneBtn: UIButton) {
         let chip = SuggestionChipView()
-        chip.configure(text: text, tone: chipTone(from: toneString ?? (coordinator?.getCurrentToneStatus() ?? "neutral")))
+        
+        // Analytics hooks
+        chip.onSurfaced = { [weak self] in
+            self?.incrementAnalyticsCounter("suggestions_surfaced")
+        }
+        chip.onExpanded = { [weak self] in
+            self?.incrementAnalyticsCounter("suggestions_expanded")
+        }
+        chip.onApplied = { [weak self] in
+            self?.incrementAnalyticsCounter("suggestions_applied")
+        }
+        chip.onDismissed = { [weak self] in
+            self?.incrementAnalyticsCounter("suggestions_dismissed")
+        }
+        chip.onTimeout = { [weak self] in
+            self?.incrementAnalyticsCounter("suggestions_timeout")
+        }
+        chip.onSwipeToNext = { [weak self] in
+            self?.incrementAnalyticsCounter("suggestions_swiped")
+        }
+        chip.onSwipeToPrevious = { [weak self] in
+            self?.incrementAnalyticsCounter("suggestions_swiped")
+        }
+        
+        // Interaction handlers
         chip.onTap = { [weak self] in
-            self?.applySuggestionText(text)
+            guard let self = self,
+                  let suggestion = self.suggestionChip?.getCurrentSuggestion() else { return }
+            self.applySuggestionText(suggestion)
         }
         chip.onCTATap = { [weak self] in
-            self?.applySuggestionText(text)
+            guard let self = self,
+                  let suggestion = self.suggestionChip?.getCurrentSuggestion() else { return }
+            self.applySuggestionText(suggestion)
         }
         chip.onDismiss = { [weak self] in
             self?.suggestionChip = nil
             self?.spellStrip.isHidden = false
         }
+        
         suggestionChip = chip
-
         spellStrip.isHidden = true
         chip.translatesAutoresizingMaskIntoConstraints = false
         bar.addSubview(chip)
         
+        // Smart layout constraints that handle undo button collisions
         let trailingAnchor = undoButtonRef?.leadingAnchor ?? bar.trailingAnchor
-        let trailingConstant: CGFloat = -8
+        let trailingConstant: CGFloat = undoButtonRef != nil ? -8 : -12
         
         NSLayoutConstraint.activate([
             chip.leadingAnchor.constraint(equalTo: toneBtn.trailingAnchor, constant: 8),
             chip.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: trailingConstant),
-            chip.centerYAnchor.constraint(equalTo: bar.centerYAnchor)
+            chip.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            // Allow chip to expand vertically if needed (line wrapping in expanded mode)
+            chip.topAnchor.constraint(greaterThanOrEqualTo: bar.topAnchor, constant: 4),
+            chip.bottomAnchor.constraint(lessThanOrEqualTo: bar.bottomAnchor, constant: -4)
         ])
-        chip.present(in: bar, from: 0)
+    }
+    
+    private func generateTextHash() -> String {
+        guard let proxy = textDocumentProxy else { return "" }
+        let before = proxy.documentContextBeforeInput ?? ""
         
-        logger.debug("Suggestion chip presented successfully")
+        // Hash the last sentence or last 50 characters for relevance checking
+        let relevantText = lastCompletedSentence(in: before) ?? 
+                          String(before.suffix(50))
+        
+        return String(relevantText.trimmingCharacters(in: .whitespacesAndNewlines).hash)
+    }
+    
+    private func isNewSentenceContext() -> Bool {
+        guard let proxy = textDocumentProxy else { return false }
+        let before = proxy.documentContextBeforeInput ?? ""
+        
+        // Check if we're at the start of a new sentence
+        return before.hasSuffix(". ") || 
+               before.hasSuffix("! ") || 
+               before.hasSuffix("? ") ||
+               before.hasSuffix("\n")
+    }
+    
+    private func incrementAnalyticsCounter(_ key: String) {
+        analyticsCounters[key, default: 0] += 1
+        
+        // Send lightweight analytics event (implement based on your analytics system)
+        #if DEBUG
+        logger.debug("📊 Analytics: \(key) = \(analyticsCounters[key] ?? 0)")
+        #endif
+        
+        // You can add your analytics service call here
+        // Analytics.track(event: key, properties: ["count": analyticsCounters[key]])
     }
 
     private func hideSuggestionChip(animated: Bool = true) {
+        #if DEBUG
         logger.debug("hideSuggestionChip called (animated: \(animated))")
+        #endif
         
         // Only clear stickiness if we're explicitly hiding (not just replacing)
         if animated {
             suggestionStickyUntil = 0
             lastSuggestionText = nil
+            lastTextHash = ""
         }
         
         suggestionChip?.dismiss(animated: animated)
         suggestionChip = nil
         spellStrip.isHidden = false
         
+        #if DEBUG
         logger.debug("Suggestion chip hidden")
+        #endif
     }
 
     private func applySuggestionText(_ text: String) {
         guard let proxy = textDocumentProxy else { return }
         triggerHapticFeedback()
-        proxy.insertText(text + " ")
+        
+        // Safer apply logic: replace last sentence or respect context
+        let before = proxy.documentContextBeforeInput ?? ""
+        
+        if let lastSentence = lastCompletedSentence(in: before) {
+            // Replace the last completed sentence
+            let sentenceLength = lastSentence.count + 1 // +1 for the ending punctuation
+            for _ in 0..<sentenceLength {
+                proxy.deleteBackward()
+            }
+            proxy.insertText(text)
+            
+            // Handle punctuation intelligently
+            if !text.hasSuffix(".") && !text.hasSuffix("!") && !text.hasSuffix("?") {
+                // Check if original sentence had punctuation and preserve it
+                if lastSentence.last?.isPunctuation == true {
+                    proxy.insertText(String(lastSentence.last!))
+                }
+            }
+        } else {
+            // Simple append for incomplete sentences
+            proxy.insertText(text)
+        }
+        
+        // Add appropriate spacing
+        if !text.hasSuffix(" ") && !text.hasSuffix("\n") {
+            proxy.insertText(" ")
+        }
+        
         hideSuggestionChip()
         handleTextChange()
     }
 
     // MARK: - Toggle suggestions vs. spell candidates
     @objc private func toggleChipOrStrip() {
+        #if DEBUG
         logger.debug("🔘 Tone indicator button tapped")
+        #endif
         
         // Keep the bar visible; just swap chip <-> strip
         if suggestionChip != nil {
+            #if DEBUG
             logger.debug("📱 Hiding suggestion chip, showing spell strip")
+            #endif
             hideSuggestionChip(animated: false)
             spellStrip.isHidden = false
             coordinator?.requestSuggestions() // refresh strip content
         } else {
             if let s = suggestions.first {
+                #if DEBUG
                 logger.debug("💬 Showing suggestion chip with existing text: '\(s)'")
+                #endif
                 showSuggestionChip(text: s, toneString: coordinator?.getCurrentToneStatus())
             } else {
+                #if DEBUG
                 logger.debug("🔍 No suggestions available, forcing analysis")
-                // No chip content yet—kick analysis so we surface something
+                #endif
                 forceAnalysis()
-                
-                // TEMPORARY: Show a test suggestion if no real suggestions are available
-                // This helps debug the chip display mechanism
-                logger.debug("🧪 Testing: Showing test suggestion chip")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                    if self?.suggestionChip == nil && self?.suggestions.isEmpty == true {
-                        self?.logger.debug("🧪 Displaying test suggestion since no real suggestions appeared")
-                        self?.showSuggestionChip(text: "Test suggestion - tap me!", toneString: self?.coordinator?.getCurrentToneStatus())
-                    }
-                }
             }
             spellStrip.isHidden = true
+        }
         }
     }
 
@@ -2242,33 +2687,45 @@ private func commit(button: UIButton) {
 
     @objc private func forceAnalysisTap() { forceAnalysis() }
     private func forceAnalysis() {
+        #if DEBUG
         logger.debug("🔍 forceAnalysis() called")
+        #endif
         
         guard let proxy = textDocumentProxy else { 
+            #if DEBUG
             logger.debug("❌ No textDocumentProxy available")
+            #endif
             return 
         }
         
         let before = proxy.documentContextBeforeInput ?? ""
+        #if DEBUG
         logger.debug("📝 Text before cursor: '\(before)'")
+        #endif
         
         let candidate = lastCompletedSentence(in: before) ?? lastNaturalClause(in: before)
+        #if DEBUG
         logger.debug("🎯 Analysis candidate: '\(candidate ?? "nil")'")
+        #endif
         
         if let s = candidate, meetsThresholds(s) {
+            #if DEBUG
             logger.debug("✅ Text meets thresholds, analyzing: '\(s)'")
+            #endif
             analysisTimer?.invalidate()
             lastAnalyzedSentence = s
             coordinator?.analyzeFinalSentence(s)
         } else {
+            #if DEBUG
             logger.debug("❌ Text doesn't meet thresholds or is nil")
             if let s = candidate {
                 logger.debug("   - Text length: \(s.count) (min: \(minCharsForAnalysis))")
                 logger.debug("   - Word count: \(s.split { $0.isWhitespace }.count) (min: \(minWordsForAnalysis))")
             }
+            logger.debug("🔄 Requesting suggestions directly from coordinator")
+            #endif
             
             // If no suitable text found, try to request suggestions anyway
-            logger.debug("🔄 Requesting suggestions directly from coordinator")
             coordinator?.requestSuggestions()
         }
     }
@@ -2284,7 +2741,9 @@ private func commit(button: UIButton) {
         let afterCtx  = textDocumentProxy?.documentContextAfterInput ?? ""
         let fullText = beforeCtx + afterCtx
         
+        #if DEBUG
         logger.debug("handleTextChange called. Text: '\(beforeCtx)' isSuggestionBarVisible: \(self.isSuggestionBarVisible)")
+        #endif
         
         if beforeCtx.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
            afterCtx.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

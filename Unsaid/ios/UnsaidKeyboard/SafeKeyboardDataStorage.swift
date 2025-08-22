@@ -10,8 +10,8 @@ class SafeKeyboardDataStorage {
     private init() {}
     
     // MARK: - Properties
-    private let logger = Logger(subsystem: "com.example.unsaid.keyboard", category: "SafeDataStorage")
-    private let appGroupIdentifier = "group.com.example.unsaid.shared"
+    private let logger = Logger(subsystem: "com.example.unsaid.UnsaidKeyboard", category: "SafeDataStorage")
+    private let appGroupIdentifier = "group.com.unsaid.shared"
     private let maxQueueSize = 100  // Prevent memory issues
     private let maxRetries = 3
     
@@ -149,22 +149,29 @@ class SafeKeyboardDataStorage {
         guard !isProcessing else { return }
         guard hasQueuedData() else { return }
         
-        isProcessing = true
-        
-        // Use lowest priority to not interfere with keyboard
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            defer {
-                self?.isProcessing = false
-            }
-            
+        dataQueue.async { [weak self] in
             guard let self = self else { return }
+            guard !self.isProcessing else { return } // Double-check after async dispatch
             
-            do {
-                try self.performSafeSync()
-                self.logger.debug("🔄 Background sync completed successfully")
-            } catch {
-                self.logger.error("⚠️ Background sync failed: \(error.localizedDescription)")
-                // Don't retry immediately to avoid performance impact
+            self.isProcessing = true
+            
+            // Use lowest priority to not interfere with keyboard
+            DispatchQueue.global(qos: .background).async { [weak self] in
+                defer {
+                    self?.dataQueue.async {
+                        self?.isProcessing = false
+                    }
+                }
+                
+                guard let self = self else { return }
+                
+                do {
+                    try self.performSafeSync()
+                    self.logger.debug("🔄 Background sync completed successfully")
+                } catch {
+                    self.logger.error("⚠️ Background sync failed: \(error.localizedDescription)")
+                    // Don't retry immediately to avoid performance impact
+                }
             }
         }
     }
@@ -175,47 +182,76 @@ class SafeKeyboardDataStorage {
             throw SafeStorageError.sharedDefaultsUnavailable
         }
         
+        // Create snapshots of current queues to avoid race conditions
+        let interactionsSnapshot = self.interactionQueue
+        let analyticsSnapshot = self.analyticsQueue
+        let toneSnapshot = self.toneQueue
+        let suggestionsSnapshot = self.suggestionQueue
+        
         // Sync each queue separately with size limits
-        try syncQueue("interactions", queue: interactionQueue, to: sharedDefaults, key: StorageKeys.pendingInteractions)
-        try syncQueue("analytics", queue: analyticsQueue, to: sharedDefaults, key: StorageKeys.pendingAnalytics)
-        try syncQueue("tone", queue: toneQueue, to: sharedDefaults, key: StorageKeys.pendingToneData)
-        try syncQueue("suggestions", queue: suggestionQueue, to: sharedDefaults, key: StorageKeys.pendingSuggestions)
+        try syncQueue("interactions", queue: interactionsSnapshot, to: sharedDefaults, key: StorageKeys.pendingInteractions)
+        try syncQueue("analytics", queue: analyticsSnapshot, to: sharedDefaults, key: StorageKeys.pendingAnalytics)
+        try syncQueue("tone", queue: toneSnapshot, to: sharedDefaults, key: StorageKeys.pendingToneData)
+        try syncQueue("suggestions", queue: suggestionsSnapshot, to: sharedDefaults, key: StorageKeys.pendingSuggestions)
         
         // Update sync metadata
         let metadata: [String: Any] = [
             "last_sync": Date().timeIntervalSince1970,
-            "interactions_count": interactionQueue.count,
-            "analytics_count": analyticsQueue.count,
-            "tone_count": toneQueue.count,
-            "suggestions_count": suggestionQueue.count,
-            "keyboard_version": "2.0.0"
+            "interactions_count": interactionsSnapshot.count,
+            "analytics_count": analyticsSnapshot.count,
+            "tone_count": toneSnapshot.count,
+            "suggestions_count": suggestionsSnapshot.count,
+            "keyboard_version": "2.0.0",
+            "sync_source": "keyboard_extension"
         ]
         
         sharedDefaults.set(metadata, forKey: StorageKeys.storageMetadata)
         
-        // Clear queues after successful sync
-        clearQueues()
+        // Clear queues after successful sync (back on dataQueue)
+        dataQueue.async { [weak self] in
+            self?.clearQueues()
+        }
     }
     
     /// Sync a specific queue to shared storage
     private func syncQueue(_ name: String, queue: [[String: Any]], to defaults: UserDefaults, key: String) throws {
         guard !queue.isEmpty else { return }
         
+        // Validate data before storing
+        let validatedQueue = queue.compactMap { item -> [String: Any]? in
+            // Ensure all required keys are present and valid
+            guard item["id"] != nil,
+                  item["timestamp"] != nil else {
+                return nil
+            }
+            return item
+        }
+        
+        guard !validatedQueue.isEmpty else {
+            logger.warning("⚠️ No valid items to sync for \(name)")
+            return
+        }
+        
         // Get existing data
         var existingData = defaults.array(forKey: key) as? [[String: Any]] ?? []
         
         // Append new data
-        existingData.append(contentsOf: queue)
+        existingData.append(contentsOf: validatedQueue)
         
         // Limit total stored data to prevent app crashes
         if existingData.count > maxQueueSize * 2 {
             existingData = Array(existingData.suffix(maxQueueSize * 2))
+            logger.warning("⚠️ Truncated \(name) data to prevent memory issues")
         }
         
-        // Store safely
-        defaults.set(existingData, forKey: key)
-        
-        logger.debug("📦 Synced \(queue.count) \(name) items")
+        // Store safely with error handling
+        do {
+            defaults.set(existingData, forKey: key)
+            defaults.synchronize() // Force write to disk
+            logger.debug("📦 Synced \(validatedQueue.count) \(name) items")
+        } catch {
+            throw SafeStorageError.syncFailed("Failed to store \(name): \(error.localizedDescription)")
+        }
     }
     
     // MARK: - Queue Management
@@ -241,15 +277,21 @@ class SafeKeyboardDataStorage {
         return [
             "id": UUID().uuidString,
             "timestamp": interaction.timestamp.timeIntervalSince1970,
-            "text_length": interaction.textBefore.count,
+            "text_before_length": interaction.textBefore.count,
+            "text_after_length": interaction.textAfter.count,
             "tone_status": interaction.toneStatus.rawValue,
             "suggestion_accepted": interaction.suggestionAccepted,
+            "user_accepted_suggestion": interaction.userAcceptedSuggestion,
             "suggestion_length": interaction.suggestionText?.count ?? 0,
             "analysis_time": interaction.analysisTime,
             "context": interaction.context,
             "interaction_type": interaction.interactionType.rawValue,
+            "communication_pattern": interaction.communicationPattern.rawValue,
+            "attachment_style": interaction.attachmentStyleDetected.rawValue,
+            "relationship_context": interaction.relationshipContext.rawValue,
+            "sentiment_score": interaction.sentimentScore,
             "word_count": interaction.wordCount,
-            "app_context": interaction.appContext ?? "unknown"
+            "app_context": interaction.appContext
         ]
     }
     
@@ -279,8 +321,12 @@ class SafeKeyboardDataStorage {
     
     /// Clear all pending data after main app has processed it
     func clearAllPendingData() {
-        guard let sharedDefaults = safeUserDefaults else { return }
+        guard let sharedDefaults = safeUserDefaults else {
+            logger.error("❌ Shared defaults unavailable for clearing data")
+            return
+        }
         
+        // Clear data atomically
         sharedDefaults.removeObject(forKey: StorageKeys.pendingInteractions)
         sharedDefaults.removeObject(forKey: StorageKeys.pendingAnalytics)
         sharedDefaults.removeObject(forKey: StorageKeys.pendingToneData)
@@ -289,18 +335,38 @@ class SafeKeyboardDataStorage {
         // Update metadata
         let metadata: [String: Any] = [
             "last_clear": Date().timeIntervalSince1970,
-            "cleared_by": "main_app"
+            "cleared_by": "main_app",
+            "clear_timestamp": Date().description
         ]
         
         sharedDefaults.set(metadata, forKey: StorageKeys.storageMetadata)
+        sharedDefaults.synchronize() // Force write to disk
         
         logger.info("🗑️ Cleared all pending data")
     }
     
     /// Get storage metadata
     func getStorageMetadata() -> [String: Any] {
-        guard let sharedDefaults = safeUserDefaults else { return [:] }
+        guard let sharedDefaults = safeUserDefaults else {
+            logger.error("❌ Shared defaults unavailable for metadata retrieval")
+            return [:]
+        }
         return sharedDefaults.dictionary(forKey: StorageKeys.storageMetadata) ?? [:]
+    }
+    
+    /// Get current queue sizes (for debugging/monitoring)
+    func getCurrentQueueSizes() -> [String: Int] {
+        var sizes: [String: Int] = [:]
+        dataQueue.sync {
+            sizes = [
+                "interactions": self.interactionQueue.count,
+                "analytics": self.analyticsQueue.count,
+                "tone": self.toneQueue.count,
+                "suggestions": self.suggestionQueue.count,
+                "total": self.interactionQueue.count + self.analyticsQueue.count + self.toneQueue.count + self.suggestionQueue.count
+            ]
+        }
+        return sizes
     }
 }
 

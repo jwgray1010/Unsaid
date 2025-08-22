@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/keyboard_manager.dart';
 import '../services/unified_analytics_service.dart';
-import '../services/personality_driven_analyzer.dart';
 import '../services/secure_storage_service.dart';
 import 'individual_goals.dart';
 
@@ -21,7 +20,6 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
 
   // Service instances - REAL DATA INTEGRATION
   final KeyboardManager _keyboardManager = KeyboardManager();
-  final PersonalityDrivenAnalyzer _personalityAnalyzer = PersonalityDrivenAnalyzer();
   final SecureStorageService _storageService = SecureStorageService();
   
   // Real data storage
@@ -687,6 +685,52 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
     }
   }
 
+  void _showPreSendCoach() {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) {
+        bool v = false, n = false, a = false;
+        return StatefulBuilder(builder: (ctx, setState) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Row(children: const [
+                Icon(Icons.shield_moon),
+                SizedBox(width: 8),
+                Text('Pre-Send Coach', style: TextStyle(fontWeight: FontWeight.bold)),
+              ]),
+              const SizedBox(height: 12),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: v,
+                onChanged: (b)=>setState(()=>v=b??false),
+                title: const Text('Validation: "I can see how this affects you."')),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: n,
+                onChanged: (b)=>setState(()=>n=b??false),
+                title: const Text('Need: "What I need is…"')),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: a,
+                onChanged: (b)=>setState(()=>a=b??false),
+                title: const Text('Ask: "Could we try…?"')),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.send),
+                  label: const Text('Looks good'),
+                  onPressed: ()=>Navigator.pop(ctx),
+                ),
+              ),
+            ]),
+          );
+        });
+      });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -739,6 +783,8 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInsightsSummary(theme),
+          const SizedBox(height: 16),
+          SecureStreakAndRepairCard(analysisHistory: _keyboardManager.analysisHistory),
           const SizedBox(height: 24),
           _buildRecentActivity(theme),
           const SizedBox(height: 24),
@@ -787,6 +833,8 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          MicroHabitOfWeek(attachment: (_personalityResults?['dominant_type'] ?? 'B').toString()),
+          const SizedBox(height: 24),
           _buildIndividualGoals(theme),
           const SizedBox(height: 24),
           _buildRecommendations(theme),
@@ -940,6 +988,19 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
                     // Navigate to analytics tab
                     _tabController?.animateTo(1);
                   },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  theme,
+                  'Pre-Send',
+                  Icons.shield_moon,
+                  _showPreSendCoach,
                 ),
               ),
             ],
@@ -1317,6 +1378,24 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
             const SizedBox(height: 16),
             ..._getSecureCommunicationRecommendations().map((rec) => 
               _buildSecureRecommendationTile(theme, rec),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                'These tools offer relationship coaching, not medical or clinical treatment. If communication feels unsafe or overwhelming, consider speaking with a licensed professional.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
           ],
         ),
@@ -1874,19 +1953,23 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
 
   // Personalized Insights Card
   Widget _buildPersonalizedInsightsCard(ThemeData theme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Column(
+      children: [
+        TriggerTopicsChart(analysisHistory: _keyboardManager.analysisHistory),
+        const SizedBox(height: 24),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.lightbulb, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Personal Insights',
-                  style: theme.textTheme.titleLarge?.copyWith(
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Personal Insights',
+                      style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1930,6 +2013,8 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
             ],
           ],
         ),
+          ),
+        ],
       ),
     );
   }
@@ -2154,3 +2239,321 @@ class _InsightsDashboardEnhancedState extends State<InsightsDashboardEnhanced>
     }
   }
 }
+
+class SecureStreakAndRepairCard extends StatelessWidget {
+  const SecureStreakAndRepairCard({
+    super.key,
+    required this.analysisHistory,
+  });
+
+  final List<Map<String, dynamic>> analysisHistory;
+
+  bool _isRupture(Map<String, dynamic> a) {
+    final tone = (a['tone_status'] ?? a['dominant_tone'] ?? 'neutral').toString().toLowerCase();
+    return tone == 'alert' || tone == 'angry' || tone == 'aggressive' || tone == 'caution';
+  }
+
+  bool _isRepair(Map<String, dynamic> a) {
+    final msg = (a['original_message'] ?? a['original_text'] ?? '').toString().toLowerCase();
+    const repairWords = [
+      'sorry','apologize','understand','i see','makes sense','thank you',
+      'appreciate','can we restart','let me try again','want to work together'
+    ];
+    return repairWords.any((w) => msg.contains(w));
+  }
+
+  int _secureStreakDays(List<Map<String, dynamic>> hist) {
+    if (hist.isEmpty) return 0;
+    // group by date -> if any rupture in a day, that day is insecure
+    final byDate = <DateTime, bool>{}; // true = secure day
+    for (final a in hist) {
+      final ts = DateTime.tryParse(a['timestamp'] ?? '') ?? DateTime.now();
+      final day = DateTime(ts.year, ts.month, ts.day);
+      byDate[day] = (byDate[day] ?? true) && !_isRupture(a);
+    }
+    // count back from today until first insecure day
+    int streak = 0;
+    DateTime d = DateTime.now();
+    for (;;) {
+      final day = DateTime(d.year, d.month, d.day);
+      if (byDate.containsKey(day) && byDate[day] == true) {
+        streak++;
+      } else {
+        break;
+      }
+      d = d.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
+
+  double _repairRateLast7d(List<Map<String, dynamic>> hist) {
+    if (hist.isEmpty) return 0;
+    final cutoff = DateTime.now().subtract(const Duration(days: 7));
+    final recent = hist.where((a) {
+      final ts = DateTime.tryParse(a['timestamp'] ?? '') ?? DateTime.now();
+      return ts.isAfter(cutoff);
+    }).toList()
+      ..sort((a,b){
+        final ta = DateTime.tryParse(a['timestamp'] ?? '') ?? DateTime(2000);
+        final tb = DateTime.tryParse(b['timestamp'] ?? '') ?? DateTime(2000);
+        return ta.compareTo(tb);
+      });
+
+    int ruptures = 0, repairs = 0;
+    for (int i = 0; i < recent.length; i++) {
+      if (_isRupture(recent[i])) {
+        ruptures++;
+        // look ahead 24h for a repair
+        final t0 = DateTime.tryParse(recent[i]['timestamp'] ?? '') ?? DateTime.now();
+        for (int j = i + 1; j < recent.length; j++) {
+          final tj = DateTime.tryParse(recent[j]['timestamp'] ?? '') ?? DateTime.now();
+          if (tj.difference(t0).inHours > 24) break;
+          if (_isRepair(recent[j])) { repairs++; break; }
+        }
+      }
+    }
+    if (ruptures == 0) return 1.0; // treat no ruptures as 100%
+    return (repairs / ruptures).clamp(0.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final streak = _secureStreakDays(analysisHistory);
+    final repairRate = _repairRateLast7d(analysisHistory);
+    final theme = Theme.of(context);
+
+    Color repairColor;
+    if (repairRate >= 0.7) repairColor = Colors.green;
+    else if (repairRate >= 0.4) repairColor = Colors.orange;
+    else repairColor = Colors.red;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.verified_user, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('Secure Streak & Repair Rate',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 16),
+          Row(children: [
+            Expanded(child: _metricTile(
+              context, 'Secure Streak', '${streak}d', Icons.local_fire_department, Colors.amber)),
+            const SizedBox(width: 12),
+            Expanded(child: _metricTile(
+              context, 'Repair Rate (7d)', '${(repairRate*100).round()}%',
+              Icons.build_circle, repairColor)),
+          ]),
+          const SizedBox(height: 8),
+          Text(
+            repairRate >= 0.7
+              ? 'Great repair habit—keep validating + restating needs.'
+              : 'Aim for a quick repair after tense moments: validate → need → next step.',
+            style: theme.textTheme.bodySmall),
+        ]),
+      ),
+    );
+  }
+
+  Widget _metricTile(BuildContext ctx, String label, String value, IconData icon, Color color) {
+    final t = Theme.of(ctx);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Column(children: [
+        Icon(icon, color: color),
+        const SizedBox(height: 6),
+        Text(value, style: t.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.bold, color: color)),
+        Text(label, style: t.textTheme.bodySmall),
+      ]),
+    );
+  }
+}
+
+class TriggerTopicsChart extends StatelessWidget {
+  const TriggerTopicsChart({super.key, required this.analysisHistory});
+
+  final List<Map<String, dynamic>> analysisHistory;
+
+  bool _isTense(Map<String, dynamic> a) {
+    final tone = (a['tone_status'] ?? a['dominant_tone'] ?? 'neutral').toString().toLowerCase();
+    return tone == 'alert' || tone == 'angry' || tone == 'aggressive' || tone == 'caution';
+  }
+
+  String _topicFor(String text) {
+    final t = text.toLowerCase();
+    if (RegExp(r'\bmoney|budget|pay|rent|bills?\b').hasMatch(t)) return 'Money';
+    if (RegExp(r'\bplan|schedule|time|when|later|tomorrow|date\b').hasMatch(t)) return 'Plans/Time';
+    if (RegExp(r'\bchores?|dishes|laundry|clean|trash\b').hasMatch(t)) return 'Chores';
+    if (RegExp(r'\bfamily|mom|dad|kids?|child|baby\b').hasMatch(t)) return 'Family';
+    if (RegExp(r'\bsex|intimacy|affection|touch\b').hasMatch(t)) return 'Intimacy';
+    if (RegExp(r'\bwork|job|deadline|meeting\b').hasMatch(t)) return 'Work';
+    return 'Other';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recent = analysisHistory.take(200).toList();
+    final counts = <String, int>{};
+    for (final a in recent) {
+      final msg = (a['original_message'] ?? a['original_text'] ?? '').toString();
+      final topic = _topicFor(msg);
+      if (_isTense(a)) counts[topic] = (counts[topic] ?? 0) + 1;
+    }
+    if (counts.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('No tense topics detected yet.')),
+      );
+    }
+    final items = counts.entries.toList()
+      ..sort((a,b)=>b.value.compareTo(a.value));
+
+    final bars = <BarChartGroupData>[];
+    for (int i = 0; i < items.length; i++) {
+      bars.add(
+        BarChartGroupData(x: i, barRods: [
+          BarChartRodData(
+            toY: items[i].value.toDouble(),
+            color: Colors.orange.withOpacity(0.9),
+            width: 18,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ]),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.flag_circle, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('Trigger Topics', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            )),
+          ]),
+          const SizedBox(height: 8),
+          Text('Where caution/alert spikes most (last 200 msgs)',
+            style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 220,
+            child: BarChart(
+              BarChartData(
+                barGroups: bars,
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: true),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (v, _) {
+                      if (v.toInt() >= 0 && v.toInt() < items.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(items[v.toInt()].key, style: const TextStyle(fontSize: 10)),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  )),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tip: Pre-agree "how we'll talk" rules for your top 1–2 tricky topics.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class MicroHabitOfWeek extends StatefulWidget {
+  const MicroHabitOfWeek({super.key, required this.attachment});
+  final String attachment; // 'A'|'B'|'C'|'D' or label
+
+  @override
+  State<MicroHabitOfWeek> createState() => _MicroHabitOfWeekState();
+}
+
+class _MicroHabitOfWeekState extends State<MicroHabitOfWeek> {
+  late Map<String, String> habit;
+  int completions = 0; // simple local counter
+
+  Map<String, String> _pickHabit(String a) {
+    switch (a) {
+      case 'A': return {
+        'title': 'Validate before asking',
+        'desc': 'Add one sentence of understanding before your request.'
+      };
+      case 'C': return {
+        'title': 'Name one feeling',
+        'desc': 'Include a single feeling word in one message per day.'
+      };
+      case 'D': return {
+        'title': 'One need + one ask',
+        'desc': 'Keep it simple: "I feel __, I need __, could we __?"'
+      };
+      default: return {
+        'title': 'Appreciation first',
+        'desc': 'Start tough messages with a brief appreciation.'
+      };
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    habit = _pickHabit(widget.attachment);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.check_circle, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('Micro-Habit of the Week',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 8),
+          Text(habit['title']!, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(habit['desc']!, style: theme.textTheme.bodySmall),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => setState(()=>completions++),
+                icon: const Icon(Icons.done),
+                label: const Text('Mark done today'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text('Done: $completions',
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          ]),
+        ]),
+      ),
+    );
+  }

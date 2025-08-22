@@ -21,13 +21,13 @@ class PersonalityDataBridge {
     static let shared = PersonalityDataBridge()
     
     /// App group identifier for shared data storage
-    private let appGroupIdentifier = "group.com.example.unsaid.shared"
+    private let appGroupIdentifier = "group.com.unsaid.shared"
     
     /// Shared UserDefaults container for cross-process communication
     private let sharedDefaults: UserDefaults?
     
     /// Logger for debugging
-    private let logger = Logger(subsystem: "com.example.unsaid.keyboard", category: "PersonalityDataBridge")
+    private let logger = Logger(subsystem: "com.example.unsaid.UnsaidKeyboard", category: "PersonalityDataBridge")
     
     // MARK: - Data Keys
     

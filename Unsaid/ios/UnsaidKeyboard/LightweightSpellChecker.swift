@@ -10,7 +10,7 @@ final class UserLexicon {
     static let shared = UserLexicon()
     private let keyLearn = "lex_learned"
     private let keyIgnore = "lex_ignored"
-    private let ud = UserDefaults(suiteName: "group.com.example.unsaid.shared")!
+    private let ud = UserDefaults(suiteName: "group.com.unsaid.shared")!
 
     private(set) var learned: Set<String> = []
     private(set) var ignored: Set<String> = []
@@ -110,39 +110,31 @@ extension String {
     }
     
     var isEmojiOrSymbol: Bool {
-        // Fast path for single Unicode scalar
-        guard let firstScalar = unicodeScalars.first, unicodeScalars.count == 1 else {
-            // For multi-character strings, check if any scalar is in emoji blocks
-            let emojiRanges: [ClosedRange<UInt32>] = [
-                0x1F600...0x1F64F, 0x1F300...0x1F5FF, 0x1F680...0x1F6FF,
-                0x2600...0x26FF,   0x2700...0x27BF,   0xFE00...0xFE0F,
-                0x1F900...0x1F9FF
-            ]
-            for scalar in unicodeScalars {
-                for range in emojiRanges where range.contains(scalar.value) {
-                    return true
-                }
+        // IMPROVED: Use Unicode scalar properties for accurate emoji detection
+        for scalar in unicodeScalars {
+            let properties = scalar.properties
+            if properties.isEmojiPresentation || properties.isEmoji {
+                return true
             }
-            let symbolChars = CharacterSet.symbols.union(.punctuationCharacters)
-            return rangeOfCharacter(from: symbolChars) != nil &&
-                   rangeOfCharacter(from: .letters) == nil
         }
-        if (0x1F600...0x1F9FF).contains(firstScalar.value) ||
-           (0x2600...0x27BF).contains(firstScalar.value) {
-            return true
-        }
+        // Check for symbols/punctuation without letters
         let symbolChars = CharacterSet.symbols.union(.punctuationCharacters)
-        return symbolChars.contains(firstScalar) && !CharacterSet.letters.contains(firstScalar)
+        return rangeOfCharacter(from: symbolChars) != nil &&
+               rangeOfCharacter(from: .letters) == nil
     }
     
+    // OPTIMIZED: Reuse expensive NSDataDetector
+    private static let linkDetector: NSDataDetector? = {
+        try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+    }()
+    
     var isURL: Bool {
-        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return false }
+        guard let detector = Self.linkDetector else { return false }
         let ns = self as NSString
-        let full = NSRange(location: 0, length: ns.length)
-        let matches = detector.matches(in: self, options: [], range: full)
+        let range = NSRange(location: 0, length: ns.length)
+        guard let match = detector.matches(in: self, options: [], range: range).first else { return false }
         // URL only if the *entire* token is a link
-        guard let m = matches.first, m.range.location == 0, m.range.length == ns.length else { return false }
-        return true
+        return match.range.location == 0 && match.range.length == ns.length
     }
     
     var isMentionOrHashtag: Bool { hasPrefix("@") || hasPrefix("#") }
@@ -174,9 +166,17 @@ final class LightweightSpellChecker {
     private var languageCache: [String: String] = [:]
     private var lastUndoableCorrection: (original: String, replacement: String, range: NSRange)?
 
-    // NEW: acceptance learning (misspelling -> correction)
+    // PERSISTENCE: Acceptance learning (misspelling -> correction)
+    private let acceptanceCountsKey = "spell_acceptance_counts"
     private var acceptanceCounts: [String: Int] = [:]
     private let acceptanceBoostThreshold = 3
+    
+    // CACHING: Allow-list optimization
+    private var cachedAllowList: Set<String> = []
+    private var allowCacheTimestamp: TimeInterval = 0
+    
+    // BEHAVIORAL: Terminal period insertion (off by default for iOS-style behavior)
+    var autoInsertTerminalPeriod = false
     
     enum DomainMode {
         case general, email, url, numeric
@@ -204,7 +204,13 @@ final class LightweightSpellChecker {
         }
     }
     
-    private init() {}
+    private init() {
+        // PERSISTENCE: Load acceptance learning data
+        if let ud = UserDefaults(suiteName: "group.com.unsaid.shared"),
+           let saved = ud.dictionary(forKey: acceptanceCountsKey) as? [String: Int] {
+            acceptanceCounts = saved
+        }
+    }
 
     // MARK: - Language prefs
     private var preferredLanguage: String = "en_US"
@@ -235,17 +241,34 @@ final class LightweightSpellChecker {
         preferredLanguage = normalized
     }
     
-    // MARK: - Allow-list for common colloquial words
-    private var allowedWords: Set<String> {
-        let shared = UserDefaults(suiteName: "group.com.example.unsaid.shared")
-        let defaults = (shared?.array(forKey: "profanity_allowlist") as? [String]) ?? []
-        // Seed with a few common colloquials; user can add/remove later
-        let seed = ["crap","shit","damn","hell","fuck","suck","wtf","lol","omg","nah","ok","okay","yo",
-                   "tbh", "imo", "fyi", "brb", "ttyl", "smh", "rn", "af", "ik", "ngl", "fr", "bet",
-                   "lowkey", "highkey", "bestie", "vibes", "sus", "periodt", "slay", "stan",
-                   "thicc", "yeet", "fam", "bae", "lit", "woke", "simp", "flex", "clout", "vibe"]
-        return Set(defaults.map{ $0.lowercased() } + seed)
+    // CONTEXT-AWARE: Set document language from textDocumentProxy
+    func setDocumentPrimaryLanguage(_ bcp47: String?) {
+        setPreferredLanguage(bcp47)
     }
+    
+    // MARK: - Allow-list for common colloquial words (CACHED)
+    private func allowedWords() -> Set<String> {
+        guard let ud = UserDefaults(suiteName: "group.com.unsaid.shared") else {
+            return Set(seedColloquials)
+        }
+        
+        let currentTimestamp = ud.double(forKey: "profanity_allowlist_ts")
+        if currentTimestamp == allowCacheTimestamp && !cachedAllowList.isEmpty {
+            return cachedAllowList
+        }
+        
+        let defaults = (ud.array(forKey: "profanity_allowlist") as? [String]) ?? []
+        cachedAllowList = Set(defaults.map{ $0.lowercased() } + seedColloquials)
+        allowCacheTimestamp = currentTimestamp
+        return cachedAllowList
+    }
+    
+    private let seedColloquials = [
+        "crap","shit","damn","hell","fuck","suck","wtf","lol","omg","nah","ok","okay","yo",
+        "tbh", "imo", "fyi", "brb", "ttyl", "smh", "rn", "af", "ik", "ngl", "fr", "bet",
+        "lowkey", "highkey", "bestie", "vibes", "sus", "periodt", "slay", "stan",
+        "thicc", "yeet", "fam", "bae", "lit", "woke", "simp", "flex", "clout", "vibe"
+    ]
 
     // MARK: - Autocorrect safety rails
     private let riskyCorrections: Set<String> = [
@@ -262,6 +285,20 @@ final class LightweightSpellChecker {
         "cunt",
         "dick",
         "fucking"
+    ]
+    
+    // KEYBOARD-ADJACENCY: Common tap-slip patterns for smarter autocorrect
+    private let qwertyNeighbors: [Character: Set<Character>] = [
+        "q": ["w", "a"], "w": ["q", "e", "a", "s"], "e": ["w", "r", "s", "d"],
+        "r": ["e", "t", "d", "f"], "t": ["r", "y", "f", "g"], "y": ["t", "u", "g", "h"],
+        "u": ["y", "i", "h", "j"], "i": ["u", "o", "j", "k"], "o": ["i", "p", "k", "l"],
+        "p": ["o", "l"], "a": ["q", "w", "s", "z"], "s": ["a", "w", "e", "d", "z", "x"],
+        "d": ["s", "e", "r", "f", "x", "c"], "f": ["d", "r", "t", "g", "c", "v"],
+        "g": ["f", "t", "y", "h", "v", "b"], "h": ["g", "y", "u", "j", "b", "n"],
+        "j": ["h", "u", "i", "k", "n", "m"], "k": ["j", "i", "o", "l", "m"],
+        "l": ["k", "o", "p"], "z": ["a", "s", "x"], "x": ["z", "s", "d", "c"],
+        "c": ["x", "d", "f", "v"], "v": ["c", "f", "g", "b"], "b": ["v", "g", "h", "n"],
+        "n": ["b", "h", "j", "m"], "m": ["n", "j", "k"]
     ]
 
     /// Keyboard-adjacent fast fixes (before UITextChecker), kept ultra safe (edit distance 1)
@@ -332,6 +369,9 @@ final class LightweightSpellChecker {
         // Be very conservative: only allow single character errors for autocorrect
         let editDist = editDistance(o.lowercased(), s.lowercased())
         if editDist != 1 { return false } // Changed from > 1 to != 1 for extra caution
+        
+        // KEYBOARD-ADJACENCY: Allow if it's a likely tap slip (boost confidence)
+        if isLikelyTapSlip(o, s) { return true }
 
         // Don't change the word if the vowel/consonant pattern completely shifts (often wrong)
         // Allow phonetic shift if it's still a single edit (e.g., tge→the)
@@ -343,6 +383,22 @@ final class LightweightSpellChecker {
         if o.count >= 3 && o.first?.isUppercase == true && !s.first!.isUppercase { return false } // Proper noun protection
 
         return true
+    }
+    
+    // KEYBOARD-ADJACENCY: Check if correction is likely a tap slip
+    private func isLikelyTapSlip(_ a: String, _ b: String) -> Bool {
+        guard a.count == b.count, a.count >= 1 else { return false }
+        let aChars = Array(a.lowercased())
+        let bChars = Array(b.lowercased())
+        var diffs: [(Character, Character)] = []
+        
+        for i in 0..<aChars.count where aChars[i] != bChars[i] {
+            diffs.append((aChars[i], bChars[i]))
+        }
+        
+        guard diffs.count == 1 else { return false }
+        let (from, to) = diffs[0]
+        return qwertyNeighbors[from]?.contains(to) == true
     }
 
     /// Simple Levenshtein distance (fast enough for short words)
@@ -425,7 +481,7 @@ final class LightweightSpellChecker {
         guard !word.isEmpty else { return [] }
         
         // Honor allow-list for common colloquial words
-        if allowedWords.contains(word.lowercased()) { return [] }
+        if allowedWords().contains(word.lowercased()) { return [] }
         
         // FAST PATH: keyboard-adjacent typos (single-word, no hyphens)
         let lower = word.lowercased()
@@ -460,7 +516,7 @@ final class LightweightSpellChecker {
         #if canImport(UIKit)
         guard !word.isEmpty else { return true }
         // Honor allow-list for common colloquial words
-        if allowedWords.contains(word.lowercased()) { return true }
+        if allowedWords().contains(word.lowercased()) { return true }
         
         let lang = resolvedLanguage(language)
         let nsWord = word as NSString
@@ -495,7 +551,7 @@ final class LightweightSpellChecker {
     func shouldAutoCorrect(_ word: String) -> Bool {
         guard word.count >= 3 else { return false } // lowered from 4 → 3
         // Honor allow-list for common colloquial words
-        if allowedWords.contains(word.lowercased()) { return false }
+        if allowedWords().contains(word.lowercased()) { return false }
         // Only block if explicitly marked intentional (via undo/ignore), not after accept
         if isIntentionallyTyped(word) { return false }
         guard !isWordCorrect(word) else { return false }
@@ -772,6 +828,11 @@ final class LightweightSpellChecker {
     }
 
     private func fixCommonContractions(_ text: String) -> String {
+        // SAFER: Skip if token is URL, mention, or ALL-CAPS
+        if text.isURL || text.isMentionOrHashtag || text == text.uppercased() {
+            return text
+        }
+        
         // 1) remove unsafe mapping
         let map: [String:String] = [
             "wont":"won't","cant":"can't","dont":"don't","isnt":"isn't","wasnt":"wasn't",
@@ -809,6 +870,7 @@ final class LightweightSpellChecker {
     }
 
     private func addPeriodIfNeeded(_ text: String) -> String {
+        guard autoInsertTerminalPeriod else { return text }
         guard text.count > 10 else { return text }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if let last = trimmed.last, [".","!","?",";", ":"].contains(String(last)) { return text }
@@ -1021,10 +1083,52 @@ final class LightweightSpellChecker {
     }
     func clearUndoHistory() { lastUndoableCorrection = nil }
     
-    // MARK: - Acceptance Learning (PATCH #3)
+    // MARK: - Acceptance Learning (PATCH #3 - PERSISTENT)
     func recordAcceptedCorrection(original: String, corrected: String) {
         let key = "\(original.lowercased())->\(corrected.lowercased())"
         acceptanceCounts[key, default: 0] += 1
+        
+        // PERSISTENCE: Save to UserDefaults
+        if let ud = UserDefaults(suiteName: "group.com.unsaid.shared") {
+            ud.set(acceptanceCounts, forKey: acceptanceCountsKey)
+        }
+    }
+    
+    // MARK: - ONE-SHOT DECISION HELPER
+    struct Decision {
+        let replacement: String?
+        let suggestions: [String]
+        let applyAuto: Bool
+    }
+    
+    /// Single entry point for keyboard controller - runs complete pipeline
+    func decide(for currentWord: String,
+                prev: String? = nil,
+                next: String? = nil,
+                langOverride: String? = nil) -> Decision {
+        
+        setDocumentPrimaryLanguage(langOverride)
+        
+        // Skip if user knows this word or it's in allow-list
+        if isWordKnownByUser(currentWord) || allowedWords().contains(currentWord.lowercased()) {
+            return Decision(replacement: nil, suggestions: [], applyAuto: false)
+        }
+        
+        // Check multi-word corrections
+        if let multi = checkMultiWordCorrection(currentWord) {
+            return Decision(replacement: multi.correction, suggestions: [multi.correction], applyAuto: true)
+        }
+        
+        // Check for single-word autocorrect
+        if shouldAutoCorrect(currentWord), let auto = getAutoCorrection(for: currentWord) {
+            return Decision(replacement: auto, suggestions: [auto], applyAuto: true)
+        }
+        
+        // Get suggestions for manual selection
+        let enhanced = performEnhancedSpellCheck(text: currentWord, previousWord: prev, nextWord: next)
+        let suggestions = enhanced.map { $0.word }
+        
+        return Decision(replacement: nil, suggestions: suggestions, applyAuto: false)
     }
     
     // MARK: - Utilities

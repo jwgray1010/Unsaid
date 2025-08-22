@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
@@ -10,7 +11,1565 @@ import '../services/secure_storage_service.dart';
 import '../services/unified_analytics_service.dart';
 import '../services/new_user_experience_service.dart';
 import '../services/partner_data_service.dart';
+import '../services/conversation_data_service.dart';
+import '../services/usage_tracking_service.dart';
 import 'secure_couple_tips.dart';
+
+// MARK: - Shared Utilities
+class RelationshipInsightsUtils {
+  static Color getScoreColor(double score) {
+    if (score >= 0.8) return Colors.green;
+    if (score >= 0.6) return Colors.orange;
+    return Colors.red;
+  }
+
+  static String getScoreDescription(double score) {
+    if (score >= 0.8) return 'Excellent';
+    if (score >= 0.6) return 'Good';
+    if (score >= 0.4) return 'Fair';
+    return 'Needs Attention';
+  }
+
+  static const TextStyle chartTitleStyle = TextStyle(
+    fontSize: 12, 
+    fontWeight: FontWeight.bold, 
+    color: Colors.white,
+  );
+
+  static TextStyle boldTextStyle(BuildContext context) {
+    return Theme.of(context).textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.bold,
+    ) ?? const TextStyle(fontWeight: FontWeight.bold);
+  }
+}
+
+// MARK: - Attachment Lens Component
+class AttachmentLensWidget extends StatelessWidget {
+  final String attachmentStyle;
+  final String communicationStyle;
+  final String context;
+  final VoidCallback? onTap;
+
+  const AttachmentLensWidget({
+    super.key,
+    required this.attachmentStyle,
+    required this.communicationStyle,
+    required this.context,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return GestureDetector(
+      onTap: onTap ?? () => _showAttachmentLensModal(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: colorScheme.primaryContainer.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.psychology,
+              size: 14,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Attachment Lens: ${_formatAttachmentStyle(attachmentStyle)} · ${_formatCommunicationStyle(communicationStyle)}',
+              style: TextStyle(
+                fontSize: 11,
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatAttachmentStyle(String style) {
+    switch (style.toLowerCase()) {
+      case 'anxious':
+        return 'Anxious';
+      case 'avoidant':
+        return 'Dismissive-Avoidant';
+      case 'disorganized':
+        return 'Fearful-Avoidant';
+      case 'secure':
+        return 'Secure';
+      default:
+        return style;
+    }
+  }
+
+  String _formatCommunicationStyle(String style) {
+    return style.split('_').map((word) => 
+      word[0].toUpperCase() + word.substring(1)
+    ).join(' ');
+  }
+
+  void _showAttachmentLensModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => AttachmentLensModal(
+        attachmentStyle: attachmentStyle,
+        communicationStyle: communicationStyle,
+        context: this.context,
+      ),
+    );
+  }
+}
+
+// MARK: - Attachment Lens Modal
+class AttachmentLensModal extends StatelessWidget {
+  final String attachmentStyle;
+  final String communicationStyle;
+  final String context;
+
+  const AttachmentLensModal({
+    super.key,
+    required this.attachmentStyle,
+    required this.communicationStyle,
+    required this.context,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final insights = _getPersonalizedInsights();
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.psychology,
+                color: colorScheme.primary,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Your Attachment Lens',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Attachment type badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              '${_formatAttachmentStyle(attachmentStyle)} · ${_formatCommunicationStyle(communicationStyle)}',
+              style: TextStyle(
+                color: colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // Insights
+          ...insights.map((insight) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        insight['icon'],
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        insight['title'],
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    insight['description'],
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )).toList(),
+          
+          const SizedBox(height: 20),
+          
+          // Close button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Got it'),
+            ),
+          ),
+          
+          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+        ],
+      ),
+    );
+  }
+
+  String _formatAttachmentStyle(String style) {
+    switch (style.toLowerCase()) {
+      case 'anxious':
+        return 'Anxious-Preoccupied';
+      case 'avoidant':
+        return 'Dismissive-Avoidant';
+      case 'disorganized':
+        return 'Fearful-Avoidant';
+      case 'secure':
+        return 'Secure';
+      default:
+        return style;
+    }
+  }
+
+  String _formatCommunicationStyle(String style) {
+    return style.split('_').map((word) => 
+      word[0].toUpperCase() + word.substring(1)
+    ).join(' ');
+  }
+
+  List<Map<String, dynamic>> _getPersonalizedInsights() {
+    final insights = <Map<String, dynamic>>[];
+
+    // Generate insights based on attachment style and communication patterns
+    if (attachmentStyle.toLowerCase() == 'avoidant') {
+      insights.addAll([
+        {
+          'icon': Icons.favorite_outline,
+          'title': 'When Overwhelmed',
+          'description': 'You tend to keep messages short and withdraw. Try adding one validating line before ending the conversation: "I care about this, I just need a moment to process."'
+        },
+        {
+          'icon': Icons.chat_bubble_outline,
+          'title': 'Connection Strategy',
+          'description': 'Your independence is valuable, but small gestures of emotional availability can strengthen your bond without feeling overwhelming.'
+        },
+      ]);
+    } else if (attachmentStyle.toLowerCase() == 'anxious') {
+      insights.addAll([
+        {
+          'icon': Icons.schedule,
+          'title': 'When Worried',
+          'description': 'You may send longer messages seeking reassurance. Try stating your need clearly: "I\'m feeling uncertain and would love to hear that we\'re okay."'
+        },
+        {
+          'icon': Icons.self_improvement,
+          'title': 'Self-Soothing',
+          'description': 'Before sending that third follow-up, take a breath. Your partner\'s delayed response usually isn\'t about you.'
+        },
+      ]);
+    } else if (attachmentStyle.toLowerCase() == 'disorganized') {
+      insights.addAll([
+        {
+          'icon': Icons.balance,
+          'title': 'Mixed Signals',
+          'description': 'You might alternate between seeking closeness and creating distance. Acknowledging this pattern can help: "I\'m feeling conflicted right now."'
+        },
+        {
+          'icon': Icons.healing,
+          'title': 'Safety First',
+          'description': 'Grounding techniques before difficult conversations can help you stay present: "Let me take a moment to center myself."'
+        },
+      ]);
+    } else { // secure
+      insights.addAll([
+        {
+          'icon': Icons.emoji_emotions,
+          'title': 'Your Strength',
+          'description': 'Your natural ability to communicate needs and stay emotionally regulated is a gift to your relationship.'
+        },
+        {
+          'icon': Icons.support,
+          'title': 'Supporting Growth',
+          'description': 'You can help model healthy communication patterns while being patient with your partner\'s attachment style.'
+        },
+      ]);
+    }
+
+    // Add communication style insights
+    if (communicationStyle.toLowerCase().contains('direct')) {
+      insights.add({
+        'icon': Icons.straighten,
+        'title': 'Direct Communication',
+        'description': 'Your clarity is helpful, but softening with empathy can prevent defensiveness: "I notice..." instead of "You always..."'
+      });
+    } else if (communicationStyle.toLowerCase().contains('gentle')) {
+      insights.add({
+        'icon': Icons.spa,
+        'title': 'Gentle Approach',
+        'description': 'Your considerate style creates safety. Don\'t forget to also express your own needs clearly.'
+      });
+    }
+
+    return insights;
+  }
+}
+
+// MARK: - Conflict Heatmap Widget
+class ConflictHeatmap extends StatelessWidget {
+  final List<Map<String, dynamic>> analyses;
+
+  const ConflictHeatmap({super.key, required this.analyses});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    // Build 7x24 matrix of scores 0..1
+    final matrix = List.generate(7, (_) => List.filled(24, 0.0));
+    final counts = List.generate(7, (_) => List.filled(24, 0));
+    
+    for (final analysis in analyses) {
+      final timestamp = analysis['timestamp'] as String?;
+      final DateTime? dateTime = timestamp != null ? DateTime.tryParse(timestamp) : null;
+      
+      if (dateTime != null) {
+        final day = dateTime.weekday % 7; // 0..6
+        final hour = dateTime.hour;
+        final tone = (analysis['tone_status'] ?? 'neutral') as String;
+        
+        // Assign conflict scores: alert=1.0, caution=0.6, neutral/clear=0.2
+        final conflictValue = switch (tone) {
+          'alert' => 1.0,
+          'caution' => 0.6,
+          _ => 0.2,
+        };
+        
+        if (day >= 0 && day < 7 && hour >= 0 && hour < 24) {
+          matrix[day][hour] += conflictValue;
+          counts[day][hour] += 1;
+        }
+      }
+    }
+    
+    // Average the scores
+    for (var d = 0; d < 7; d++) {
+      for (var h = 0; h < 24; h++) {
+        if (counts[d][h] > 0) {
+          matrix[d][h] /= counts[d][h];
+        }
+      }
+    }
+
+    Color getCellColor(double value) {
+      if (value >= 0.8) return Colors.red.shade400;
+      if (value >= 0.5) return Colors.orange.shade400;
+      if (value > 0.2) return Colors.green.shade300;
+      return colorScheme.surfaceVariant.withOpacity(0.3);
+    }
+
+    final dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.grid_on, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Conflict Heatmap',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tension patterns by day and time',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Time labels (hours)
+            Row(
+              children: [
+                const SizedBox(width: 40), // Space for day labels
+                Expanded(
+                  child: Row(
+                    children: List.generate(6, (index) {
+                      final hour = index * 4; // Show every 4 hours
+                      return Expanded(
+                        child: Text(
+                          '${hour.toString().padLeft(2, '0')}:00',
+                          style: Theme.of(context).textTheme.labelSmall,
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            
+            // Heatmap grid
+            SizedBox(
+              height: 180,
+              child: Row(
+                children: [
+                  // Day labels
+                  SizedBox(
+                    width: 40,
+                    child: Column(
+                      children: dayLabels.map((day) => Expanded(
+                        child: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Text(
+                            day,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                  
+                  // Grid
+                  Expanded(
+                    child: GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 24,
+                        childAspectRatio: 1.0,
+                        crossAxisSpacing: 1,
+                        mainAxisSpacing: 1,
+                      ),
+                      itemCount: 7 * 24,
+                      itemBuilder: (context, index) {
+                        final day = index ~/ 24;
+                        final hour = index % 24;
+                        final value = matrix[day][hour];
+                        
+                        return GestureDetector(
+                          onTap: () => _showHeatmapDetail(context, day, hour, value),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: getCellColor(value),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Legend
+            Row(
+              children: [
+                Text(
+                  'Low tension',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+                const SizedBox(width: 8),
+                Container(width: 12, height: 12, color: Colors.green.shade300),
+                const Spacer(),
+                Container(width: 12, height: 12, color: Colors.orange.shade400),
+                const SizedBox(width: 8),
+                Container(width: 12, height: 12, color: Colors.red.shade400),
+                const SizedBox(width: 8),
+                Text(
+                  'High tension',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
+            ),
+            
+            if (_getBestWorstTimes(matrix).isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '💡 Insight',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _getBestWorstTimes(matrix),
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHeatmapDetail(BuildContext context, int day, int hour, double value) {
+    final dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final period = hour < 12 ? 'AM' : 'PM';
+    final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${dayLabels[day]} ${displayHour}:00 $period'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Tension Level: ${_getTensionDescription(value)}'),
+            const SizedBox(height: 8),
+            if (value > 0.6)
+              const Text(
+                '💡 Consider avoiding heavy topics during this time',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getTensionDescription(double value) {
+    if (value >= 0.8) return 'High';
+    if (value >= 0.5) return 'Moderate';
+    if (value > 0.2) return 'Low';
+    return 'Minimal';
+  }
+
+  String _getBestWorstTimes(List<List<double>> matrix) {
+    double maxValue = 0;
+    double minValue = 1;
+    int worstDay = -1, worstHour = -1;
+    int bestDay = -1, bestHour = -1;
+    
+    for (var d = 0; d < 7; d++) {
+      for (var h = 0; h < 24; h++) {
+        if (matrix[d][h] > maxValue) {
+          maxValue = matrix[d][h];
+          worstDay = d;
+          worstHour = h;
+        }
+        if (matrix[d][h] > 0 && matrix[d][h] < minValue) {
+          minValue = matrix[d][h];
+          bestDay = d;
+          bestHour = h;
+        }
+      }
+    }
+    
+    if (worstDay == -1 || bestDay == -1) return '';
+    
+    final dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final worstPeriod = worstHour < 12 ? 'morning' : (worstHour < 18 ? 'afternoon' : 'evening');
+    final bestPeriod = bestHour < 12 ? 'morning' : (bestHour < 18 ? 'afternoon' : 'evening');
+    
+    return 'Your best communication time: ${dayLabels[bestDay]} ${bestPeriod}. '
+           'Consider postponing difficult conversations from ${dayLabels[worstDay]} ${worstPeriod}.';
+  }
+}
+
+// MARK: - Rupture-Repair Tracker
+class RuptureRepairTracker extends StatelessWidget {
+  final List<Map<String, dynamic>> analyses;
+
+  const RuptureRepairTracker({super.key, required this.analyses});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final repairData = _calculateRepairMetrics();
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.healing, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Rupture & Repair Tracker',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'How well do you recover from tense moments?',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Repair Rate Gauge
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Weekly Repair Rate',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Text(
+                            '${(repairData['repairRate'] * 100).toInt()}%',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              color: _getRepairRateColor(repairData['repairRate']),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            _getRepairRateIcon(repairData['repairRate']),
+                            color: _getRepairRateColor(repairData['repairRate']),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getRepairRateDescription(repairData['repairRate']),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SizedBox(
+                    height: 80,
+                    child: CircularProgressIndicator(
+                      value: repairData['repairRate'],
+                      strokeWidth: 8,
+                      backgroundColor: colorScheme.surfaceVariant,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _getRepairRateColor(repairData['repairRate']),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Weekly breakdown
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'This Week',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '${repairData['weeklyRuptures']} ruptures, ${repairData['weeklyRepairs']} repairs',
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: repairData['weeklyRuptures'] > 0 ? 
+                           repairData['weeklyRepairs'] / repairData['weeklyRuptures'] : 0,
+                    backgroundColor: colorScheme.errorContainer,
+                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Coaching tip
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Repair Micro-Habit',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _getRepairCoachingTip(repairData['repairRate']),
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (repairData['recentRuptures'].isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Recent Ruptures',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...repairData['recentRuptures'].take(3).map<Widget>((rupture) => 
+                _buildRuptureItem(context, rupture)
+              ).toList(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _calculateRepairMetrics() {
+    final now = DateTime.now();
+    final weekAgo = now.subtract(const Duration(days: 7));
+    
+    final recentAnalyses = analyses.where((analysis) {
+      final timestamp = analysis['timestamp'] as String?;
+      if (timestamp == null) return false;
+      final dateTime = DateTime.tryParse(timestamp);
+      return dateTime != null && dateTime.isAfter(weekAgo);
+    }).toList();
+
+    // Identify ruptures (alert/caution tones)
+    final ruptures = recentAnalyses.where((analysis) {
+      final tone = analysis['tone_status'] as String? ?? 'neutral';
+      return tone == 'alert' || tone == 'caution';
+    }).toList();
+
+    // Simple repair detection: look for neutral/clear tones within 24h after ruptures
+    int repairCount = 0;
+    final recentRuptures = <Map<String, dynamic>>[];
+
+    for (final rupture in ruptures) {
+      final ruptureTime = DateTime.tryParse(rupture['timestamp'] as String? ?? '');
+      if (ruptureTime == null) continue;
+
+      recentRuptures.add({
+        'timestamp': ruptureTime,
+        'tone': rupture['tone_status'],
+        'text': rupture['text'] ?? 'No text available',
+        'repaired': false,
+      });
+
+      // Look for repairs within 24 hours
+      final repairWindow = ruptureTime.add(const Duration(hours: 24));
+      final hasRepair = recentAnalyses.any((analysis) {
+        final analysisTime = DateTime.tryParse(analysis['timestamp'] as String? ?? '');
+        if (analysisTime == null) return false;
+        
+        final tone = analysis['tone_status'] as String? ?? 'neutral';
+        return analysisTime.isAfter(ruptureTime) && 
+               analysisTime.isBefore(repairWindow) &&
+               (tone == 'neutral' || tone == 'clear') &&
+               _isRepairAttempt(analysis['text'] as String? ?? '');
+      });
+
+      if (hasRepair) {
+        repairCount++;
+        recentRuptures.last['repaired'] = true;
+      }
+    }
+
+    final repairRate = ruptures.isEmpty ? 0.0 : repairCount / ruptures.length;
+
+    return {
+      'repairRate': repairRate,
+      'weeklyRuptures': ruptures.length,
+      'weeklyRepairs': repairCount,
+      'recentRuptures': recentRuptures.reversed.toList(),
+    };
+  }
+
+  bool _isRepairAttempt(String text) {
+    final repairKeywords = [
+      'sorry', 'apologize', 'my fault', 'i was wrong', 'understand', 
+      'see your point', 'appreciate', 'thank you', 'love you',
+      'can we', 'let\'s try', 'want to understand', 'help me understand'
+    ];
+    
+    final lowerText = text.toLowerCase();
+    return repairKeywords.any((keyword) => lowerText.contains(keyword));
+  }
+
+  Color _getRepairRateColor(double rate) {
+    if (rate >= 0.8) return Colors.green;
+    if (rate >= 0.6) return Colors.orange;
+    return Colors.red;
+  }
+
+  IconData _getRepairRateIcon(double rate) {
+    if (rate >= 0.8) return Icons.emoji_emotions;
+    if (rate >= 0.6) return Icons.sentiment_neutral;
+    return Icons.sentiment_dissatisfied;
+  }
+
+  String _getRepairRateDescription(double rate) {
+    if (rate >= 0.8) return 'Excellent recovery';
+    if (rate >= 0.6) return 'Good resilience';
+    if (rate >= 0.4) return 'Room for improvement';
+    return 'Focus on repair skills';
+  }
+
+  String _getRepairCoachingTip(double rate) {
+    if (rate >= 0.8) {
+      return 'You\'re great at bouncing back! Keep modeling healthy repair for your relationship.';
+    } else if (rate >= 0.6) {
+      return 'When you notice tension (⚠️), try: "I want to understand—can we rewind and try that again?"';
+    } else {
+      return 'Next time you see ⚠️, pause and try a repair micro-habit: "I care about this conversation. Can we slow down?"';
+    }
+  }
+
+  Widget _buildRuptureItem(BuildContext context, Map<String, dynamic> rupture) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isRepaired = rupture['repaired'] as bool;
+    final tone = rupture['tone'] as String;
+    final timestamp = rupture['timestamp'] as DateTime;
+    final text = rupture['text'] as String;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isRepaired ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isRepaired ? Icons.check_circle_outline : Icons.warning_outlined,
+            size: 16,
+            color: isRepaired ? Colors.green : Colors.red,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_formatDate(timestamp)} - ${tone.toUpperCase()}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  text.length > 50 ? '${text.substring(0, 50)}...' : text,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isRepaired)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'Repaired',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.green,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) return 'Today';
+    if (difference.inDays == 1) return 'Yesterday';
+    if (difference.inDays < 7) return '${difference.inDays} days ago';
+    return '${date.month}/${date.day}';
+  }
+}
+
+// MARK: - Micro-Habits Experiments
+class MicroHabitsExperiment extends StatefulWidget {
+  final List<Map<String, dynamic>> analyses;
+
+  const MicroHabitsExperiment({super.key, required this.analyses});
+
+  @override
+  State<MicroHabitsExperiment> createState() => _MicroHabitsExperimentState();
+}
+
+class _MicroHabitsExperimentState extends State<MicroHabitsExperiment> {
+  String? selectedExperiment;
+  bool experimentStarted = false;
+  int currentDay = 1;
+  int completedUses = 0;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentExperiment();
+  }
+
+  Future<void> _loadCurrentExperiment() async {
+    final storage = SecureStorageService();
+    final savedExperiment = await storage.getString('current_micro_habit_experiment');
+    final savedDay = await storage.getString('micro_habit_day');
+    final savedUses = await storage.getString('micro_habit_completed_uses');
+    
+    if (savedExperiment != null && mounted) {
+      setState(() {
+        selectedExperiment = savedExperiment;
+        experimentStarted = true;
+        currentDay = int.tryParse(savedDay ?? '1') ?? 1;
+        completedUses = int.tryParse(savedUses ?? '0') ?? 0;
+      });
+    }
+  }
+
+  Future<void> _startExperiment() async {
+    if (selectedExperiment == null) return;
+    
+    final storage = SecureStorageService();
+    await storage.setString('current_micro_habit_experiment', selectedExperiment!);
+    await storage.setString('micro_habit_day', '1');
+    await storage.setString('micro_habit_completed_uses', '0');
+    await storage.setString('micro_habit_start_date', DateTime.now().toIso8601String());
+    
+    setState(() {
+      experimentStarted = true;
+      currentDay = 1;
+      completedUses = 0;
+    });
+  }
+
+  Future<void> _logExperimentUse(bool successful) async {
+    final storage = SecureStorageService();
+    final analytics = UnifiedAnalyticsService();
+    
+    if (successful) {
+      completedUses++;
+      await storage.setString('micro_habit_completed_uses', completedUses.toString());
+      
+      // Log to analytics
+      await analytics.logEvent('micro_habit_success', {
+        'experiment_type': selectedExperiment,
+        'day': currentDay,
+        'total_uses': completedUses,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    } else {
+      // Log missed opportunity
+      await analytics.logEvent('micro_habit_missed', {
+        'experiment_type': selectedExperiment,
+        'day': currentDay,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    }
+    
+    // Update daily progress
+    await _updateDailyProgress();
+    
+    setState(() {});
+  }
+
+  Future<void> _updateDailyProgress() async {
+    final storage = SecureStorageService();
+    final startDateStr = await storage.getString('micro_habit_start_date');
+    
+    if (startDateStr != null) {
+      final startDate = DateTime.parse(startDateStr);
+      final daysSinceStart = DateTime.now().difference(startDate).inDays + 1;
+      
+      setState(() {
+        currentDay = daysSinceStart.clamp(1, 7);
+      });
+      
+      await storage.setString('micro_habit_day', currentDay.toString());
+      
+      // Check if experiment is complete
+      if (currentDay >= 7) {
+        await _completeExperiment();
+      }
+    }
+  }
+
+  Future<void> _completeExperiment() async {
+    final storage = SecureStorageService();
+    final analytics = UnifiedAnalyticsService();
+    
+    // Log completion
+    await analytics.logEvent('micro_habit_completed', {
+      'experiment_type': selectedExperiment,
+      'total_uses': completedUses,
+      'success_rate': completedUses / 7, // Assuming daily target
+      'completion_date': DateTime.now().toIso8601String(),
+    });
+    
+    // Clear current experiment
+    await storage.removeKey('current_micro_habit_experiment');
+    await storage.removeKey('micro_habit_day');
+    await storage.removeKey('micro_habit_completed_uses');
+    await storage.removeKey('micro_habit_start_date');
+    
+    setState(() {
+      experimentStarted = false;
+      selectedExperiment = null;
+      currentDay = 1;
+      completedUses = 0;
+    });
+    
+    // Show completion dialog
+    if (mounted) {
+      _showCompletionDialog();
+    }
+  }
+
+  void _showCompletionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('🎉 Experiment Complete!'),
+        content: Text(
+          'Congratulations! You completed the ${experiments[selectedExperiment]!['title']} experiment.\n\n'
+          'Success rate: ${(completedUses / 7 * 100).round()}%\n\n'
+          'Ready to try another micro-habit?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Choose New Experiment'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  final Map<String, Map<String, dynamic>> experiments = {
+    'pause_before_react': {
+      'title': '3-Second Pause',
+      'description': 'Take 3 deep breaths before responding to tense messages',
+      'icon': Icons.pause_circle_outline,
+      'commitment': '7 days',
+      'tracking': 'Track: Did I pause before responding?',
+      'science': 'Activates prefrontal cortex, reduces reactive responses by 40%',
+    },
+    'appreciation_sandwich': {
+      'title': 'Appreciation Sandwich',
+      'description': 'Start difficult conversations with something you appreciate',
+      'icon': Icons.favorite_outline,
+      'commitment': '5 conversations',
+      'tracking': 'Track: Did I start with appreciation?',
+      'science': 'Positive priming increases receptivity to feedback by 60%',
+    },
+    'repair_phrase': {
+      'title': 'Magic Repair Phrase',
+      'description': 'Use "Help me understand..." when you feel defensive',
+      'icon': Icons.build_outlined,
+      'commitment': '3 uses',
+      'tracking': 'Track: Did I use repair phrase when triggered?',
+      'science': 'Curiosity language reduces defensive responses by 50%',
+    },
+    'tone_check': {
+      'title': 'Tone Check-In',
+      'description': 'Ask "How did that land?" after important messages',
+      'icon': Icons.feedback_outlined,
+      'commitment': '7 days',
+      'tracking': 'Track: Did I check in about my tone?',
+      'science': 'Meta-communication reduces misunderstandings by 35%',
+    },
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.science_outlined, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Micro-Habits Lab',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tiny experiments. Big relationship changes.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            if (!experimentStarted) ...[
+              // Experiment selection
+              Text(
+                'Choose Your Next Experiment',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...experiments.entries.map((entry) => 
+                _buildExperimentOption(context, entry.key, entry.value)
+              ).toList(),
+              const SizedBox(height: 16),
+              if (selectedExperiment != null)
+                ElevatedButton(
+                  onPressed: () async {
+                    await _startExperiment();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    minimumSize: const Size(double.infinity, 44),
+                  ),
+                  child: Text(
+                    'Start ${experiments[selectedExperiment]!['commitment']} Experiment',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ] else ...[
+              // Active experiment tracking
+              _buildActiveExperiment(context),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExperimentOption(BuildContext context, String key, Map<String, dynamic> experiment) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSelected = selectedExperiment == key;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedExperiment = key;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected 
+            ? colorScheme.primaryContainer.withOpacity(0.5)
+            : colorScheme.surfaceVariant.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected 
+              ? colorScheme.primary 
+              : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  experiment['icon'] as IconData,
+                  color: colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    experiment['title'] as String,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Icon(
+                    Icons.check_circle,
+                    color: colorScheme.primary,
+                    size: 20,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              experiment['description'] as String,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    experiment['commitment'] as String,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    experiment['science'] as String,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveExperiment(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final experiment = experiments[selectedExperiment]!;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                colorScheme.primary.withOpacity(0.1),
+                colorScheme.primaryContainer.withOpacity(0.3),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    experiment['icon'] as IconData,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Active: ${experiment['title']}',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Day $currentDay of 7',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                experiment['description'] as String,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                experiment['tracking'] as String,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Progress tracking
+        Text(
+          'This Week\'s Progress',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        
+        Row(
+          children: List.generate(7, (index) {
+            final isComplete = index < currentDay; 
+            return Expanded(
+              child: Container(
+                margin: EdgeInsets.only(right: index < 6 ? 4 : 0),
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isComplete 
+                    ? colorScheme.primary 
+                    : colorScheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            );
+          }),
+        ),
+        
+        const SizedBox(height: 4),
+        Text(
+          '$currentDay of 7 days completed • $completedUses successful uses',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Quick log buttons
+        Text(
+          'Quick Log',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await _logExperimentUse(true);
+                },
+                icon: const Icon(Icons.check_circle_outline, size: 16),
+                label: const Text('Used it!'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.green,
+                  side: const BorderSide(color: Colors.green),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await _logExperimentUse(false);
+                },
+                icon: const Icon(Icons.cancel_outlined, size: 16),
+                label: const Text('Missed it'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
+                ),
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // End experiment option
+        TextButton(
+          onPressed: () async {
+            await _completeExperiment();
+          },
+          child: Text(
+            'End Experiment & Choose New One',
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class RelationshipInsightsDashboard extends StatefulWidget {
   const RelationshipInsightsDashboard({
@@ -413,14 +1972,14 @@ class _RelationshipInsightsDashboardState
           color: Colors.blue.withOpacity(0.8),
           value: 50,
           title: 'You\n50%',
-          titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+          titleStyle: RelationshipInsightsUtils.chartTitleStyle,
           radius: 80,
         ),
         PieChartSectionData(
           color: Colors.green.withOpacity(0.8),
           value: 50,
           title: 'Partner\n50%',
-          titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+          titleStyle: RelationshipInsightsUtils.chartTitleStyle,
           radius: 80,
         ),
       ];
@@ -439,14 +1998,14 @@ class _RelationshipInsightsDashboardState
           color: Colors.blue.withOpacity(0.8),
           value: (userMessages / total * 100),
           title: 'You\n${(userMessages / total * 100).round()}%',
-          titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+          titleStyle: RelationshipInsightsUtils.chartTitleStyle,
           radius: 80,
         ),
         PieChartSectionData(
           color: Colors.green.withOpacity(0.8),
           value: (partnerMessages / total * 100),
           title: '${partnerService.partnerName ?? 'Partner'}\n${(partnerMessages / total * 100).round()}%',
-          titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+          titleStyle: RelationshipInsightsUtils.chartTitleStyle,
           radius: 80,
         ),
       ];
@@ -964,7 +2523,7 @@ class _RelationshipInsightsDashboardState
                     'Overall Health',
                     '${(healthScore * 100).round()}%',
                     Icons.favorite,
-                    _getScoreColor(healthScore),
+                    RelationshipInsightsUtils.getScoreColor(healthScore),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1683,12 +3242,6 @@ class _RelationshipInsightsDashboardState
     if (score >= 0.7) return 'Good';
     if (score >= 0.6) return 'Fair';
     return 'Needs Attention';
-  }
-
-  Color _getScoreColor(double score) {
-    if (score >= 0.8) return Colors.green;
-    if (score >= 0.6) return Colors.orange;
-    return Colors.red;
   }
 
   Widget _buildTimeRangeFilter(ThemeData theme) {
@@ -2657,5 +4210,658 @@ class _RelationshipInsightsDashboardState
         ],
       ),
     );
+  }
+}
+
+// MARK: - Enhanced Co-Parenting Intelligence
+class CoParentingIntelligence extends StatelessWidget {
+  final List<Map<String, dynamic>> analyses;
+
+  const CoParentingIntelligence({super.key, required this.analyses});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final insights = _analyzeCoParentingPatterns();
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.family_restroom, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Co-Parenting Intelligence',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'How your communication affects the kids',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Child-First Score
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary.withOpacity(0.1),
+                    colorScheme.primaryContainer.withOpacity(0.3),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Child-First Score',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _getChildFirstDescription(insights['childFirstScore']),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: RelationshipInsightsUtils.getScoreColor(insights['childFirstScore']).withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${(insights['childFirstScore'] * 100).toInt()}',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: RelationshipInsightsUtils.getScoreColor(insights['childFirstScore']),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: insights['childFirstScore'],
+                    backgroundColor: colorScheme.surfaceVariant,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      RelationshipInsightsUtils.getScoreColor(insights['childFirstScore']),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Key Metrics Grid
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    context,
+                    'Unity Score',
+                    '${(insights['unityScore'] * 100).toInt()}%',
+                    'How often you present united front',
+                    Icons.handshake_outlined,
+                    RelationshipInsightsUtils.getScoreColor(insights['unityScore']),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    context,
+                    'Child Shield',
+                    '${(insights['childShieldScore'] * 100).toInt()}%',
+                    'Protecting kids from conflict',
+                    Icons.shield_outlined,
+                    RelationshipInsightsUtils.getScoreColor(insights['childShieldScore']),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    context,
+                    'Schedule Harmony',
+                    '${(insights['scheduleHarmony'] * 100).toInt()}%',
+                    'Coordination without conflict',
+                    Icons.schedule,
+                    RelationshipInsightsUtils.getScoreColor(insights['scheduleHarmony']),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    context,
+                    'Emotional Safety',
+                    '${(insights['emotionalSafety'] * 100).toInt()}%',
+                    'Creating secure environment',
+                    Icons.favorite_outline,
+                    RelationshipInsightsUtils.getScoreColor(insights['emotionalSafety']),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Conversation Type Breakdown
+            Text(
+              'Communication Breakdown',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            ...insights['conversationTypes'].entries.map<Widget>((entry) {
+              final percentage = entry.value as double;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: _getConversationTypeColor(entry.key),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        _getConversationTypeLabel(entry.key),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: LinearProgressIndicator(
+                        value: percentage,
+                        backgroundColor: colorScheme.surfaceVariant,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          _getConversationTypeColor(entry.key),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${(percentage * 100).toInt()}%',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+
+            const SizedBox(height: 20),
+
+            // Coaching Insights
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.psychology,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Child Development Insight',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _getCoParentingInsight(insights),
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (insights['riskFactors'].isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_outlined,
+                          size: 16,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Watch For',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...insights['riskFactors'].map<Widget>((factor) => 
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.arrow_right,
+                              size: 14,
+                              color: Colors.orange,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                factor as String,
+                                style: TextStyle(
+                                  color: Colors.orange.shade700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    ).toList(),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _analyzeCoParentingPatterns() {
+    // Analyze child-focused language vs conflict language
+    int childFocusedMessages = 0;
+    int conflictMessages = 0;
+    int logisticsMessages = 0;
+    int supportiveMessages = 0;
+    int totalMessages = analyses.length;
+
+    final riskFactors = <String>[];
+    final conversationTypes = <String, double>{};
+
+    for (final analysis in analyses) {
+      final text = (analysis['text'] as String? ?? '').toLowerCase();
+      final tone = analysis['tone_status'] as String? ?? 'neutral';
+
+      // Categorize conversation types
+      if (_isChildFocused(text)) {
+        childFocusedMessages++;
+      } else if (_isLogistics(text)) {
+        logisticsMessages++;
+      } else if (_isSupportive(text)) {
+        supportiveMessages++;
+      } else if (tone == 'alert' || tone == 'caution') {
+        conflictMessages++;
+      }
+    }
+
+    if (totalMessages > 0) {
+      conversationTypes['child_focused'] = childFocusedMessages / totalMessages;
+      conversationTypes['logistics'] = logisticsMessages / totalMessages;
+      conversationTypes['supportive'] = supportiveMessages / totalMessages;
+      conversationTypes['conflict'] = conflictMessages / totalMessages;
+    }
+
+    // Calculate scores
+    final childFirstScore = totalMessages > 0 
+      ? (childFocusedMessages + supportiveMessages) / totalMessages 
+      : 0.0;
+    
+    final unityScore = totalMessages > 0 
+      ? 1.0 - (conflictMessages / totalMessages) 
+      : 1.0;
+    
+    final childShieldScore = _calculateChildShieldScore();
+    final scheduleHarmony = _calculateScheduleHarmony();
+    final emotionalSafety = _calculateEmotionalSafety();
+
+    // Identify risk factors
+    if (conflictMessages > childFocusedMessages) {
+      riskFactors.add('More conflict than child-focused communication');
+    }
+    if (childFirstScore < 0.3) {
+      riskFactors.add('Low child-first language detected');
+    }
+    if (_hasTriangulation()) {
+      riskFactors.add('Potential child triangulation patterns');
+    }
+
+    return {
+      'childFirstScore': childFirstScore,
+      'unityScore': unityScore,
+      'childShieldScore': childShieldScore,
+      'scheduleHarmony': scheduleHarmony,
+      'emotionalSafety': emotionalSafety,
+      'conversationTypes': conversationTypes,
+      'riskFactors': riskFactors,
+    };
+  }
+
+  bool _isChildFocused(String text) {
+    final childKeywords = [
+      'kids', 'children', 'son', 'daughter', 'school', 'homework',
+      'bedtime', 'pickup', 'activities', 'doctor', 'teacher',
+      'happy', 'proud', 'excited', 'loves', 'enjoys', 'needs',
+    ];
+    return childKeywords.any((keyword) => text.contains(keyword));
+  }
+
+  bool _isLogistics(String text) {
+    final logisticsKeywords = [
+      'time', 'when', 'where', 'schedule', 'calendar', 'appointment',
+      'meeting', 'event', 'practice', 'game', 'lesson',
+    ];
+    return logisticsKeywords.any((keyword) => text.contains(keyword));
+  }
+
+  bool _isSupportive(String text) {
+    final supportKeywords = [
+      'thank you', 'appreciate', 'great job', 'well done', 'agree',
+      'support', 'help', 'together', 'team', 'partnership',
+    ];
+    return supportKeywords.any((keyword) => text.contains(keyword));
+  }
+
+  double _calculateChildShieldScore() {
+    if (analyses.isEmpty) return 0.0;
+    
+    int protectiveMessages = 0;
+    int totalMessages = analyses.length;
+    
+    for (final analysis in analyses) {
+      final text = (analysis['text'] as String? ?? '').toLowerCase();
+      final tone = analysis['tone_status'] as String? ?? 'neutral';
+      
+      // Look for protective language that shields children from conflict
+      final protectiveKeywords = [
+        'let\'s talk later', 'not in front of', 'when kids are asleep',
+        'privately', 'between us', 'away from kids', 'discuss this later',
+        'protect', 'shield', 'keep peaceful', 'their wellbeing'
+      ];
+      
+      // Positive indicators: redirecting conflict away from children
+      final hasProtectiveLanguage = protectiveKeywords.any((keyword) => text.contains(keyword));
+      
+      // Negative indicators: involving children or exposing them to conflict
+      final exposingKeywords = [
+        'tell the kids', 'ask them', 'they need to know', 'in front of them'
+      ];
+      final isExposing = exposingKeywords.any((keyword) => text.contains(keyword));
+      
+      if (hasProtectiveLanguage && !isExposing) {
+        protectiveMessages++;
+      } else if (tone == 'alert' && _mentionsChildren(text)) {
+        // Deduct for conflict that mentions children
+        protectiveMessages--;
+      }
+    }
+    
+    return (protectiveMessages / totalMessages).clamp(0.0, 1.0);
+  }
+
+  double _calculateScheduleHarmony() {
+    if (analyses.isEmpty) return 0.0;
+    
+    int schedulingMessages = 0;
+    int smoothSchedulingMessages = 0;
+    
+    for (final analysis in analyses) {
+      final text = (analysis['text'] as String? ?? '').toLowerCase();
+      final tone = analysis['tone_status'] as String? ?? 'neutral';
+      
+      final schedulingKeywords = [
+        'pickup', 'drop off', 'schedule', 'time', 'when', 'where',
+        'appointment', 'event', 'practice', 'school', 'activity'
+      ];
+      
+      if (schedulingKeywords.any((keyword) => text.contains(keyword))) {
+        schedulingMessages++;
+        
+        // Smooth scheduling indicators
+        final cooperativeKeywords = [
+          'works for me', 'sounds good', 'that\'s fine', 'no problem',
+          'i can do', 'let me check', 'i\'ll handle', 'we can work'
+        ];
+        
+        if (tone != 'alert' && cooperativeKeywords.any((keyword) => text.contains(keyword))) {
+          smoothSchedulingMessages++;
+        }
+      }
+    }
+    
+    return schedulingMessages > 0 
+      ? (smoothSchedulingMessages / schedulingMessages).clamp(0.0, 1.0)
+      : 0.8; // Default good score if no scheduling discussions
+  }
+
+  double _calculateEmotionalSafety() {
+    if (analyses.isEmpty) return 0.0;
+    
+    int emotionalMessages = 0;
+    int safeEmotionalMessages = 0;
+    
+    for (final analysis in analyses) {
+      final text = (analysis['text'] as String? ?? '').toLowerCase();
+      final tone = analysis['tone_status'] as String? ?? 'neutral';
+      
+      // Look for emotional content
+      final emotionalKeywords = [
+        'feel', 'hurt', 'sad', 'angry', 'upset', 'frustrated',
+        'happy', 'excited', 'worried', 'anxious', 'love', 'care'
+      ];
+      
+      if (emotionalKeywords.any((keyword) => text.contains(keyword))) {
+        emotionalMessages++;
+        
+        // Safe emotional expression indicators
+        final safeEmotionalKeywords = [
+          'i feel', 'i\'m feeling', 'it makes me', 'i experience',
+          'help me understand', 'i need', 'i would like'
+        ];
+        
+        final isIStatement = safeEmotionalKeywords.any((keyword) => text.contains(keyword));
+        
+        if ((tone == 'neutral' || tone == 'clear') && isIStatement) {
+          safeEmotionalMessages++;
+        }
+      }
+    }
+    
+    return emotionalMessages > 0 
+      ? (safeEmotionalMessages / emotionalMessages).clamp(0.0, 1.0)
+      : 0.7; // Default moderate score if no emotional discussions
+  }
+
+  bool _hasTriangulation() {
+    if (analyses.isEmpty) return false;
+    
+    for (final analysis in analyses) {
+      final text = (analysis['text'] as String? ?? '').toLowerCase();
+      
+      // Triangulation patterns: putting children in the middle
+      final triangulationKeywords = [
+        'tell your dad', 'tell your mom', 'ask your father', 'ask your mother',
+        'kids said', 'they told me', 'go ask', 'tell them that',
+        'your dad thinks', 'your mom said', 'take sides', 'choose between'
+      ];
+      
+      if (triangulationKeywords.any((keyword) => text.contains(keyword))) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  bool _mentionsChildren(String text) {
+    final childKeywords = [
+      'kids', 'children', 'son', 'daughter', 'child', 'baby',
+      'toddler', 'teenager', 'student'
+    ];
+    return childKeywords.any((keyword) => text.contains(keyword));
+  }
+
+  Widget _buildMetricCard(
+    BuildContext context,
+    String title,
+    String value,
+    String description,
+    IconData icon,
+    Color color,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 11,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getChildFirstDescription(double score) {
+    if (score >= 0.8) return 'Excellent child-centered communication';
+    if (score >= 0.6) return 'Good focus on children\'s needs';
+    if (score >= 0.4) return 'Some child-focused language';
+    return 'Focus more on children\'s wellbeing';
+  }
+
+  Color _getConversationTypeColor(String type) {
+    switch (type) {
+      case 'child_focused': return Colors.green;
+      case 'supportive': return Colors.blue;
+      case 'logistics': return Colors.purple;
+      case 'conflict': return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  String _getConversationTypeLabel(String type) {
+    switch (type) {
+      case 'child_focused': return 'Child-Focused';
+      case 'supportive': return 'Supportive';
+      case 'logistics': return 'Logistics';
+      case 'conflict': return 'Conflict';
+      default: return 'Other';
+    }
+  }
+
+  String _getCoParentingInsight(Map<String, dynamic> insights) {
+    final childFirstScore = insights['childFirstScore'] as double;
+    final unityScore = insights['unityScore'] as double;
+
+    if (childFirstScore >= 0.8 && unityScore >= 0.8) {
+      return 'Your unified, child-centered approach creates emotional security. Children of cooperative co-parents show 40% better emotional regulation.';
+    } else if (childFirstScore >= 0.6) {
+      return 'You\'re doing well focusing on the children. Research shows kids thrive when parents maintain child-first communication, even during disagreements.';
+    } else {
+      return 'Try shifting more conversations toward your children\'s needs and experiences. Kids benefit most when they feel like the priority, not the problem.';
+    }
   }
 }

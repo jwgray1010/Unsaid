@@ -77,6 +77,7 @@ dependencies:
   # Additional dependencies
   url_launcher: ^6.2.5
   fl_chart: ^0.69.0
+  package_info_plus: ^8.0.0
 
   # HTTP package
   http: ^1.2.1

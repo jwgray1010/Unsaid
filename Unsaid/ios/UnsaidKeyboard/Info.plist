@@ -41,10 +41,10 @@
 		<string>$(PRODUCT_MODULE_NAME).KeyboardViewController</string>
 	</dict>
 	<key>UNSAID_API_BASE_URL</key>
-	<string>https://api.myunsaidapp.com</string>
+	<string>https://api.myunsaidapp.com/api</string>
 	<key>UNSAID_API_KEY</key>
-	<string>your-api-key-here</string>
+	<string>$(UNSAID_API_KEY)</string>
 	<key>OPENAI_API_KEY</key>
-	<string>your-openai-api-key-here</string>
+	<string>$(OPENAI_API_KEY)</string>
 </dict>
 </plist>

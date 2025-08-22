@@ -81,10 +81,10 @@
 		</dict>
 	</array>
 	<key>UNSAID_API_BASE_URL</key>
-	<string>https://api.myunsaidapp.com</string>
+	<string>https://api.myunsaidapp.com/api</string>
 	<key>UNSAID_API_KEY</key>
-	<string>your-api-key-here</string>
+	<string>test-key</string>
 	<key>OPENAI_API_KEY</key>
-	<string>your-openai-api-key-here</string>
+	<string>test-openai-key</string>
 </dict>
 </plist>

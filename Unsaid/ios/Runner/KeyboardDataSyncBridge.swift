@@ -54,7 +54,7 @@ import Flutter
                     "total_tone_data": (allPendingData["tone_data"] as? [[String: Any]])?.count ?? 0,
                     "total_suggestions": (allPendingData["suggestions"] as? [[String: Any]])?.count ?? 0,
                     "total_analytics": (allPendingData["analytics"] as? [[String: Any]])?.count ?? 0,
-                    "app_group_id": "group.com.example.unsaid.shared",
+                    "app_group_id": "group.com.unsaid.shared",
                     "source": "SafeKeyboardDataStorage"
                 ]
             ]

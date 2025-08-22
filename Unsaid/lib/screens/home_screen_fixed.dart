@@ -6,6 +6,8 @@ import '../services/secure_communication_progress_service.dart';
 import '../services/secure_storage_service.dart';
 import '../services/unified_analytics_service.dart';
 import '../services/keyboard_manager.dart';
+import '../services/new_user_experience_service.dart';
+import '../services/usage_tracking_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -27,6 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final SecureStorageService _storageService = SecureStorageService();
   final UnifiedAnalyticsService _analyticsService = UnifiedAnalyticsService();
   final KeyboardManager _keyboardManager = KeyboardManager();
+  final NewUserExperienceService _newUserService = NewUserExperienceService();
+  final UsageTrackingService _usageTracker = UsageTrackingService();
   Map<String, dynamic>? _progressData;
   Map<String, dynamic>? _personalityData;
   Map<String, dynamic>? _analyticsData;
@@ -94,63 +98,48 @@ class _HomeScreenState extends State<HomeScreen> {
       false; // This would be determined by checking if partner exists in database
 
   @override
+  @override
   void initState() {
     super.initState();
-    _loadPartnerProfile();
-    _loadProgressData();
-    _loadPersonalityData();
-    _loadAnalyticsData();
-    _loadRealKeyboardData();
+    _bootstrap();
   }
 
-  void _loadPersonalityData() async {
+  Future<void> _bootstrap() async {
     try {
-      final results = await _storageService.getPersonalityTestResults();
-      setState(() {
-        _personalityData = results;
+      // Initialize new user experience service first
+      await _newUserService.checkUserHasData();
+      
+      final results = await Future.wait([
+        _storageService.getPersonalityTestResults(),
+        _analyticsService.getIndividualAnalytics(),
+        _progressService.getSecureCommunicationProgress(
+          userPersonalityType: personalityTypeLabel,
+          userCommunicationStyle: _personalityData?['communication_style_label'] ?? 'Assertive',
+        ),
+        _keyboardManager.getComprehensiveRealData(),
+        _storageService.getPartnerProfile(),
+      ]);
+      
+      // Track home screen usage
+      _usageTracker.trackScreenView('home', {
+        'is_new_user': _newUserService.isNewUser,
+        'total_interactions': _newUserService.totalInteractions,
       });
-      print(' Personality data loaded: ${results != null ? 'Found' : 'Not found'}');
-    } catch (e) {
-      print(' Error loading personality data: $e');
-    }
-  }
-
-  void _loadAnalyticsData() async {
-    try {
-      final analytics = await _analyticsService.getIndividualAnalytics();
+      
+      if (!mounted) return;
       setState(() {
-        _analyticsData = analytics;
-      });
-      print(' Analytics data loaded');
-    } catch (e) {
-      print(' Error loading analytics data: $e');
-    }
-  }
-
-  void _loadProgressData() async {
-    try {
-      final progress = await _progressService.getSecureCommunicationProgress(
-        userPersonalityType: personalityTypeLabel,
-        userCommunicationStyle: _personalityData?['communication_style_label'] ?? 'Assertive',
-      );
-      setState(() {
-        _progressData = progress;
-      });
-    } catch (e) {
-      print('Error loading progress data: $e');
-    }
-  }
-
-  void _loadPartnerProfile() async {
-    // Load real partner data from storage service
-    try {
-      final partnerData = await _storageService.getPartnerProfile();
-      setState(() {
-        if (partnerData != null && partnerData.isNotEmpty) {
+        _personalityData = results[0] as Map<String, dynamic>?;
+        _analyticsData   = results[1] as Map<String, dynamic>?;
+        _progressData    = results[2] as Map<String, dynamic>?;
+        _realKeyboardData= results[3] as Map<String, dynamic>?;
+        final partner    = results[4] as Map<String, dynamic>?;
+        
+        // Handle partner data with proper fallbacks
+        if (partner != null && partner.isNotEmpty) {
           hasPartner = true;
-          partnerProfile = partnerData;
+          partnerProfile = partner;
         } else {
-          hasPartner = false; // Show invite card when no partner data
+          hasPartner = false;
           partnerProfile = {
             'name': 'No Partner Connected',
             'email': '',
@@ -165,9 +154,27 @@ class _HomeScreenState extends State<HomeScreen> {
             'joined_date': null,
           };
         }
+        
+        // Handle keyboard data with proper fallbacks
+        if (_realKeyboardData?['real_data'] != true || (_realKeyboardData?['total_interactions'] ?? 0) == 0) {
+          _realKeyboardData = {
+            'real_data': false,
+            'total_interactions': 0,
+            'isNewUser': true,
+            'welcomeMessage': '🎉 Welcome to Unsaid!',
+            'subtitle': 'Your personalized insights will appear here as you start using the keyboard',
+            'actionPrompt': 'Enable the Unsaid keyboard to begin your communication journey',
+            'tone_distribution': {'positive': 0, 'neutral': 0, 'negative': 0},
+            'attachment_style': 'discovering',
+            'suggestion_acceptance_rate': 0,
+            'current_tone_status': 'ready',
+          };
+        }
+        
+        loading = false;
       });
     } catch (e) {
-      print('Error loading partner profile: $e');
+      if (!mounted) return;
       setState(() {
         hasPartner = false;
         partnerProfile = {
@@ -183,9 +190,88 @@ class _HomeScreenState extends State<HomeScreen> {
           'test_completed': false,
           'joined_date': null,
         };
+        _realKeyboardData = {
+          'real_data': false,
+          'isNewUser': true,
+          'error': true,
+          'welcomeMessage': '🎉 Welcome to Unsaid!',
+          'subtitle': 'Setting up your personalized experience...',
+          'actionPrompt': 'Make sure the Unsaid keyboard is enabled in Settings',
+          'tone_distribution': {'positive': 0, 'neutral': 0, 'negative': 0},
+        };
+        loading = false;
       });
     }
   }
+
+  CTAModel _decidePrimaryCTA(BuildContext context) {
+    // Use new user experience service for better detection
+    final isNewUser = _newUserService.isNewUser;
+    final totalInteractions = _newUserService.totalInteractions;
+    
+    final hasReal = (_realKeyboardData?['real_data'] == true) &&
+                    ((_realKeyboardData?['total_interactions'] ?? 0) > 0);
+
+    // Track CTA shown for analytics
+    _usageTracker.trackCTAShown(_getCTAType(isNewUser, hasReal));
+
+    if (isNewUser || !hasReal) {
+      return CTAModel(
+        title: 'Enable the Unsaid Keyboard',
+        subtitle: 'Get live guidance while you type—set up takes ~30 seconds.',
+        button: 'Enable Keyboard',
+        icon: Icons.keyboard,
+        onPressed: () {
+          _usageTracker.trackCTAClicked('enable_keyboard');
+          Navigator.pushNamed(context, '/keyboard_setup');
+        },
+      );
+    }
+
+    if (_personalityData == null) {
+      return CTAModel(
+        title: 'Discover Your Attachment Style',
+        subtitle: 'A quick test unlocks personalized tips and goals.',
+        button: 'Take the 3-min Test',
+        icon: Icons.psychology,
+        onPressed: () {
+          _usageTracker.trackCTAClicked('personality_test');
+          Navigator.pushNamed(context, '/personality_test_modern');
+        },
+      );
+    }
+
+    if (!hasPartner) {
+      return CTAModel(
+        title: 'Invite Your Partner',
+        subtitle: 'Get shared insights and tools tailored to you both.',
+        button: 'Send Invite',
+        icon: Icons.person_add_alt_1,
+        onPressed: () {
+          _usageTracker.trackCTAClicked('invite_partner');
+          _invitePartner();
+        },
+      );
+    }
+
+    return CTAModel(
+      title: 'Keep Building Together',
+      subtitle: 'Jump back into your relationship hub.',
+      button: 'Open Relationship Hub',
+      icon: Icons.favorite,
+      onPressed: () {
+        _usageTracker.trackCTAClicked('relationship_hub');
+        Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const RelationshipInsightsDashboard()));
+      },
+    );
+  }
+  
+  String _getCTAType(bool isNewUser, bool hasReal) {
+    if (isNewUser || !hasReal) return 'enable_keyboard';
+    if (_personalityData == null) return 'personality_test';
+    if (!hasPartner) return 'invite_partner';
+    return 'relationship_hub';
   }
 
   void _invitePartner() {
@@ -194,6 +280,131 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildInvitePartnerSheet(),
+    );
+  }
+
+  Widget _buildHeroHeader() {
+    return Semantics(
+      label: 'Welcome header',
+      child: Row(
+        children: [
+          Container(
+            width: 48, height: 48,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.favorite, size: 24, color: Colors.white),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Welcome back, $userName',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.black)),
+              const SizedBox(height: 2),
+              Text('What would you like to do today?',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black.withOpacity(0.6))),
+            ]),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.pushNamed(context, '/premium'),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF7B61FF), borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: const Row(children: [
+                Icon(Icons.star, color: Colors.white, size: 16),
+                SizedBox(width: 4),
+                Text('Premium', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionGrid() {
+    final items = <Map<String, dynamic>>[
+      {
+        'title': 'Keyboard Coach',
+        'subtitle': 'Live tone & nudges',
+        'icon': Icons.psychology_outlined,
+        'color': const Color(0xFF4CAF50),
+        'onTap': () {
+          _usageTracker.trackActionGridClick('keyboard_coach');
+          Navigator.pushNamed(context, '/tone_test');
+        },
+      },
+      {
+        'title': 'Personality',
+        'subtitle': personalityTypeLabel.split(' ').first,
+        'icon': Icons.account_circle_outlined,
+        'color': const Color(0xFFFF6B6B),
+        'onTap': () async {
+          _usageTracker.trackActionGridClick('personality');
+          try {
+            final results = await _storageService.getPersonalityTestResults();
+            if (!mounted) return;
+            if (results != null && results.isNotEmpty) {
+              Navigator.pushNamed(context, '/personality_results', arguments: results['answers'] ?? []);
+            } else {
+              Navigator.pushNamed(context, '/personality_test_modern');
+            }
+          } catch (_) {
+            if (!mounted) return;
+            Navigator.pushNamed(context, '/personality_test_modern');
+          }
+        },
+      },
+      {
+        'title': 'Relationship Hub',
+        'subtitle': hasPartner ? 'Open dashboard' : 'Invite partner',
+        'icon': Icons.favorite_outline,
+        'color': const Color(0xFFE91E63),
+        'onTap': () {
+          _usageTracker.trackActionGridClick('relationship_hub');
+          if (hasPartner) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const RelationshipInsightsDashboard()));
+          } else {
+            _invitePartner();
+          }
+        },
+      },
+    ];
+
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.9),
+      itemCount: items.length,
+      itemBuilder: (_, i) {
+        final it = items[i];
+        final Color c = it['color'];
+        return GestureDetector(
+          onTap: it['onTap'] as VoidCallback,
+          child: Container(
+            decoration: BoxDecoration(
+              color: c.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: c.withOpacity(0.18)),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(it['icon'] as IconData, color: c, size: 28),
+              const SizedBox(height: 10),
+              Text(it['title'] as String,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+              const SizedBox(height: 4),
+              Text(it['subtitle'] as String,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Colors.black.withOpacity(0.6))),
+            ]),
+          ),
+        );
+      },
     );
   }
 
@@ -206,45 +417,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Load real keyboard data from Swift extension with new user fallbacks
-  void _loadRealKeyboardData() async {
-    try {
-      final realData = await _keyboardManager.getComprehensiveRealData();
-      setState(() {
-        if (realData['real_data'] == true && (realData['total_interactions'] ?? 0) > 0) {
-          // User has real data
-          _realKeyboardData = realData;
-        } else {
-          // NEW USER: Create encouraging fallback data
-          _realKeyboardData = {
-            'real_data': false,
-            'total_interactions': 0,
-            'isNewUser': true,
-            'welcomeMessage': '🎉 Welcome to Unsaid!',
-            'subtitle': 'Your personalized insights will appear here as you start using the keyboard',
-            'actionPrompt': 'Enable the Unsaid keyboard to begin your communication journey',
-            'tone_distribution': {'positive': 0, 'neutral': 0, 'negative': 0},
-            'attachment_style': 'discovering',
-            'suggestion_acceptance_rate': 0,
-            'current_tone_status': 'ready',
-          };
-        }
-      });
-      print(' Real keyboard data loaded: ${realData['real_data']} (${realData['total_interactions'] ?? 0} interactions)');
-    } catch (e) {
-      print(' Error loading real keyboard data: $e');
-      // ERROR FALLBACK: Still provide a good experience
-      setState(() {
-        _realKeyboardData = {
-          'real_data': false,
-          'isNewUser': true,
-          'error': true,
-          'welcomeMessage': ' Welcome to Unsaid!',
-          'subtitle': 'Setting up your personalized experience...',
-          'actionPrompt': 'Make sure the Unsaid keyboard is enabled in Settings',
-          'tone_distribution': {'positive': 0, 'neutral': 0, 'negative': 0},
-        };
-      });
-    }
   }
 
   @override
@@ -258,80 +430,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     var children = [
-      // Header
-      Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF7B61FF).withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.favorite,
-              size: 24,
-              color: Color(0xFF7B61FF),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome back, $userName',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Your relationship insights',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.black.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Premium Button
-          GestureDetector(
-            onTap: () {
-              Navigator.pushNamed(context, '/premium');
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF7B61FF),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(Icons.star, color: Colors.white, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Premium',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-
-      const SizedBox(height: 32),
-
-      // Progress Bar Section
-      _buildProgressSection(),
-
-      const SizedBox(height: 32),
+      // Hero Header
+      _buildHeroHeader(),
+      const SizedBox(height: 20),
+      
+      // Primary CTA Banner
+      PrimaryCTABanner(model: _decidePrimaryCTA(context)),
+      const SizedBox(height: 24),
+      
+      // Action Grid
+      _buildActionGrid(),
+      const SizedBox(height: 24),
 
       // Partner Profile Section
       _buildPartnerProfileSection(),
@@ -1014,7 +1123,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green.shade600,
+        backgroundColor: Theme.of(context).colorScheme.error,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -2190,6 +2299,69 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class CTAModel {
+  final String title;
+  final String subtitle;
+  final String button;
+  final IconData icon;
+  final VoidCallback onPressed;
+  CTAModel({
+    required this.title,
+    required this.subtitle,
+    required this.button,
+    required this.icon,
+    required this.onPressed,
+  });
+}
+
+class PrimaryCTABanner extends StatelessWidget {
+  const PrimaryCTABanner({super.key, required this.model});
+  final CTAModel model;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0,8))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+            child: Icon(model.icon, color: Colors.white, size: 20),
+          ),
+          const Spacer(),
+          Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white.withOpacity(0.7)),
+        ]),
+        const SizedBox(height: 14),
+        Text(model.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, height: 1.15)),
+        const SizedBox(height: 6),
+        Text(model.subtitle, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white, foregroundColor: const Color(0xFF7B61FF),
+              elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            onPressed: model.onPressed,
+            child: Text(model.button, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ),
+      ]),
     );
   }
 }

@@ -19,13 +19,23 @@ class KeyboardViewController: UIInputViewController {
 
 	// MARK: - Keyboard Height Calculation
 	private var preferredKeyboardHeight: CGFloat {
-		// IMPROVED: Less brittle height calculation using trait collection
-		let isCompact = traitCollection.verticalSizeClass == .compact
-		let baseHeight: CGFloat = isCompact ? 209 : 300
-		// FUTURE-PROOF: Add safe area bottom inset for newer devices
+		// ADAPTIVE: Scale height based on screen size and device type for better UX
+		let screenHeight = UIScreen.main.bounds.height
+		let isPad = traitCollection.userInterfaceIdiom == .pad
+		
+		// Base height roughly 38-42% of portrait phone height, smaller on iPad
+		let baseHeight: CGFloat
+		if isPad {
+			baseHeight = max(290, screenHeight * 0.28)
+		} else {
+			baseHeight = max(280, screenHeight * 0.38)
+		}
+		
+		// SAFE: Add safe area bottom inset (handles early lifecycle when inset may be 0)
 		let bottomInset = view.safeAreaInsets.bottom
-		let finalHeight = baseHeight + bottomInset
-		logger.debug("📐 KeyboardViewController: Height calculation - base: \(baseHeight), inset: \(bottomInset), final: \(finalHeight)")
+		let finalHeight = floor(baseHeight + bottomInset)
+		
+		logger.debug("📐 KeyboardViewController: Height calculation - screen: \(screenHeight), base: \(baseHeight), inset: \(bottomInset), final: \(finalHeight)")
 		return finalHeight
 	}
 
@@ -33,6 +43,10 @@ class KeyboardViewController: UIInputViewController {
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		logger.info("🎹 KeyboardViewController: viewDidLoad started")
+		
+		// HANDSHAKE: Register keyboard presence with app
+		registerKeyboardPresence()
+		
 		// CRITICAL: Only set up keyboard once to prevent crashes
 		if !isKeyboardSetup {
 			setupKeyboard()
@@ -44,6 +58,10 @@ class KeyboardViewController: UIInputViewController {
 	override func viewWillAppear(_ animated: Bool) {
 		super.viewWillAppear(animated)
 		logger.debug("🎹 KeyboardViewController: viewWillAppear")
+		
+		// HANDSHAKE: Update presence each time keyboard appears
+		registerKeyboardPresence()
+		
 		// SAFE: Only prepare if keyboard is set up
 		// KeyboardController doesn't need special preparation
 	}
@@ -55,6 +73,9 @@ class KeyboardViewController: UIInputViewController {
 		if isKeyboardSetup {
 			updateKeyboardHeight()
 		}
+		
+		// HANDSHAKE: Write status to App Group for host app detection
+		writeKeyboardHandshake()
 	}
 
 	override func updateViewConstraints() {
@@ -69,6 +90,32 @@ class KeyboardViewController: UIInputViewController {
 		super.viewWillLayoutSubviews()
 		// SAFE: Only update appearance if keyboard is set up
 		// KeyboardController handles its own layout in layoutSubviews()
+	}
+
+	// MARK: - App Group Handshake
+	private func registerKeyboardPresence() {
+		// Use the standard App Group identifier
+		guard let sharedDefaults = UserDefaults(suiteName: "group.com.unsaid.shared") else {
+			logger.error("❌ KeyboardViewController: Failed to access App Group")
+			return
+		}
+		
+		// Register that keyboard is active
+		sharedDefaults.set(Date().timeIntervalSince1970, forKey: "keyboard_last_seen")
+		
+		// Test if we can write to the App Group (indicates Allow Full Access is enabled)
+		let testKey = "keyboard_full_access_test"
+		let testValue = UUID().uuidString
+		sharedDefaults.set(testValue, forKey: testKey)
+		
+		// Verify we can read it back
+		let canAccessAppGroup = sharedDefaults.string(forKey: testKey) == testValue
+		sharedDefaults.set(canAccessAppGroup, forKey: "keyboard_full_access_ok")
+		
+		// Clean up test data
+		sharedDefaults.removeObject(forKey: testKey)
+		
+		logger.debug("🤝 KeyboardViewController: Registered presence - Full Access: \(canAccessAppGroup)")
 	}
 
 	// MARK: - Keyboard Setup
@@ -123,11 +170,28 @@ class KeyboardViewController: UIInputViewController {
 			return
 		}
 		let targetHeight = preferredKeyboardHeight
-		// FIXED: Create new height constraint with proper priority
+		// OPTIMAL: Create height constraint with standard high priority to avoid conflicts
 		heightConstraint = view.heightAnchor.constraint(equalToConstant: targetHeight)
-		heightConstraint?.priority = UILayoutPriority(760) // Slightly higher to win over incidental low-priorities
+		heightConstraint?.priority = UILayoutPriority(750) // Standard "high" priority
 		heightConstraint?.isActive = true
-		logger.debug("📏 KeyboardViewController: Set keyboard height to \(targetHeight)pt (safe mode)")
+		logger.debug("📏 KeyboardViewController: Set keyboard height to \(targetHeight)pt")
+	}
+	
+	// MARK: - Safe Area Handling
+	override func viewSafeAreaInsetsDidChange() {
+		super.viewSafeAreaInsetsDidChange()
+		guard isKeyboardSetup else { return }
+		
+		// ADAPTIVE: Update height when safe area changes (fixes early lifecycle timing)
+		let newHeight = preferredKeyboardHeight
+		if let constraint = heightConstraint, constraint.constant != newHeight {
+			constraint.constant = newHeight
+			// SMOOTH: Animate height changes for polished UX
+			UIView.animate(withDuration: 0.12) {
+				self.view.layoutIfNeeded()
+			}
+			logger.debug("📏 KeyboardViewController: Updated height to \(newHeight)pt (safe-area change)")
+		}
 	}
 
 	// MARK: - Text Input Delegate Methods
@@ -192,14 +256,41 @@ class KeyboardViewController: UIInputViewController {
 
 	// MARK: - Accessibility Support
 	@objc private func contentSizeCategoryDidChange() {
-		// POLISH: Update keyboard appearance when user changes text size
-		logger.debug("📱 KeyboardViewController: Content size category changed")
-		// KeyboardController handles its own appearance updates
+		// DYNAMIC: Update keyboard appearance when user changes text size
+		logger.debug("📱 KeyboardViewController: Dynamic Type changed; refreshing keyboard layout")
+		// Forward to KeyboardController for typography updates
+		keyboardController?.setNeedsLayout()
+		keyboardController?.layoutIfNeeded()
 	}
 
 	// MARK: - Input Mode Switching
 	override var needsInputModeSwitchKey: Bool {
-		// RESPECT: System requirement for globe/dismiss key
+		// SAFE: Keep system globe key for App Review compliance
+		// Note: KeyboardController also has its own globe button for redundancy
 		return true
+	}
+	
+	// MARK: - Keyboard Handshake
+	private func writeKeyboardHandshake() {
+		// HANDSHAKE: Write status to shared App Group for reliable host app detection
+		guard let appGroup = UserDefaults(suiteName: "group.com.unsaid.shared") else {
+			logger.error("❌ KeyboardViewController: Failed to access App Group for handshake")
+			return
+		}
+		
+		// Write last seen timestamp
+		appGroup.set(Date().timeIntervalSince1970, forKey: "kb_last_seen")
+		
+		// Test full access by trying to write/read from App Group
+		let testKey = "kb_full_access_test"
+		let testValue = "test_\(Date().timeIntervalSince1970)"
+		appGroup.set(testValue, forKey: testKey)
+		let canReadBack = appGroup.string(forKey: testKey) == testValue
+		appGroup.set(canReadBack, forKey: "kb_full_access_ok")
+		
+		// Clean up test data
+		appGroup.removeObject(forKey: testKey)
+		
+		logger.debug("✅ KeyboardViewController: Handshake written - full access: \(canReadBack)")
 	}
 }

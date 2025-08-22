@@ -225,6 +225,154 @@ enum RelationshipContext: String, CaseIterable, Codable {
     #endif
 }
 
+/// Represents urgency levels for suggestions and analysis
+enum UrgencyLevel: String, CaseIterable, Codable {
+    case low = "low"
+    case medium = "medium"
+    case high = "high"
+    case critical = "critical"
+    
+    var displayName: String {
+        switch self {
+        case .low:
+            return "Low"
+        case .medium:
+            return "Medium"
+        case .high:
+            return "High"
+        case .critical:
+            return "Critical"
+        }
+    }
+    
+    #if canImport(UIKit)
+    var color: UIColor {
+        switch self {
+        case .low:
+            return UIColor.systemGreen
+        case .medium:
+            return UIColor.systemYellow
+        case .high:
+            return UIColor.systemOrange
+        case .critical:
+            return UIColor.systemRed
+        }
+    }
+    #endif
+}
+
+/// Represents types of analysis suggestions
+enum AnalysisSuggestionType: String, CaseIterable, Codable {
+    case tone = "tone"
+    case clarity = "clarity"
+    case empathy = "empathy"
+    case timing = "timing"
+    case context = "context"
+    case attachment = "attachment"
+    case conflict = "conflict"
+    case emotional = "emotional"
+    
+    var displayName: String {
+        switch self {
+        case .tone:
+            return "Tone"
+        case .clarity:
+            return "Clarity"
+        case .empathy:
+            return "Empathy"
+        case .timing:
+            return "Timing"
+        case .context:
+            return "Context"
+        case .attachment:
+            return "Attachment"
+        case .conflict:
+            return "Conflict"
+        case .emotional:
+            return "Emotional"
+        }
+    }
+    
+    #if canImport(UIKit)
+    var color: UIColor {
+        switch self {
+        case .tone:
+            return UIColor.systemBlue
+        case .clarity:
+            return UIColor.systemGreen
+        case .empathy:
+            return UIColor.systemPink
+        case .timing:
+            return UIColor.systemOrange
+        case .context:
+            return UIColor.systemYellow
+        case .attachment:
+            return UIColor.systemPurple
+        case .conflict:
+            return UIColor.systemRed
+        case .emotional:
+            return UIColor.systemTeal
+        }
+    }
+    #endif
+}
+
+/// Represents conversation types for contextual analysis
+enum ConversationType: String, CaseIterable, Codable {
+    case casual = "casual"
+    case serious = "serious"
+    case conflict = "conflict"
+    case intimate = "intimate"
+    case professional = "professional"
+    case supportive = "supportive"
+    case planning = "planning"
+    case emotional = "emotional"
+    
+    var displayName: String {
+        switch self {
+        case .casual:
+            return "Casual"
+        case .serious:
+            return "Serious"
+        case .conflict:
+            return "Conflict"
+        case .intimate:
+            return "Intimate"
+        case .professional:
+            return "Professional"
+        case .supportive:
+            return "Supportive"
+        case .planning:
+            return "Planning"
+        case .emotional:
+            return "Emotional"
+        }
+    }
+    
+    #if canImport(UIKit)
+    var color: UIColor {
+        switch self {
+        case .casual:
+            return UIColor.systemGreen
+        case .serious:
+            return UIColor.systemBlue
+        case .conflict:
+            return UIColor.systemRed
+        case .intimate:
+            return UIColor.systemPink
+        case .professional:
+            return UIColor.systemYellow
+        case .supportive:
+            return UIColor.systemTeal
+        case .planning:
+            return UIColor.systemPurple
+        case .emotional:
+            return UIColor.systemOrange
+        }
+    }
+    #endif
+}
+
 /// Represents different tone statuses
 enum ToneStatus: String, CaseIterable, Codable {
     case clear = "clear"
@@ -266,129 +414,6 @@ enum ToneStatus: String, CaseIterable, Codable {
     #endif
 }
 
-/// Represents different urgency levels
-enum UrgencyLevel: String, CaseIterable, Codable {
-    case low = "low"
-    case medium = "medium"
-    case high = "high"
-    case critical = "critical"
-    
-    var displayName: String {
-        switch self {
-        case .low:
-            return "Low"
-        case .medium:
-            return "Medium"
-        case .high:
-            return "High"
-        case .critical:
-            return "Critical"
-        }
-    }
-    
-    #if canImport(UIKit)
-    var color: UIColor {
-        switch self {
-        case .low:
-            return UIColor.systemGreen
-        case .medium:
-            return UIColor.systemYellow
-        case .high:
-            return UIColor.systemOrange
-        case .critical:
-            return UIColor.systemRed
-        }
-    }
-    #endif
-}
-
-/// Represents different conversation types
-enum ConversationType: String, CaseIterable, Codable {
-    case romantic = "romantic"
-    case professional = "professional"
-    case social = "social"
-    case casual = "casual"
-    case family = "family"
-    case formal = "formal"
-    
-    var displayName: String {
-        switch self {
-        case .romantic:
-            return "Romantic"
-        case .professional:
-            return "Professional"
-        case .social:
-            return "Social"
-        case .casual:
-            return "Casual"
-        case .family:
-            return "Family"
-        case .formal:
-            return "Formal"
-        }
-    }
-    
-    #if canImport(UIKit)
-    var color: UIColor {
-        switch self {
-        case .romantic:
-            return UIColor.systemPink
-        case .professional:
-            return UIColor.systemBlue
-        case .social:
-            return UIColor.systemGreen
-        case .casual:
-            return UIColor.systemTeal
-        case .family:
-            return UIColor.systemYellow
-        case .formal:
-            return UIColor.systemPurple
-        }
-    }
-    #endif
-}
-
-/// Represents real-time tone status
-enum RealTimeToneStatus: String, CaseIterable, Codable {
-    case positive = "positive"
-    case negative = "negative"
-    case neutral = "neutral"
-    case warning = "warning"
-    case suggestion = "suggestion"
-    
-    var displayName: String {
-        switch self {
-        case .positive:
-            return "Positive"
-        case .negative:
-            return "Negative"
-        case .neutral:
-            return "Neutral"
-        case .warning:
-            return "Warning"
-        case .suggestion:
-            return "Suggestion"
-        }
-    }
-    
-    #if canImport(UIKit)
-    var color: UIColor {
-        switch self {
-        case .positive:
-            return UIColor.systemGreen
-        case .negative:
-            return UIColor.systemRed
-        case .neutral:
-            return UIColor.systemGray
-        case .warning:
-            return UIColor.systemYellow
-        case .suggestion:
-            return UIColor.systemBlue
-        }
-    }
-    #endif
-}
-
 // MARK: - Constants
 
 /// Shared constants for the application
@@ -410,72 +435,6 @@ struct SharedConstants {
 
 // MARK: - Analysis Data Structures
 
-/// Represents different emotion types for analysis
-enum EmotionType: String, CaseIterable, Codable {
-    case joy = "joy"
-    case sadness = "sadness"
-    case anger = "anger"
-    case fear = "fear"
-    case surprise = "surprise"
-    case disgust = "disgust"
-    case neutral = "neutral"
-    case anxiety = "anxiety"
-    case excitement = "excitement"
-    case contentment = "contentment"
-    
-    var displayName: String {
-        switch self {
-        case .joy:
-            return "Joy"
-        case .sadness:
-            return "Sadness"
-        case .anger:
-            return "Anger"
-        case .fear:
-            return "Fear"
-        case .surprise:
-            return "Surprise"
-        case .disgust:
-            return "Disgust"
-        case .neutral:
-            return "Neutral"
-        case .anxiety:
-            return "Anxiety"
-        case .excitement:
-            return "Excitement"
-        case .contentment:
-            return "Contentment"
-        }
-    }
-    
-    #if canImport(UIKit)
-    var color: UIColor {
-        switch self {
-        case .joy:
-            return UIColor.systemYellow
-        case .sadness:
-            return UIColor.systemBlue
-        case .anger:
-            return UIColor.systemRed
-        case .fear:
-            return UIColor.systemPurple
-        case .surprise:
-            return UIColor.systemOrange
-        case .disgust:
-            return UIColor.systemBrown
-        case .neutral:
-            return UIColor.systemGray
-        case .anxiety:
-            return UIColor.systemIndigo
-        case .excitement:
-            return UIColor.systemPink
-        case .contentment:
-            return UIColor.systemGreen
-        }
-    }
-    #endif
-}
-
 /// Performance-related constants for optimization
 struct PerformanceConstants {
     static let analysisDebounceInterval: TimeInterval = 0.3
@@ -490,53 +449,6 @@ struct PerformanceConstants {
 }
 
 // MARK: - Communication Shared Types
-
-// MA: - Communication Analysis Type
-/// Represents different types of analysis suggestions
-enum AnalysisSuggestionType: String, CaseIterable, Codable {
-    case toneImprovement = "toneImprovement"
-    case attachmentAware = "attachmentAware"
-    case conversationRepair = "conversationRepair"
-    case crossStyleCommunication = "crossStyleCommunication"
-    case emotionalRegulation = "emotionalRegulation"
-    case conflictDeescalation = "conflictDeescalation"
-    
-    var displayName: String {
-        switch self {
-        case .toneImprovement:
-            return "Tone Improvement"
-        case .attachmentAware:
-            return "Attachment Aware"
-        case .conversationRepair:
-            return "Conversation Repair"
-        case .crossStyleCommunication:
-            return "Cross-Style Communication"
-        case .emotionalRegulation:
-            return "Emotional Regulation"
-        case .conflictDeescalation:
-            return "Conflict De-escalation"
-        }
-    }
-    
-    #if canImport(UIKit)
-    var color: UIColor {
-        switch self {
-        case .toneImprovement:
-            return UIColor.systemBlue
-        case .attachmentAware:
-            return UIColor.systemPink
-        case .conversationRepair:
-            return UIColor.systemGreen
-        case .crossStyleCommunication:
-            return UIColor.systemOrange
-        case .emotionalRegulation:
-            return UIColor.systemPurple
-        case .conflictDeescalation:
-            return UIColor.systemTeal
-        }
-    }
-    #endif
-}
 
 /// Represents turn-taking patterns in conversations
 enum TurnTakingPattern: String, CaseIterable, Codable {

@@ -4,8 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.example.unsaid.shared</string>
-		<string>group.com.unsaid.keyboard</string>
+		<string>group.com.unsaid.shared</string>
 	</array>
 	<key>com.apple.security.network.client</key>
 	<true/>

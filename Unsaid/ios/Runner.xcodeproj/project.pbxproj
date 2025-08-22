@@ -16,6 +16,8 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		F39A47001E1F170000E8B355 /* UnsaidKeyboardHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39A46FF1E1F170000E8B355 /* UnsaidKeyboardHelper.swift */; };
+		F39A47011E1F170100E8B355 /* KeyboardDataSyncBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39A47021E1F170100E8B355 /* KeyboardDataSyncBridge.swift */; };
+		F39A47031E1F170200E8B355 /* PersonalityDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39A47041E1F170200E8B355 /* PersonalityDataManager.swift */; };
 		F3EB71BE2E28DF080086D723 /* UnsaidKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F3EB71B72E28DF080086D723 /* UnsaidKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -84,6 +86,8 @@
 		9F9BD70A265EE4EFA97B196C /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1ED82B900AA9E634B6704BB /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		F39A46FF1E1F170000E8B355 /* UnsaidKeyboardHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnsaidKeyboardHelper.swift; sourceTree = "<group>"; };
+		F39A47021E1F170100E8B355 /* KeyboardDataSyncBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDataSyncBridge.swift; sourceTree = "<group>"; };
+		F39A47041E1F170200E8B355 /* PersonalityDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalityDataManager.swift; sourceTree = "<group>"; };
 		F3B4F9041E1F2D0000589545 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		F3EB71B72E28DF080086D723 /* UnsaidKeyboard.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = UnsaidKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -92,7 +96,6 @@
 		F3EB71DF2E28DF9E0086D723 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				PersonalityDataManager.swift,
 			);
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 		};
@@ -181,6 +184,8 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				F39A46FF1E1F170000E8B355 /* UnsaidKeyboardHelper.swift */,
+				F39A47021E1F170100E8B355 /* KeyboardDataSyncBridge.swift */,
+				F39A47041E1F170200E8B355 /* PersonalityDataManager.swift */,
 				F3B4F9041E1F2D0000589545 /* Runner.entitlements */,
 			);
 			path = Runner;
@@ -482,6 +487,8 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				F39A47001E1F170000E8B355 /* UnsaidKeyboardHelper.swift in Sources */,
+				F39A47011E1F170100E8B355 /* KeyboardDataSyncBridge.swift in Sources */,
+				F39A47031E1F170200E8B355 /* PersonalityDataManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

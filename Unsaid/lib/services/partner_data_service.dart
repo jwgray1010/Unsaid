@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'keyboard_manager.dart';
 import 'swift_keyboard_data_bridge.dart';
+import 'conversation_data_service.dart';
+import 'unified_analytics_service.dart';
 
 /// Service for managing partner data and relationship connectivity
 class PartnerDataService extends ChangeNotifier {
@@ -13,6 +15,8 @@ class PartnerDataService extends ChangeNotifier {
 
   final KeyboardManager _keyboardManager = KeyboardManager();
   final SwiftKeyboardDataBridge _dataBridge = SwiftKeyboardDataBridge();
+  final ConversationDataService _conversationService = ConversationDataService();
+  final UnifiedAnalyticsService _analyticsService = UnifiedAnalyticsService();
 
   bool _hasPartner = false;
   String? _partnerName;

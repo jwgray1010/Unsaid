@@ -26,6 +26,14 @@ protocol ToneSuggestionDelegate: AnyObject {
 /// Isolated coordinator for tone analysis and AI-powered suggestions
 /// Performs lightweight client work; defers tone/suggestion logic to backend.
 /// Safe for keyboard extensions (ephemeral networking, tight timeouts, minimal timers).
+/// 
+/// KeyboardController Integration Checklist:
+/// - viewDidLoad: coordinator.delegate = self
+/// - text change: coordinator.handleTextChange(currentText)
+/// - tone button: coordinator.requestSuggestions()
+/// - send/done: coordinator.analyzeFinalSentence(finalText) → coordinator.resetState()
+/// - accept suggestion: insert text → coordinator.recordSuggestionAccepted(suggestion)
+/// - reject suggestion: coordinator.recordSuggestionRejected(suggestion)
 final class ToneSuggestionCoordinator {
     // MARK: Public
     weak var delegate: ToneSuggestionDelegate?
@@ -47,7 +55,10 @@ final class ToneSuggestionCoordinator {
         return (fromExt?.nilIfEmpty ?? fromMain?.nilIfEmpty) ?? ""
     }
     private var isAPIConfigured: Bool {
-        !apiBaseURL.isEmpty && !apiKey.isEmpty
+        let ok = !apiBaseURL.isEmpty && !apiKey.isEmpty
+        // Respect auth backoff window to avoid hammering on auth failures
+        if Date() < authBackoffUntil { return false }
+        return ok
     }
 
     // MARK: Networking
@@ -90,15 +101,19 @@ final class ToneSuggestionCoordinator {
     private var lastEscalationAt: Date = .distantPast
     private var suggestionSnapshot: String?
     private var enhancedAnalysisResults: [String: Any]?
+    
+    // MARK: - Request Management
+    private var latestRequestID = UUID()
+    private var authBackoffUntil: Date = .distantPast
 
     // MARK: - Shared Defaults (App Group)
     private let personalityBridge = PersonalityDataBridge.shared
     private let sharedUserDefaults: UserDefaults? = {
-        UserDefaults(suiteName: "group.com.example.unsaid.shared")
+        UserDefaults(suiteName: "group.com.unsaid.shared")
     }()
 
     // MARK: - Logging
-    private let logger = Logger(subsystem: "com.example.unsaid.keyboard", category: "ToneSuggestionCoordinator")
+    private let logger = Logger(subsystem: "com.example.unsaid.UnsaidKeyboard", category: "ToneSuggestionCoordinator")
     private var logThrottle: [String: Date] = [:]
     private let logThrottleInterval: TimeInterval = 1.0
 
@@ -288,7 +303,12 @@ final class ToneSuggestionCoordinator {
 
     // MARK: - Suggestion flow
     private func generatePerfectSuggestion(from snapshot: String = "") {
-        let textToAnalyze = snapshot.isEmpty ? currentText : snapshot
+        var textToAnalyze = snapshot.isEmpty ? currentText : snapshot
+        
+        // CAP: Limit text length for consistency
+        if textToAnalyze.count > 1000 { 
+            textToAnalyze = String(textToAnalyze.suffix(1000)) 
+        }
         
         // Direct call to suggestions API (no separate tone analysis needed)
         var context: [String: Any] = [
@@ -308,9 +328,16 @@ final class ToneSuggestionCoordinator {
                     self.delegate?.didUpdateSecureFixButtonState()
                     self.storeSuggestionGenerated(suggestion: s)
                 } else {
-                    self.suggestions = []
-                    self.delegate?.didUpdateSuggestions([])
-                    self.delegate?.didUpdateSecureFixButtonState()
+                    // FALLBACK: Try local suggestions if network fails
+                    if let fallback = self.fallbackSuggestion(for: textToAnalyze), !fallback.isEmpty {
+                        self.suggestions = [fallback]
+                        self.delegate?.didUpdateSuggestions(self.suggestions)
+                        self.delegate?.didUpdateSecureFixButtonState()
+                    } else {
+                        self.suggestions = []
+                        self.delegate?.didUpdateSuggestions([])
+                        self.delegate?.didUpdateSecureFixButtonState()
+                    }
                 }
             }
         }
@@ -363,6 +390,23 @@ final class ToneSuggestionCoordinator {
             appContext: "keyboard_extension"
         )
         SafeKeyboardDataStorage.shared.recordInteraction(interaction)
+    }
+    
+    // MARK: - Suggestion Analytics Hooks
+    func recordSuggestionAccepted(_ suggestion: String) {
+        SafeKeyboardDataStorage.shared.recordSuggestionInteraction(
+            suggestion: suggestion, 
+            accepted: true, 
+            context: "ml_suggestion_accepted"
+        )
+    }
+    
+    func recordSuggestionRejected(_ suggestion: String) {
+        SafeKeyboardDataStorage.shared.recordSuggestionInteraction(
+            suggestion: suggestion, 
+            accepted: false, 
+            context: "ml_suggestion_rejected"
+        )
     }
 
     // MARK: - Decisioning
@@ -476,7 +520,14 @@ final class ToneSuggestionCoordinator {
         }
         if !emotions.isEmpty {
             if !currentText.isEmpty {
-                callTextUpdateAPI(text: currentText) { _ in }
+                // Use suggestions API for enhanced analysis
+                var context: [String: Any] = [
+                    "text": currentText,
+                    "emotions": emotions,
+                    "enhanced_analysis": true
+                ]
+                context.merge(personalityPayload()) { _, new in new }
+                callSuggestionsAPI(context: context) { _ in }
             }
         }
     }
@@ -494,12 +545,24 @@ final class ToneSuggestionCoordinator {
     // MARK: - API Calls
     private func callSuggestionsAPI(context: [String: Any], usingSnapshot snapshot: String? = nil, completion: @escaping (String?) -> Void) {
         guard isNetworkAvailable, isAPIConfigured else { completion(nil); return }
+        
+        // GUARD: Generate request ID to prevent stale responses
+        let requestID = UUID()
+        latestRequestID = requestID
+        
         var payload = context
+        payload["requestId"] = requestID.uuidString
         payload["userId"] = getUserId()
         payload["userEmail"] = getUserEmail()
         payload.merge(personalityPayload()) { _, new in new }
         payload["conversationHistory"] = exportConversationHistoryForAPI(withCurrentText: snapshot)
-        callEndpoint(path: "suggestions", payload: payload) { data in
+        
+        callEndpoint(path: "suggestions", payload: payload) { [weak self] data in
+            guard let self else { return }
+            
+            // GUARD: Ignore stale results
+            guard requestID == self.latestRequestID else { completion(nil); return }
+            
             let d = data ?? [:]
             
             // Store comprehensive ML analysis results for later use
@@ -532,7 +595,9 @@ final class ToneSuggestionCoordinator {
             
             // Extract suggestion text
             var suggestion: String?
-            if let arr = d["suggestions"] as? [[String: Any]], let first = arr.first, let text = first["text"] as? String {
+            if let arr = d["suggestions"] as? [[String: Any]], 
+               let first = arr.first,
+               let text = first["text"] as? String {
                 suggestion = text
             } else if let s = d["general_suggestion"] as? String {
                 suggestion = s
@@ -582,6 +647,10 @@ final class ToneSuggestionCoordinator {
                 return
             }
             guard (200..<300).contains(http.statusCode), let data = data else {
+                // HANDLE: Auth failures with backoff
+                if http.statusCode == 401 || http.statusCode == 403 {
+                    self.authBackoffUntil = Date().addingTimeInterval(60) // 1 min backoff
+                }
                 #if DEBUG
                 self.throttledLog("HTTP \(http.statusCode) \(normalized)", category: "api")
                 if let d = data, let s = String(data: d, encoding: .utf8) {
@@ -646,6 +715,11 @@ final class ToneSuggestionCoordinator {
         networkMonitor?.cancel()
         networkMonitor = nil
         didStartMonitoring = false
+    }
+    
+    // MARK: - Offline Fallback
+    private func fallbackSuggestion(for text: String) -> String? {
+        return LightweightSpellChecker.shared.getCapitalizationAndPunctuationSuggestions(for: text).first
     }
 
     // MARK: - Logging

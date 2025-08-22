@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'keyboard_manager.dart';
 import 'relationship_insights_service.dart';
+import 'conversation_data_service.dart';
 
 /// Unified Analytics Service for all screens
 /// Provides centralized access to communication analysis data
@@ -13,6 +14,7 @@ class UnifiedAnalyticsService extends ChangeNotifier {
   final KeyboardManager _keyboardManager = KeyboardManager();
   final RelationshipInsightsService _relationshipInsights =
       RelationshipInsightsService();
+  final ConversationDataService _conversationService = ConversationDataService();
 
   /// Get individual user analytics (for insights dashboard)
   Future<Map<String, dynamic>> getIndividualAnalytics() async {
@@ -588,6 +590,78 @@ class UnifiedAnalyticsService extends ChangeNotifier {
         'Develop clearer communication',
       ],
     };
+  }
+
+  /// Get comprehensive conversation analytics
+  Future<Map<String, dynamic>> getConversationAnalytics({
+    String? userId,
+    String? relationshipId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final conversationHistory = await _conversationService.getConversationHistory(
+        userId: userId,
+        relationshipId: relationshipId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      
+      final stats = await _conversationService.getConversationStats(
+        userId: userId,
+        relationshipId: relationshipId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      
+      return {
+        'conversation_history': conversationHistory,
+        'conversation_stats': stats,
+        'processed_at': DateTime.now().toIso8601String(),
+      };
+    } catch (e) {
+      debugPrint('Error getting conversation analytics: $e');
+      return {
+        'conversation_history': [],
+        'conversation_stats': {},
+        'error': true,
+        'processed_at': DateTime.now().toIso8601String(),
+      };
+    }
+  }
+
+  /// Store conversation for future analysis
+  Future<void> recordConversation(Map<String, dynamic> conversationData) async {
+    try {
+      await _conversationService.storeConversation(conversationData);
+      notifyListeners(); // Refresh analytics
+    } catch (e) {
+      debugPrint('Error recording conversation: $e');
+    }
+  }
+
+  /// Store message for analysis
+  Future<void> recordMessage(String conversationId, Map<String, dynamic> messageData) async {
+    try {
+      await _conversationService.storeMessage(conversationId, messageData);
+      notifyListeners(); // Refresh analytics
+    } catch (e) {
+      debugPrint('Error recording message: $e');
+    }
+  }
+
+  /// Get recent conversations for quick insights
+  Future<List<Map<String, dynamic>>> getRecentConversations({int limit = 10}) async {
+    try {
+      return await _conversationService.getConversationHistory(
+        endDate: DateTime.now(),
+        startDate: DateTime.now().subtract(const Duration(days: 7)),
+        limit: limit,
+      );
+    } catch (e) {
+      debugPrint('Error getting recent conversations: $e');
+      return [];
+    }
   }
 
   /// Clear cached data and refresh

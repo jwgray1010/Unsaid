@@ -5,6 +5,7 @@ import 'dart:async';
 import 'keyboard_extension.dart';
 import 'secure_config.dart';
 import 'secure_storage_service.dart';
+import 'conversation_data_service.dart';
 // Adding imports for AI services integration
 import 'co_parenting_ai_service.dart' as coparenting;
 import 'emotional_intelligence_coach.dart' as eiq;
@@ -54,6 +55,9 @@ class KeyboardManager extends ChangeNotifier {
   // Store recent emotion/tone history for analytics
   final List<Map<String, dynamic>> _toneHistory = [];
   List<Map<String, dynamic>> get toneHistory => List.unmodifiable(_toneHistory);
+  
+  // Conversation service for storing interaction data
+  final ConversationDataService _conversationService = ConversationDataService();
 
   // Store trigger/conflict words for alerts
   static const List<String> _triggerWords = [
@@ -119,7 +123,32 @@ class KeyboardManager extends ChangeNotifier {
       'timestamp': DateTime.now().toIso8601String(),
     });
     if (_toneHistory.length > 50) _toneHistory.removeAt(0); // keep last 50
+    
+    // Store in conversation service for deeper analytics
+    _storeAnalysisForConversation(analysis);
+    
     notifyListeners();
+  }
+  
+  // Store analysis data for conversation tracking
+  Future<void> _storeAnalysisForConversation(Map<String, dynamic> analysis) async {
+    try {
+      final messageData = {
+        'text': analysis['original_message'] ?? analysis['original_text'] ?? '',
+        'tone_analysis': analysis,
+        'timestamp': DateTime.now().toIso8601String(),
+        'user_id': 'current_user', // Replace with actual user ID
+        'source': 'keyboard',
+      };
+      
+      // Create or append to today's conversation
+      final today = DateTime.now();
+      final conversationId = 'daily_${today.year}_${today.month}_${today.day}';
+      
+      await _conversationService.storeMessage(conversationId, messageData);
+    } catch (e) {
+      debugPrint('Error storing analysis for conversation: $e');
+    }
   }
 
   // Detect trigger/conflict words in a message

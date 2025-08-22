@@ -343,4 +343,132 @@ class UsageTrackingService extends ChangeNotifier {
       }
     }
   }
+
+  /// Track screen views for analytics
+  Future<void> trackScreenView(String screenName, [Map<String, dynamic>? properties]) async {
+    try {
+      final timestamp = DateTime.now().toIso8601String();
+      final event = {
+        'type': 'screen_view',
+        'screen': screenName,
+        'timestamp': timestamp,
+        'properties': properties ?? {},
+      };
+      
+      await _storeEvent(event);
+      
+      if (kDebugMode) {
+        print('📱 Screen view tracked: $screenName');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error tracking screen view: $e');
+      }
+    }
+  }
+
+  /// Track CTA banner shows
+  Future<void> trackCTAShown(String ctaType) async {
+    try {
+      final timestamp = DateTime.now().toIso8601String();
+      final event = {
+        'type': 'cta_shown',
+        'cta_type': ctaType,
+        'timestamp': timestamp,
+      };
+      
+      await _storeEvent(event);
+      
+      if (kDebugMode) {
+        print('👁️ CTA shown tracked: $ctaType');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error tracking CTA shown: $e');
+      }
+    }
+  }
+
+  /// Track CTA banner clicks
+  Future<void> trackCTAClicked(String ctaType) async {
+    try {
+      final timestamp = DateTime.now().toIso8601String();
+      final event = {
+        'type': 'cta_clicked',
+        'cta_type': ctaType,
+        'timestamp': timestamp,
+      };
+      
+      await _storeEvent(event);
+      
+      if (kDebugMode) {
+        print('👆 CTA clicked tracked: $ctaType');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error tracking CTA clicked: $e');
+      }
+    }
+  }
+
+  /// Track action grid clicks
+  Future<void> trackActionGridClick(String action) async {
+    try {
+      final timestamp = DateTime.now().toIso8601String();
+      final event = {
+        'type': 'action_grid_click',
+        'action': action,
+        'timestamp': timestamp,
+      };
+      
+      await _storeEvent(event);
+      
+      if (kDebugMode) {
+        print('🎯 Action grid click tracked: $action');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error tracking action grid click: $e');
+      }
+    }
+  }
+
+  /// Store event in local storage
+  Future<void> _storeEvent(Map<String, dynamic> event) async {
+    if (_prefs == null) return;
+    
+    try {
+      final eventsJson = _prefs!.getString('analytics_events') ?? '[]';
+      final events = List<dynamic>.from(json.decode(eventsJson));
+      
+      events.add(event);
+      
+      // Keep only last 1000 events to prevent storage bloat
+      if (events.length > 1000) {
+        events.removeRange(0, events.length - 1000);
+      }
+      
+      await _prefs!.setString('analytics_events', json.encode(events));
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error storing event: $e');
+      }
+    }
+  }
+
+  /// Get stored analytics events
+  Future<List<Map<String, dynamic>>> getAnalyticsEvents() async {
+    if (_prefs == null) return [];
+    
+    try {
+      final eventsJson = _prefs!.getString('analytics_events') ?? '[]';
+      final events = List<dynamic>.from(json.decode(eventsJson));
+      return events.cast<Map<String, dynamic>>();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting analytics events: $e');
+      }
+      return [];
+    }
+  }
 }
