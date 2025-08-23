@@ -43,7 +43,7 @@ class TrialService extends ChangeNotifier {
     if (_trialStartDate == null || !_isTrialActive) return 0;
     
     final now = DateTime.now();
-    final trialEnd = _trialStartDate!.add(Duration(days: _trialDurationDays));
+    final trialEnd = _trialStartDate!.add(const Duration(days: _trialDurationDays));
     final remaining = trialEnd.difference(now).inDays;
     
     return remaining > 0 ? remaining : 0;
@@ -54,7 +54,7 @@ class TrialService extends ChangeNotifier {
     if (_trialStartDate == null || !_isTrialActive) return 0;
     
     final now = DateTime.now();
-    final trialEnd = _trialStartDate!.add(Duration(days: _trialDurationDays));
+    final trialEnd = _trialStartDate!.add(const Duration(days: _trialDurationDays));
     final remaining = trialEnd.difference(now).inHours;
     
     return remaining > 0 ? remaining : 0;
@@ -65,7 +65,7 @@ class TrialService extends ChangeNotifier {
     if (_trialStartDate == null) return false;
     
     final now = DateTime.now();
-    final trialEnd = _trialStartDate!.add(Duration(days: _trialDurationDays));
+    final trialEnd = _trialStartDate!.add(const Duration(days: _trialDurationDays));
     
     return now.isAfter(trialEnd) && !_hasSubscription;
   }
@@ -186,7 +186,7 @@ class TrialService extends ChangeNotifier {
     if (_trialStartDate == null) return;
     
     final now = DateTime.now();
-    final trialEnd = _trialStartDate!.add(Duration(days: _trialDurationDays));
+    final trialEnd = _trialStartDate!.add(const Duration(days: _trialDurationDays));
     
     if (now.isAfter(trialEnd) && !_hasSubscription) {
       // Trial has expired and no subscription
@@ -205,7 +205,7 @@ class TrialService extends ChangeNotifier {
     
     final now = DateTime.now();
     final trialStart = _trialStartDate!;
-    final trialEnd = trialStart.add(Duration(days: _trialDurationDays));
+    final trialEnd = trialStart.add(const Duration(days: _trialDurationDays));
     
     final totalDuration = trialEnd.difference(trialStart).inMilliseconds;
     final elapsed = now.difference(trialStart).inMilliseconds;

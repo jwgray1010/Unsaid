@@ -18,7 +18,7 @@ class PersonalityDataManager {
     // MARK: - Properties
     
     /// App group identifier for sharing data with keyboard extension
-    private let appGroupIdentifier = "group.com.unsaid.shared"
+    private let appGroupIdentifier = "group.com.example.unsaid"
     
     /// Shared UserDefaults container for app group communication
     private let sharedUserDefaults: UserDefaults?

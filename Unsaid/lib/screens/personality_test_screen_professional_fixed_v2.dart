@@ -166,7 +166,7 @@ class _PersonalityTestScreenProfessionalState
       SnackBar(
         content: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.warning_amber_rounded,
               color: Colors.white,
               size: 20,
@@ -435,7 +435,7 @@ class _PersonalityTestScreenProfessionalState
                                       ),
                                     ),
                                     child: isSelected
-                                        ? Icon(
+                                        ? const Icon(
                                             Icons.check,
                                             color: Colors.white,
                                             size: 16,
@@ -490,7 +490,7 @@ class _PersonalityTestScreenProfessionalState
                           ),
                           child: OutlinedButton.icon(
                             onPressed: _goPrevious,
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.arrow_back_ios,
                               color: Colors.white,
                               size: 18,

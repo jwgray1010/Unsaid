@@ -3,6 +3,7 @@ import NaturalLanguage
 import QuartzCore
 #if canImport(UIKit)
 import UIKit
+import Contacts
 #endif
 
 // MARK: - Personal Dictionary
@@ -10,7 +11,7 @@ final class UserLexicon {
     static let shared = UserLexicon()
     private let keyLearn = "lex_learned"
     private let keyIgnore = "lex_ignored"
-    private let ud = UserDefaults(suiteName: "group.com.unsaid.shared")!
+    private let ud = UserDefaults(suiteName: "group.com.example.unsaid")!
 
     private(set) var learned: Set<String> = []
     private(set) var ignored: Set<String> = []
@@ -178,6 +179,15 @@ final class LightweightSpellChecker {
     // BEHAVIORAL: Terminal period insertion (off by default for iOS-style behavior)
     var autoInsertTerminalPeriod = false
     
+    // BEHAVIORAL: Auto-capitalization and keyboard switching
+    var autoCapitalizeAfterPunctuation = true
+    var autoSwitchToABCAfterPunctuation = true
+    
+    // TRAITS: System-level behavior flags
+    private var traitsWantsAutocorrect = true
+    private var smartQuotesEnabled = true
+    private var touchLikelihoods: [Character: Double] = [:]
+    
     enum DomainMode {
         case general, email, url, numeric
         var shouldSkipSpellCheck: Bool {
@@ -186,6 +196,10 @@ final class LightweightSpellChecker {
             case .general: return false
             }
         }
+    }
+    
+    private func setDomainMode(_ mode: DomainMode) {
+        domainMode = mode
     }
     
     struct SpellSuggestion {
@@ -206,7 +220,7 @@ final class LightweightSpellChecker {
     
     private init() {
         // PERSISTENCE: Load acceptance learning data
-        if let ud = UserDefaults(suiteName: "group.com.unsaid.shared"),
+        if let ud = UserDefaults(suiteName: "group.com.example.unsaid"),
            let saved = ud.dictionary(forKey: acceptanceCountsKey) as? [String: Int] {
             acceptanceCounts = saved
         }
@@ -248,7 +262,7 @@ final class LightweightSpellChecker {
     
     // MARK: - Allow-list for common colloquial words (CACHED)
     private func allowedWords() -> Set<String> {
-        guard let ud = UserDefaults(suiteName: "group.com.unsaid.shared") else {
+        guard let ud = UserDefaults(suiteName: "group.com.example.unsaid") else {
             return Set(seedColloquials)
         }
         
@@ -351,6 +365,28 @@ final class LightweightSpellChecker {
         "relaly": "really", "realy": "really", "rellay": "really",
         // "probably" cluster
         "probaly": "probably", "probbaly": "probably", "propably": "probably",
+        
+        // Contractions - common missing apostrophes
+        "youre": "you're", "theyre": "they're", "were": "we're", "hes": "he's", "shes": "she's",
+        "its": "it's", "thats": "that's", "whats": "what's", "whos": "who's", "hows": "how's",
+        "wheres": "where's", "theres": "there's", "heres": "here's", "whens": "when's",
+        "dont": "don't", "cant": "can't", "wont": "won't", "isnt": "isn't", "arent": "aren't",
+        "wasnt": "wasn't", "werent": "weren't", "hasnt": "hasn't", "havent": "haven't",
+        "hadnt": "hadn't", "wouldnt": "wouldn't", "couldnt": "couldn't", "shouldnt": "shouldn't",
+        "didnt": "didn't", "doesnt": "doesn't", "mustnt": "mustn't", "neednt": "needn't",
+        "ive": "I've", "id": "I'd", "ill": "I'll", "im": "I'm", "youve": "you've",
+        "youd": "you'd", "youll": "you'll", "weve": "we've", "wed": "we'd", "well": "we'll",
+        "theyve": "they've", "theyd": "they'd", "theyll": "they'll"
+    ]
+    
+    /// Multi-word corrections (applied at commit boundaries only)
+    private let multiWordPatterns: [String: String] = [
+        "alot": "a lot", "incase": "in case", "infact": "in fact", "aswell": "as well",
+        "eachother": "each other", "thankyou": "thank you", "atleast": "at least",
+        "everyday": "every day", "anymore": "any more", "anytime": "any time",
+        "onto": "on to", "into": "in to", "somtimes": "sometimes", "ofcourse": "of course",
+        "nevermind": "never mind", "inspite": "in spite", "uptil": "up till",
+        "upto": "up to", "aslong": "as long", "inspite": "in spite"
     ]
 
     private func isWordBoundary(_ c: Character) -> Bool {
@@ -925,8 +961,6 @@ final class LightweightSpellChecker {
         return nil
     }
     
-    func setDomainMode(_ mode: DomainMode) { domainMode = mode }
-    
     func detectDomainMode(for text: String) -> DomainMode {
         let lower = text.lowercased()
         if lower.contains("@") && lower.contains(".") { return .email }
@@ -999,8 +1033,10 @@ final class LightweightSpellChecker {
             let editDist = editDistance(text, suggestion)
             let contextScore = bgScorer.score(prev: previousWord, cand: suggestion, next: nextWord)
             let isUserWord = userLex.learned.contains(suggestion.lowercased())
+            let prox = proximityBoost(original: text, suggestion: suggestion) // NEW: proximity scoring
+            let adjustedConfidence = 0.8 + prox * 0.15 // boost confidence with proximity
             enhanced.append(SpellSuggestion(word: suggestion,
-                                            confidence: 0.8,
+                                            confidence: adjustedConfidence,
                                             isFromUserDict: isUserWord,
                                             editDistance: editDist,
                                             contextScore: contextScore))
@@ -1023,20 +1059,18 @@ final class LightweightSpellChecker {
     }
     
     // MARK: - Multi-word Autocorrect
-    func checkMultiWordCorrection(_ text: String) -> (original: String, correction: String)? {
-        let multiWordPatterns: [String: String] = [
-            "alot": "a lot",
-            "incase": "in case",
-            "infact": "in fact",
-            "aswell": "as well",
-            "eachother": "each other",
-            "thankyou": "thank you",
-            "atleast": "at least",
-            "cannot": "can not",  // stylistic   
-            "everyday": "every day",
-        ]
+    func checkMultiWordCorrection(_ text: String, prev: String? = nil, next: String? = nil) -> (original: String, correction: String)? {
         let normalized = text.normalizedForSpell.lowercased()
-        if let correction = multiWordPatterns[normalized] { return (text, correction) }
+        if let corr = multiWordPatterns[normalized] {
+            // Context-aware handling for ambiguous cases
+            if normalized == "into", let n = next, ["it","them","this","that"].contains(n.lowercased()) {
+                return (text, "in to") // "hand it in to me"
+            }
+            if normalized == "onto", let n = next, ["it","them","this","that"].contains(n.lowercased()) {
+                return (text, "on to") // "pass it on to them"
+            }
+            return (text, corr)
+        }
         return nil
     }
     
@@ -1089,7 +1123,7 @@ final class LightweightSpellChecker {
         acceptanceCounts[key, default: 0] += 1
         
         // PERSISTENCE: Save to UserDefaults
-        if let ud = UserDefaults(suiteName: "group.com.unsaid.shared") {
+        if let ud = UserDefaults(suiteName: "group.com.example.unsaid") {
             ud.set(acceptanceCounts, forKey: acceptanceCountsKey)
         }
     }
@@ -1105,7 +1139,13 @@ final class LightweightSpellChecker {
     func decide(for currentWord: String,
                 prev: String? = nil,
                 next: String? = nil,
-                langOverride: String? = nil) -> Decision {
+                langOverride: String? = nil,
+                isOnCommitBoundary: Bool = false) -> Decision {
+        
+        // Honor system traits - early exit if autocorrect disabled
+        guard traitsWantsAutocorrect else { 
+            return Decision(replacement: nil, suggestions: [], applyAuto: false) 
+        }
         
         setDocumentPrimaryLanguage(langOverride)
         
@@ -1114,13 +1154,15 @@ final class LightweightSpellChecker {
             return Decision(replacement: nil, suggestions: [], applyAuto: false)
         }
         
-        // Check multi-word corrections
-        if let multi = checkMultiWordCorrection(currentWord) {
+        // Check multi-word corrections (only at commit boundaries)
+        if isOnCommitBoundary, let multi = checkMultiWordCorrection(currentWord, prev: prev, next: next) {
             return Decision(replacement: multi.correction, suggestions: [multi.correction], applyAuto: true)
         }
         
-        // Check for single-word autocorrect
-        if shouldAutoCorrect(currentWord), let auto = getAutoCorrection(for: currentWord) {
+        // Apple-like timing: mid-token = suggestions only, commit boundary = auto-correct allowed
+        let autoOkay = isOnCommitBoundary ? shouldAutoCorrect(currentWord) : false
+        
+        if autoOkay, let auto = getAutoCorrection(for: currentWord) {
             return Decision(replacement: auto, suggestions: [auto], applyAuto: true)
         }
         
@@ -1227,6 +1269,198 @@ final class LightweightSpellChecker {
     func recordIntentionalWord(_ word: String) {
         markIntentional(word)
     }
+    
+    // MARK: - Auto-Capitalization & Keyboard Mode Support
+    
+    /// Check if the next character should be capitalized based on context
+    func shouldCapitalizeNext(afterText text: String) -> Bool {
+        guard autoCapitalizeAfterPunctuation else { return false }
+        
+        // Always capitalize at the beginning
+        if text.isEmpty { return true }
+        
+        // Check for sentence-ending punctuation followed by space
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return true }
+        
+        // Look for sentence enders (., !, ?) possibly followed by quotes/parentheses and space
+        let sentenceEndPattern = #"[.!?]['")\]]*\s*$"#
+        if text.range(of: sentenceEndPattern, options: .regularExpression) != nil {
+            return true
+        }
+        
+        // Capitalize after line breaks
+        if text.hasSuffix("\n") || text.hasSuffix("\r\n") {
+            return true
+        }
+        
+        // Capitalize after colon if it starts a new sentence (common in dialogues)
+        if text.hasSuffix(": ") {
+            return true
+        }
+        
+        return false
+    }
+    
+    /// Check if keyboard should switch back to ABC mode after punctuation
+    func shouldSwitchToABCMode(afterText text: String, lastCharacter: Character) -> Bool {
+        guard autoSwitchToABCAfterPunctuation else { return false }
+        
+        // Switch to ABC after sentence-ending punctuation
+        if [".", "!", "?"].contains(String(lastCharacter)) {
+            return true
+        }
+        
+        // Switch to ABC after comma, semicolon, colon if followed by space
+        if [",", ";", ":"].contains(String(lastCharacter)) && text.hasSuffix(" ") {
+            return true
+        }
+        
+        return false
+    }
+    
+    /// Get recommended keyboard state based on context
+    func getRecommendedKeyboardState(forText text: String) -> (shouldCapitalize: Bool, shouldUseABCMode: Bool) {
+        let shouldCap = shouldCapitalizeNext(afterText: text)
+        
+        // Recommend ABC mode if we're capitalizing or at the start of input
+        let shouldABC = shouldCap || text.isEmpty || 
+                       text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        
+        return (shouldCapitalize: shouldCap, shouldUseABCMode: shouldABC)
+    }
+    
+    // MARK: - Apple-like System Integration
+    
+    #if canImport(UIKit)
+    /// Sync behavior from UITextInputTraits - call on every keypress batch or when traits change
+    func syncFromTextTraits(_ proxy: UITextDocumentProxy) {
+        // Capitalization behavior
+        if let cap = proxy.autocapitalizationType {
+            autoCapitalizeAfterPunctuation = cap != .none
+        }
+        
+        // Autocorrect gating
+        traitsWantsAutocorrect = proxy.autocorrectionType != .no
+        
+        // Smart quotes/dashes: if user turned these off, skip fixes that change quotes/dashes
+        smartQuotesEnabled = proxy.smartQuotesType != .no
+        
+        // Keyboard type → domain detection, closer to Apple
+        switch proxy.keyboardType {
+        case .emailAddress: setDomainMode(.email)
+        case .URL, .webSearch: setDomainMode(.url)
+        case .numberPad, .phonePad, .decimalPad, .numbersAndPunctuation: setDomainMode(.numeric)
+        default: setDomainMode(.general)
+        }
+    }
+    
+    /// Load Apple's supplementary lexicon
+    private func loadSystemLexicon(_ controller: UIInputViewController,
+                                   completion: @escaping (Set<String>) -> Void) {
+        controller.requestSupplementaryLexicon { lex in
+            let set = Set(lex.entries.map { $0.userInput.lowercased() })
+            completion(set)
+        }
+    }
+    
+    /// Load Contacts names to avoid "correcting" them
+    private func loadContactsLexicon(completion: @escaping (Set<String>) -> Void) {
+        let store = CNContactStore()
+        let keys = [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactNicknameKey] as [CNKeyDescriptor]
+        var out = Set<String>()
+        let req = CNContactFetchRequest(keysToFetch: keys)
+        do {
+            try store.enumerateContacts(with: req) { c, _ in
+                [c.givenName, c.familyName, c.nickname]
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty }
+                    .forEach { name in
+                        out.insert(name.lowercased())
+                    }
+            }
+        } catch { /* ignore permission errors */ }
+        completion(out)
+    }
+    
+    /// Merge system and contacts lexicons into allow-list cache
+    func primeAppleLikeAllowList(using controller: UIInputViewController) {
+        loadSystemLexicon(controller) { lex in
+            self.loadContactsLexicon { contacts in
+                let merged = lex.union(contacts)
+                // Merge with existing allowlist seeds and user words
+                self.cachedAllowList = self.allowedWords().union(merged)
+                self.allowCacheTimestamp = Date().timeIntervalSince1970
+            }
+        }
+    }
+    
+    /// Apple hallmark: re-evaluate previous word on space/punctuation
+    func reevaluatePreviousWord(before proxy: UITextDocumentProxy) -> AutoCorrectionCandidate? {
+        guard let context = proxy.documentContextBeforeInput, !context.isEmpty else { return nil }
+        // Grab the last token (previous word)
+        let prev = LightweightSpellChecker.lastToken(in: context) ?? ""
+        guard prev.count >= 2, !isWordKnownByUser(prev), !allowedWords().contains(prev.lowercased()) else { return nil }
+        
+        // Also peek the "next" token if we just started one (helps bigram scoring)
+        let nextStart = proxy.documentContextAfterInput ?? ""
+        let next = LightweightSpellChecker.lastToken(in: nextStart)  // often nil here, ok
+        
+        let decision = decide(for: prev, prev: nil, next: next, isOnCommitBoundary: true)
+        guard decision.applyAuto, let replacement = decision.replacement, replacement != prev else { return nil }
+        
+        // Replace the previous word in the document safely:
+        // 1) move caret back by prev.count
+        for _ in 0..<prev.count { proxy.deleteBackward() }
+        // 2) insert corrected word
+        proxy.insertText(replacement)
+        return AutoCorrectionCandidate(original: prev, correction: replacement, confidence: 0.95, source: .local)
+    }
+    
+    /// System-wide learning like Apple
+    func learnWordSystemWide(_ w: String) {
+        UITextChecker.learnWord(w)
+        learnWord(w) // local store
+    }
+    
+    func unlearnWordSystemWide(_ w: String) {
+        UITextChecker.unlearnWord(w)
+        forgetWord(w)
+    }
+    
+    /// Supply per-character probability weights from touch model
+    func setTouchLikelihoods(_ map: [Character: Double]) {
+        self.touchLikelihoods = map
+    }
+    
+    /// Geometry-aware "fat finger" scoring
+    private func proximityBoost(original: String, suggestion: String) -> Double {
+        guard original.count == suggestion.count else { return 0 }
+        let a = Array(original.lowercased())
+        let b = Array(suggestion.lowercased())
+        for i in 0..<a.count where a[i] != b[i] {
+            return touchLikelihoods[b[i]] ?? 0 // simple 1-diff model
+        }
+        return 0
+    }
+    
+    /// Handle double-space period like iOS (trait-aware)
+    func handleDoubleSpace(_ proxy: UITextDocumentProxy) -> Bool {
+        // Detect double-space
+        if let ctx = proxy.documentContextBeforeInput, ctx.hasSuffix("  ") {
+            if traitsWantsAutocorrect && autoInsertTerminalPeriod {
+                // delete the extra space and add ". "
+                proxy.deleteBackward()
+                proxy.deleteBackward()
+                proxy.insertText(". ")
+                // after punctuation, reevaluate previous word (very Apple)
+                _ = reevaluatePreviousWord(before: proxy)
+                return true
+            }
+        }
+        return false
+    }
+    #endif
 }
 
 // MARK: - Apple-style data structures

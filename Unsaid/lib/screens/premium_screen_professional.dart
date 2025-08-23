@@ -150,7 +150,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
       
       HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(' Admin mode activated'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 2),
@@ -164,7 +164,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Keep tapping... (${7 - _secretTapCount} more)'),
-          duration: Duration(seconds: 1),
+          duration: const Duration(seconds: 1),
         ),
       );
     }
@@ -180,14 +180,14 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
         body: Stack(
           children: [
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF6C47FF),
-                    const Color(0xFF9C88FF),
-                    const Color(0xFFB39DDB),
+                    Color(0xFF6C47FF),
+                    Color(0xFF9C88FF),
+                    Color(0xFFB39DDB),
                   ],
                 ),
               ),
@@ -241,7 +241,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
                                     // Sparkle effects
                                     ...List.generate(6, (index) {
                                       final angle = (index * 60.0) * (3.14159 / 180);
-                                      final radius = 80.0;
+                                      const radius = 80.0;
                                       return Positioned(
                                         left:
                                             75 +
@@ -329,8 +329,8 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.verified, color: Colors.white, size: 18, semanticLabel: 'Research-backed'),
-                                        SizedBox(width: 6),
+                                        const Icon(Icons.verified, color: Colors.white, size: 18, semanticLabel: 'Research-backed'),
+                                        const SizedBox(width: 6),
                                         Text(
                                           'Research-backed insights',
                                           style: theme.textTheme.bodyMedium?.copyWith(
@@ -361,7 +361,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
                                   child: Container(
                                     padding: EdgeInsets.all(AppTheme.spacing.lg),
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
+                                      gradient: const LinearGradient(
                                         colors: [
                                           Color(0xFF6C47FF),
                                           Color(0xFF4A2FE7),
@@ -376,7 +376,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
                                         BoxShadow(
                                           color: Colors.black.withOpacity(0.2),
                                           blurRadius: 20,
-                                          offset: Offset(0, 10),
+                                          offset: const Offset(0, 10),
                                         ),
                                       ],
                                     ),
@@ -628,7 +628,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
                 child: Padding(
                   padding: const EdgeInsets.only(left: 8, top: 8),
                   child: IconButton(
-                    icon: Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
                     tooltip: 'Back',
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -750,7 +750,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
                         ],
                       ),
                     ),
-                    Icon(Icons.check_circle, color: Colors.white, size: 20, semanticLabel: 'Included'),
+                    const Icon(Icons.check_circle, color: Colors.white, size: 20, semanticLabel: 'Included'),
                   ],
                 ),
               ),
@@ -767,7 +767,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
     return Container(
       padding: EdgeInsets.all(AppTheme.spacing.lg),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [Color(0xFF6C47FF), Color(0xFF4A2FE7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -777,7 +777,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
           BoxShadow(
             color: Colors.black.withOpacity(0.2),
             blurRadius: 20,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -808,7 +808,7 @@ class _PremiumScreenProfessionalState extends State<PremiumScreenProfessional>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.timer, color: Colors.white, size: 24, semanticLabel: 'Free Trial'),
+                    const Icon(Icons.timer, color: Colors.white, size: 24, semanticLabel: 'Free Trial'),
                     SizedBox(width: AppTheme.spacing.sm),
                     Text(
                       '7-Day Free Trial',

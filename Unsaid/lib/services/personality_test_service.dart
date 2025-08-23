@@ -14,13 +14,14 @@ class PersonalityTestService {
   static Future<bool> isTestCompleted() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Admin bypass: admins can always retake the test
       if (AdminService.instance.canRetakePersonalityTest) {
-        AdminService.instance.logAdminAction('Checking personality test completion (admin can retake)');
+        AdminService.instance.logAdminAction(
+            'Checking personality test completion (admin can retake)');
         return false; // Always allow admin to retake
       }
-      
+
       return prefs.getBool(_testCompletedKey) ?? false;
     } catch (e) {
       if (kDebugMode) {
@@ -36,14 +37,14 @@ class PersonalityTestService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_testCompletedKey, true);
       await prefs.setStringList(_testResultsKey, answers);
-      
+
       // Process and store personality results for keyboard access
       await _processAndStorePersonalityResults(answers);
-      
+
       if (AdminService.instance.isCurrentUserAdmin) {
         AdminService.instance.logAdminAction('Completed personality test');
       }
-      
+
       if (kDebugMode) {
         print('✅ Personality test marked as completed');
       }
@@ -55,26 +56,30 @@ class PersonalityTestService {
   }
 
   /// Process personality test answers and store results for keyboard access
-  static Future<void> _processAndStorePersonalityResults(List<String> answers) async {
+  static Future<void> _processAndStorePersonalityResults(
+      List<String> answers) async {
     try {
       // Get the randomized questions to match answers
       final questions = RandomizedPersonalityTest.getRandomizedQuestions();
-      
+
       // Count responses by type
       final Map<String, int> counts = {'A': 0, 'B': 0, 'C': 0, 'D': 0};
-      
+
       for (int i = 0; i < answers.length && i < questions.length; i++) {
         final answer = answers[i];
         final question = questions[i];
-        
+
         // Find which option was selected by comparing the answer text
-        final optionIndex = question.options.indexWhere((option) => option.text == answer);
+        final optionIndex =
+            question.options.indexWhere((option) => option.text == answer);
         if (optionIndex != -1) {
           final type = question.options[optionIndex].type;
-          counts[type] = (counts[type] ?? 0) + 1;
+          if (type != null) {
+            counts[type] = (counts[type] ?? 0) + 1;
+          }
         }
       }
-      
+
       // Find dominant type
       String dominantType = 'B'; // Default to secure
       int maxCount = 0;
@@ -84,7 +89,7 @@ class PersonalityTestService {
           maxCount = v;
         }
       });
-      
+
       // Mapping from personality types to attachment styles for iOS keyboard
       const attachmentStyleMapping = {
         'A': 'anxious',
@@ -92,20 +97,20 @@ class PersonalityTestService {
         'C': 'avoidant',
         'D': 'disorganized',
       };
-      
+
       const typeLabels = {
         'A': 'Anxious Attachment',
         'B': 'Secure Attachment',
         'C': 'Dismissive Avoidant',
         'D': 'Disorganized/Fearful Avoidant',
       };
-      
+
       // Get attachment style for iOS keyboard
       final attachmentStyle = attachmentStyleMapping[dominantType] ?? 'secure';
-      
+
       // Determine communication style (simplified logic)
       final commStyle = _getDominantCommStyle(counts);
-      
+
       // Store processed results
       final storage = SecureStorageService();
       await storage.storePersonalityTestResults({
@@ -119,7 +124,7 @@ class PersonalityTestService {
         'communication_style_label': _getCommStyleLabel(commStyle),
         'test_completed_at': DateTime.now().toIso8601String(),
       });
-      
+
       // Trigger iOS-side storage and debug output
       try {
         final personalityData = {
@@ -128,10 +133,10 @@ class PersonalityTestService {
           'dominant_type': dominantType,
           'test_completed_at': DateTime.now().toIso8601String(),
         };
-        
+
         await PersonalityDataBridge.storePersonalityData(personalityData);
         await PersonalityDataBridge.debugPersonalityData();
-        
+
         if (kDebugMode) {
           print('✅ iOS personality data storage triggered');
         }
@@ -140,10 +145,11 @@ class PersonalityTestService {
           print('⚠️ Error triggering iOS personality data storage: $e');
         }
       }
-      
+
       if (kDebugMode) {
         print('✅ Personality results processed and stored for keyboard access');
-        print('   - Dominant type: $dominantType (${typeLabels[dominantType]})');
+        print(
+            '   - Dominant type: $dominantType (${typeLabels[dominantType]})');
         print('   - Attachment style: $attachmentStyle');
         print('   - Communication style: $commStyle');
       }
@@ -153,23 +159,23 @@ class PersonalityTestService {
       }
     }
   }
-  
+
   /// Get dominant communication style based on personality type counts
   static String _getDominantCommStyle(Map<String, int> counts) {
     // Simplified logic - in a real app, this would be more sophisticated
     final total = counts.values.fold(0, (sum, count) => sum + count);
     if (total == 0) return 'assertive';
-    
+
     final secureRatio = (counts['B'] ?? 0) / total;
     final anxiousRatio = (counts['A'] ?? 0) / total;
     final avoidantRatio = (counts['C'] ?? 0) / total;
-    
+
     if (secureRatio > 0.5) return 'assertive';
     if (anxiousRatio > 0.4) return 'passive';
     if (avoidantRatio > 0.4) return 'aggressive';
     return 'assertive';
   }
-  
+
   /// Get communication style label
   static String _getCommStyleLabel(String style) {
     const labels = {

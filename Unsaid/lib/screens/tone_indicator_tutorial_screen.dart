@@ -481,7 +481,7 @@ class _ToneIndicatorTutorialScreenState
                     Container(
                       height: 40, // Reduced height to save space
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
+                      child: const Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
@@ -498,9 +498,9 @@ class _ToneIndicatorTutorialScreenState
                                 Icons.signal_cellular_4_bar,
                                 size: 14,
                               ), // Reduced icon size
-                              const SizedBox(width: 3),
+                              SizedBox(width: 3),
                               Icon(Icons.wifi, size: 14),
-                              const SizedBox(width: 3),
+                              SizedBox(width: 3),
                               Icon(Icons.battery_full, size: 14),
                             ],
                           ),
@@ -519,14 +519,14 @@ class _ToneIndicatorTutorialScreenState
                           CircleAvatar(
                             radius: 14, // Reduced avatar size
                             backgroundColor: Colors.blue.shade100,
-                            child: Icon(
+                            child: const Icon(
                               Icons.person,
                               size: 14,
                               color: Colors.blue,
                             ),
                           ),
                           const SizedBox(width: 10),
-                          Text(
+                          const Text(
                             'Sarah',
                             style: TextStyle(
                               fontSize: 16, // Reduced font size
@@ -558,7 +558,7 @@ class _ToneIndicatorTutorialScreenState
                                   color: Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: Text(
+                                child: const Text(
                                   'Hey! How\'s the project coming along?',
                                   style: TextStyle(
                                     fontSize: 13,

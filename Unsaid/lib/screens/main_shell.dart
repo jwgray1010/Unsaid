@@ -18,10 +18,10 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
   List<Widget> get _screens => [
-    HomeScreen(key: const PageStorageKey('HomeScreen')),
-    InsightsDashboardEnhanced(key: const PageStorageKey('InsightsDashboard')),
-    RelationshipInsightsDashboard(
-      key: const PageStorageKey('RelationshipInsightsDashboard'),
+    const HomeScreen(key: PageStorageKey('HomeScreen')),
+    const InsightsDashboardEnhanced(key: PageStorageKey('InsightsDashboard')),
+    const RelationshipInsightsDashboard(
+      key: PageStorageKey('RelationshipInsightsDashboard'),
     ),
     SettingsScreenProfessional(
       key: const PageStorageKey('SettingsScreen'),

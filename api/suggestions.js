@@ -96,20 +96,22 @@ class AdvancedFeatureExtractor {
     initializeFeatureGenerators() {
         this.generators = [
             { name: 'emotionalTriggers', weight: 0.25, processor: this.extractEmotionalFeatures.bind(this) },
-            { name: 'contextClassification', weight: 0.20, processor: this.extractContextFeatures.bind(this) },
-            { name: 'attachmentMarkers', weight: 0.20, processor: this.extractAttachmentFeatures.bind(this) },
-            { name: 'intensityMapping', weight: 0.15, processor: this.extractIntensityFeatures.bind(this) },
-            { name: 'communicationPatterns', weight: 0.20, processor: this.extractCommunicationFeatures.bind(this) }
+            { name: 'contextClassification', weight: 0.15, processor: this.extractContextFeatures.bind(this) },
+            { name: 'attachmentMarkers', weight: 0.15, processor: this.extractAttachmentFeatures.bind(this) },
+            { name: 'intensityMapping', weight: 0.10, processor: this.extractIntensityFeatures.bind(this) },
+            { name: 'communicationPatterns', weight: 0.15, processor: this.extractCommunicationFeatures.bind(this) },
+            { name: 'paralinguistic', weight: 0.20, processor: this.extractParalinguistic.bind(this) }
         ];
     }
 
     extractEmotionalFeatures(text) {
         const features = {};
-        const lowerText = text.toLowerCase();
         
+        // Enhanced emotion detection with negation awareness
         Object.entries(this.emotionalTriggers.emotions).forEach(([emotion, keywords]) => {
-            const matchCount = keywords.filter(keyword => lowerText.includes(keyword)).length;
-            features[`emotion_${emotion}`] = matchCount;
+            const negationAwareScore = this.negateAwareScore(text, keywords);
+            features[`emotion_${emotion}`] = Math.max(0, negationAwareScore); // Don't allow negative scores
+            features[`emotion_${emotion}_negated`] = negationAwareScore < 0 ? Math.abs(negationAwareScore) : 0;
         });
         
         return features;
@@ -161,6 +163,83 @@ class AdvancedFeatureExtractor {
         };
     }
 
+    // 1) PARALINGUISTIC FEATURES (caps, punctuation, emojis)
+    extractParalinguistic(text) {
+        const t = text;
+        const letters = (t.match(/[A-Za-z]/g) || []).length;
+        const uppers = (t.match(/[A-Z]/g) || []).length;
+        const capsRatio = letters ? uppers / letters : 0;
+        
+        // Count repeated punctuation with weight limit
+        const excls = (t.match(/!+/g) || []).reduce((sum, match) => sum + Math.min(match.length, 3), 0);
+        const qmarks = (t.match(/\?+/g) || []).reduce((sum, match) => sum + Math.min(match.length, 3), 0);
+        const ellipses = (t.match(/…|\.{3,}/g) || []).length;
+        
+        // Emoji classification
+        const emojisAnger = (t.match(/[😡🤬👿💢😤]/g) || []).length;
+        const emojisSad = (t.match(/[😢😭💔😞😔]/g) || []).length;
+        const emojisJoy = (t.match(/[😊😁😄🥳✨😀😂]/g) || []).length;
+        const emojisAnxiety = (t.match(/[😰😨😱😟😦]/g) || []).length;
+        
+        // Profanity/toxicity detection (small list)
+        const profanityWords = ['damn', 'shit', 'fuck', 'pissed', 'bloody', 'bastard'];
+        const profanityCount = profanityWords.filter(word => t.toLowerCase().includes(word)).length;
+        
+        // Hedging words that lower intensity
+        const hedgingWords = ['maybe', 'kinda', 'perhaps', 'sort of', 'kind of', 'i think', 'probably'];
+        const hedgingCount = hedgingWords.filter(word => t.toLowerCase().includes(word)).length;
+        
+        return {
+            caps_ratio: capsRatio,
+            exclamation_weight: excls,
+            question_weight: qmarks,
+            ellipses_count: ellipses,
+            emojis_anger: emojisAnger,
+            emojis_sad: emojisSad,
+            emojis_joy: emojisJoy,
+            emojis_anxiety: emojisAnxiety,
+            profanity_count: profanityCount,
+            hedging_count: hedgingCount
+        };
+    }
+
+    // 2) NEGATION-AWARE SCORING
+    negateAwareScore(text, emotionWords) {
+        const tokens = text.toLowerCase().split(/\b/);
+        const negators = new Set(['not', 'never', "don't", "didn't", "isn't", "can't", "won't", "shouldn't", "couldn't"]);
+        let score = 0;
+        let negWindow = 0;
+        
+        for (const token of tokens) {
+            const cleanToken = token.trim();
+            if (negators.has(cleanToken)) {
+                negWindow = 4; // Look ahead 4 words
+                continue;
+            }
+            
+            if (emotionWords.includes(cleanToken)) {
+                // If in negation window, flip the score
+                score += (negWindow > 0 ? -1 : 1);
+                negWindow = Math.max(0, negWindow - 1);
+            } else if (/\w/.test(cleanToken)) {
+                // Decay negation window for non-emotion words
+                negWindow = Math.max(0, negWindow - 1);
+            }
+        }
+        
+        return score;
+    }
+
+    // 6) LANGUAGE DETECTION (simple heuristic)
+    detectLanguage(text) {
+        const commonEnglishWords = ['the', 'and', 'is', 'in', 'to', 'of', 'a', 'that', 'it', 'with', 'for', 'as', 'was', 'on', 'are', 'you', 'i', 'have', 'be', 'this'];
+        const words = text.toLowerCase().split(/\s+/);
+        const englishWordCount = words.filter(word => commonEnglishWords.includes(word)).length;
+        const englishRatio = words.length > 0 ? englishWordCount / words.length : 0;
+        
+        return englishRatio > 0.1 ? 'en' : 'unknown';
+    }
+
     extractAllFeatures(text) {
         const startTime = Date.now();
         const allFeatures = {};
@@ -185,50 +264,213 @@ class AdvancedFeatureExtractor {
 }
 
 // ========================================
+// 2.5) TEMPORAL SMOOTHING CLASS
+// ========================================
+class ToneSmoother {
+    constructor(alpha = 0.6) {
+        this.alpha = alpha;
+        this.state = null;
+        this.lastUpdate = Date.now();
+    }
+
+    step(probabilities) {
+        const now = Date.now();
+        
+        // If no previous state or too much time has passed, reset
+        if (!this.state || (now - this.lastUpdate) > 300000) { // 5 minutes
+            this.state = { ...probabilities };
+            this.lastUpdate = now;
+            return this.state;
+        }
+
+        // EWMA smoothing
+        for (const emotion of Object.keys(probabilities)) {
+            if (this.state[emotion] !== undefined) {
+                this.state[emotion] = this.alpha * probabilities[emotion] + 
+                                    (1 - this.alpha) * this.state[emotion];
+            } else {
+                this.state[emotion] = probabilities[emotion];
+            }
+        }
+
+        this.lastUpdate = now;
+        return this.state;
+    }
+
+    reset() {
+        this.state = null;
+    }
+}
+
+// ========================================
+// 2.6) CONFIDENCE CALIBRATION UTILITIES
+// ========================================
+function softmax(scores, temperature = 1.3) {
+    const values = Object.values(scores);
+    const maxVal = Math.max(...values);
+    const exp = values.map(v => Math.exp((v - maxVal) / temperature));
+    const sum = exp.reduce((a, b) => a + b, 0);
+    
+    const result = {};
+    const keys = Object.keys(scores);
+    keys.forEach((key, i) => {
+        result[key] = exp[i] / sum;
+    });
+    
+    return result;
+}
+
+function calibrateConfidence(probabilities) {
+    const sortedProbs = Object.entries(probabilities).sort((a, b) => b[1] - a[1]);
+    const topProb = sortedProbs[0][1];
+    const secondProb = sortedProbs[1] ? sortedProbs[1][1] : 0;
+    
+    // Confidence based on margin between top two predictions
+    const margin = topProb - secondProb;
+    const baseConfidence = topProb;
+    
+    // Apply calibration: floor at 0.35, ceiling at 0.92
+    const calibrated = Math.min(Math.max(baseConfidence * (0.5 + margin), 0.35), 0.92);
+    
+    return {
+        confidence: calibrated,
+        dominantEmotion: sortedProbs[0][0],
+        margin: margin
+    };
+}
+
+// ========================================
+// 2.7) SAFETY GUARDRAILS
+// ========================================
+function needsEscalation(text) {
+    const t = text.toLowerCase();
+    
+    if (/(kill myself|suicide|self.harm|end it all|want to die)/.test(t)) {
+        return 'self_harm';
+    }
+    if (/(hurt you|kill you|harm you|violence)/.test(t)) {
+        return 'violence';
+    }
+    if (/(legal advice|lawsuit|sue|court|lawyer)/.test(t)) {
+        return 'legal';
+    }
+    if (/(medical|doctor|diagnosis|medication|prescription)/.test(t)) {
+        return 'medical';
+    }
+    
+    return null;
+}
+
+function getSafetyResponse(escalationType) {
+    const responses = {
+        self_harm: "I'm concerned about what you're going through. Please reach out to a mental health professional, call 988 (Suicide & Crisis Lifeline), or go to your nearest emergency room.",
+        violence: "I understand you're feeling intense emotions. Please consider speaking with a counselor or calling a crisis helpline for support in managing these feelings safely.",
+        legal: "For legal matters, I recommend consulting with a qualified attorney who can provide proper legal advice.",
+        medical: "For medical concerns, please consult with a healthcare professional who can provide appropriate medical guidance."
+    };
+    
+    return responses[escalationType] || "Please consider speaking with a professional who can provide appropriate guidance for your situation.";
+}
+
+// ========================================
 // 3. ML TONE ANALYZER (INLINE)
 // ========================================
 class MLAdvancedToneAnalyzer {
     constructor(options = {}) {
         this.featureExtractor = new AdvancedFeatureExtractor();
+        this.toneSmoother = new ToneSmoother(options.smoothingAlpha || 0.6);
         this.config = {
-            maxProcessingTime: options.maxProcessingTime || 300,
+            maxProcessingTime: options.maxProcessingTime || 120, // Reduced from 300ms
             enableCaching: options.enableCaching !== false,
-            minConfidenceThreshold: options.minConfidenceThreshold || 0.25
+            minConfidenceThreshold: options.minConfidenceThreshold || 0.25,
+            enableSmoothing: options.enableSmoothing !== false,
+            enableSafetyChecks: options.enableSafetyChecks !== false
         };
         this.cache = new Map();
+        this.sessionSmoothing = new Map(); // Per-user smoothing
     }
 
     async analyzeText(text, options = {}) {
         const startTime = Date.now();
-        const cacheKey = `${text.substring(0, 50)}_${options.attachmentStyle || 'secure'}`;
+        const { userId = 'anonymous', attachmentStyle = 'secure' } = options;
+        
+        // 8) Input validation
+        if (!text || text.length > 2000) {
+            throw new Error('Invalid text input: empty or too long (max 2000 chars)');
+        }
+        
+        // 6) Language detection - bail to neutral if not English
+        const language = this.featureExtractor.detectLanguage(text);
+        if (language !== 'en') {
+            return this.generateNeutralFallback(text, 'non_english');
+        }
+        
+        // 7) Safety check first
+        if (this.config.enableSafetyChecks) {
+            const escalationType = needsEscalation(text);
+            if (escalationType) {
+                return this.generateSafetyResponse(text, escalationType);
+            }
+        }
+        
+        const cacheKey = `${text.substring(0, 50)}_${attachmentStyle}_${language}`;
         
         if (this.config.enableCaching && this.cache.has(cacheKey)) {
             return { ...this.cache.get(cacheKey), fromCache: true };
         }
 
         try {
-            // Extract features
+            // Extract features with time budget
+            const featureStartTime = Date.now();
             const featureResult = this.featureExtractor.extractAllFeatures(text);
             
+            // Check if we're exceeding time budget
+            const featureTime = Date.now() - featureStartTime;
+            if (featureTime > this.config.maxProcessingTime * 0.7) {
+                console.warn(`Feature extraction took ${featureTime}ms, exceeding 70% of budget`);
+            }
+            
             // Analyze tone based on features
-            const toneAnalysis = this.classifyTone(featureResult.features, text);
+            const toneAnalysis = this.classifyToneEnhanced(featureResult.features, text, attachmentStyle);
+            
+            // 4) Apply confidence calibration
+            const calibrationResult = calibrateConfidence(toneAnalysis.emotions);
+            
+            // 3) Apply temporal smoothing if enabled and user session exists
+            let finalEmotions = toneAnalysis.emotions;
+            if (this.config.enableSmoothing && userId !== 'anonymous') {
+                if (!this.sessionSmoothing.has(userId)) {
+                    this.sessionSmoothing.set(userId, new ToneSmoother());
+                }
+                const smoother = this.sessionSmoothing.get(userId);
+                finalEmotions = smoother.step(toneAnalysis.emotions);
+            }
             
             const result = {
                 tone: {
-                    classification: toneAnalysis.dominantEmotion,
-                    confidence: toneAnalysis.confidence,
-                    probabilities: toneAnalysis.emotions
+                    classification: calibrationResult.dominantEmotion,
+                    confidence: calibrationResult.confidence,
+                    probabilities: finalEmotions,
+                    margin: calibrationResult.margin
                 },
                 features: {
                     summary: featureResult.features,
                     count: featureResult.featureCount
                 },
                 quality: {
-                    overallScore: toneAnalysis.confidence
+                    overallScore: calibrationResult.confidence,
+                    featureTime: featureTime,
+                    languageDetected: language
                 },
-                uncertainty: 1 - toneAnalysis.confidence,
-                explanation: `Detected ${toneAnalysis.dominantEmotion} with ${(toneAnalysis.confidence * 100).toFixed(1)}% confidence`,
-                timestamp: new Date().toISOString()
+                uncertainty: 1 - calibrationResult.confidence,
+                explanation: `Detected ${calibrationResult.dominantEmotion} with ${(calibrationResult.confidence * 100).toFixed(1)}% confidence`,
+                timestamp: new Date().toISOString(),
+                processingInfo: {
+                    usedSmoothing: this.config.enableSmoothing && userId !== 'anonymous',
+                    usedNegation: this.hasNegationFeatures(featureResult.features),
+                    usedParalinguistics: this.hasParalinguisticFeatures(featureResult.features),
+                    attachmentStyleBias: attachmentStyle !== 'secure'
+                }
             };
 
             if (this.config.enableCaching) {
@@ -243,27 +485,69 @@ class MLAdvancedToneAnalyzer {
         }
     }
 
-    classifyTone(features, text) {
+    classifyToneEnhanced(features, text, attachmentStyle = 'secure') {
         const emotions = {};
         let maxScore = 0;
         let dominantEmotion = 'neutral';
         
-        // Emotion scoring based on features
+        // Enhanced emotion scoring with paralinguistic features
         const emotionMappings = {
-            anger: ['emotionalTriggers_emotion_anger', 'intensityMapping_intensity_high'],
-            sadness: ['emotionalTriggers_emotion_sadness', 'intensityMapping_intensity_medium'],
-            anxiety: ['emotionalTriggers_emotion_anxiety', 'intensityMapping_intensity_high'],
-            joy: ['emotionalTriggers_emotion_joy', 'intensityMapping_intensity_high'],
-            love: ['emotionalTriggers_emotion_love', 'intensityMapping_intensity_medium']
+            anger: {
+                features: ['emotionalTriggers_emotion_anger', 'intensityMapping_intensity_high'],
+                paralinguistic: ['paralinguistic_caps_ratio', 'paralinguistic_exclamation_weight', 'paralinguistic_profanity_count', 'paralinguistic_emojis_anger'],
+                weights: [1.0, 0.8, 1.5, 0.6, 2.0]
+            },
+            sadness: {
+                features: ['emotionalTriggers_emotion_sadness', 'intensityMapping_intensity_medium'],
+                paralinguistic: ['paralinguistic_ellipses_count', 'paralinguistic_emojis_sad'],
+                weights: [1.0, 0.6, 1.2, 1.5]
+            },
+            anxiety: {
+                features: ['emotionalTriggers_emotion_anxiety', 'intensityMapping_intensity_high'],
+                paralinguistic: ['paralinguistic_question_weight', 'paralinguistic_emojis_anxiety', 'paralinguistic_hedging_count'],
+                weights: [1.0, 0.8, 1.3, 1.4, 0.8]
+            },
+            joy: {
+                features: ['emotionalTriggers_emotion_joy', 'intensityMapping_intensity_high'],
+                paralinguistic: ['paralinguistic_exclamation_weight', 'paralinguistic_emojis_joy'],
+                weights: [1.0, 0.8, 1.2, 2.0]
+            },
+            love: {
+                features: ['emotionalTriggers_emotion_love', 'intensityMapping_intensity_medium'],
+                paralinguistic: ['paralinguistic_emojis_joy'],
+                weights: [1.0, 0.6, 1.0]
+            }
         };
         
-        Object.entries(emotionMappings).forEach(([emotion, featureKeys]) => {
+        // Apply attachment style bias (5)
+        const attachmentBias = this.getAttachmentBias(attachmentStyle);
+        
+        Object.entries(emotionMappings).forEach(([emotion, mapping]) => {
             let score = 0;
-            featureKeys.forEach(key => {
-                if (features[key]) {
-                    score += features[key];
+            
+            // Core emotional features
+            mapping.features.forEach((featureKey, index) => {
+                if (features[featureKey]) {
+                    score += features[featureKey] * mapping.weights[index];
                 }
             });
+            
+            // Paralinguistic features
+            if (mapping.paralinguistic) {
+                mapping.paralinguistic.forEach((featureKey, index) => {
+                    if (features[featureKey]) {
+                        const weight = mapping.weights[mapping.features.length + index] || 1.0;
+                        score += features[featureKey] * weight;
+                    }
+                });
+            }
+            
+            // Apply attachment style bias
+            score *= attachmentBias[emotion] || 1.0;
+            
+            // Apply hedging penalty
+            const hedgingPenalty = (features['paralinguistic_hedging_count'] || 0) * 0.2;
+            score = Math.max(0, score - hedgingPenalty);
             
             emotions[emotion] = Math.min(score, 1.0);
             if (score > maxScore) {
@@ -272,13 +556,67 @@ class MLAdvancedToneAnalyzer {
             }
         });
         
-        const confidence = Math.min(maxScore * 0.8 + 0.2, 0.95);
+        // Apply softmax for better probability distribution
+        const softmaxEmotions = softmax(emotions, 1.3);
         
         return {
             dominantEmotion,
-            emotions,
-            confidence,
-            context: this.detectContext(features)
+            emotions: softmaxEmotions,
+            confidence: maxScore,
+            context: this.detectContext(features),
+            rawScores: emotions
+        };
+    }
+
+    // 5) Attachment style bias for ambiguous cases
+    getAttachmentBias(attachmentStyle) {
+        const biases = {
+            secure: { anger: 1.0, sadness: 1.0, anxiety: 1.0, joy: 1.0, love: 1.0 },
+            anxious: { anger: 0.8, sadness: 1.1, anxiety: 1.3, joy: 1.0, love: 1.1 },
+            avoidant: { anger: 1.1, sadness: 0.9, anxiety: 0.8, joy: 0.9, love: 0.8 },
+            disorganized: { anger: 1.2, sadness: 1.1, anxiety: 1.2, joy: 0.8, love: 0.8 }
+        };
+        
+        return biases[attachmentStyle] || biases.secure;
+    }
+
+    hasNegationFeatures(features) {
+        return Object.keys(features).some(key => key.includes('_negated') && features[key] > 0);
+    }
+
+    hasParalinguisticFeatures(features) {
+        return Object.keys(features).some(key => key.startsWith('paralinguistic_') && features[key] > 0);
+    }
+
+    generateSafetyResponse(text, escalationType) {
+        return {
+            tone: {
+                classification: 'safety_concern',
+                confidence: 0.95,
+                probabilities: { safety_concern: 0.95 }
+            },
+            features: { count: 0 },
+            quality: { overallScore: 0.95 },
+            uncertainty: 0.05,
+            explanation: `Safety concern detected: ${escalationType}`,
+            safetyResponse: getSafetyResponse(escalationType),
+            escalationType: escalationType,
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    generateNeutralFallback(text, reason) {
+        return {
+            tone: {
+                classification: 'neutral',
+                confidence: 0.6,
+                probabilities: { neutral: 0.6 }
+            },
+            features: { count: 0 },
+            quality: { overallScore: 0.6 },
+            uncertainty: 0.4,
+            explanation: `Neutral fallback: ${reason}`,
+            timestamp: new Date().toISOString()
         };
     }
 
@@ -492,12 +830,15 @@ class SuggestionService {
 // 5. MAIN ENDPOINT HANDLER
 // ========================================
 
-// Initialize components
+// Initialize components with enhanced configuration
 const mlAnalyzer = new MLAdvancedToneAnalyzer({
-    maxProcessingTime: 300,
+    maxProcessingTime: 120, // Faster processing for real-time use
     enableCaching: true,
     minConfidenceThreshold: 0.25,
-    fallbackStrategy: 'heuristic'
+    fallbackStrategy: 'heuristic',
+    smoothingAlpha: 0.6,
+    enableSmoothing: true,
+    enableSafetyChecks: true
 });
 
 module.exports = async function handler(req, res) {
@@ -582,6 +923,50 @@ if (req.method === 'POST') {
             code: 'MISSING_TEXT',
             message: 'Text is required for suggestion generation'
           }
+        });
+      }
+
+      // 8) Enhanced input validation
+      if (text.length > 2000) {
+        return res.status(400).json({
+          error: {
+            code: 'TEXT_TOO_LONG',
+            message: 'Text must be 2000 characters or less'
+          }
+        });
+      }
+
+      // Validate attachment style if provided
+      const validAttachmentStyles = ['secure', 'anxious', 'avoidant', 'disorganized'];
+      const finalAttachmentStyle = personalityData.attachmentStyle || attachmentStyle || 'secure';
+      if (!validAttachmentStyles.includes(finalAttachmentStyle)) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_ATTACHMENT_STYLE',
+            message: `Attachment style must be one of: ${validAttachmentStyles.join(', ')}`
+          }
+        });
+      }
+
+      // 7) Safety check before processing
+      const escalationType = needsEscalation(text);
+      if (escalationType) {
+        return res.status(200).json({
+          success: true,
+          suggestions: [{
+            text: getSafetyResponse(escalationType),
+            type: 'safety_response',
+            confidence: 0.95,
+            source: 'safety_system',
+            category: 'crisis_support'
+          }],
+          general_suggestion: getSafetyResponse(escalationType),
+          primaryTone: 'safety_concern',
+          toneStatus: 'safety_concern',
+          confidence: 0.95,
+          escalationType: escalationType,
+          timestamp: new Date().toISOString(),
+          note: 'Safety concern detected - professional help recommended'
         });
       }
       // Tone analysis results are optional - can work independently

@@ -348,7 +348,7 @@ class _OnboardingAccountScreenProfessionalState
                                               height: 20,
                                               fit: BoxFit.contain,
                                             )
-                                          : Icon(
+                                          : const Icon(
                                               Icons.g_mobiledata,
                                               size: 20,
                                               color: Colors.white70,

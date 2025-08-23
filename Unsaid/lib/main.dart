@@ -9,6 +9,7 @@ import 'services/new_user_experience_service.dart';
 import 'services/partner_data_service.dart';
 import 'services/trial_service.dart';
 import 'services/onboarding_service.dart';
+import 'services/compatibility_service.dart';
 import 'widgets/keyboard_data_sync_widget.dart';
 import 'firebase_options.dart';
 
@@ -68,6 +69,10 @@ void main() async {
     await AuthService.instance.initialize();
     // Auth service initialized
 
+    // Initialize compatibility service for older systems
+    await CompatibilityService.instance.initialize();
+    // Compatibility service initialized
+
     // For development: Auto sign-in anonymously if not authenticated
     if (!AuthService.instance.isAuthenticated) {
       try {
@@ -124,7 +129,8 @@ class UnsaidApp extends StatelessWidget {
         builder: (context, authService, child) {
           return KeyboardDataSyncWidget(
             onDataReceived: (data) {
-              debugPrint('📱 Main App: Received keyboard data with ${data.totalItems} items');
+              debugPrint(
+                  '📱 Main App: Received keyboard data with ${data.totalItems} items');
               // Here you can integrate with your existing analytics or storage
             },
             onError: (error) {
@@ -134,369 +140,426 @@ class UnsaidApp extends StatelessWidget {
               // This ensures the app is accessible at the root level.
               label: 'Unsaid communication and relationship app',
               child: MaterialApp(
-              title: 'Unsaid',
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              initialRoute: '/splash',  // Always start with splash screen
-              navigatorObservers: [MyNavigatorObserver()],
-              onGenerateRoute: (settings) {
-                switch (settings.name) {
-                  case '/splash':
-                    return MaterialPageRoute(
-                      builder: (context) => const SplashScreenProfessional(),
-                    );
-                  case '/onboarding':
-                    return MaterialPageRoute(
-                      builder: (context) => OnboardingAccountScreenProfessional(
-                        onContinueAsGuest: () async {
-                          try {
-                            final result = await authService.signInAnonymously();
-                            if (result != null && context.mounted) {
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/personality_test_disclaimer',
-                              );
-                            } else if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Failed to sign in as guest. Please try again.'),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        onSignInWithApple: () async {
-                          try {
-                            final result = await authService.signInWithApple();
-                            if (result != null && context.mounted) {
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/personality_test_disclaimer',
-                              );
-                            } else if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Apple sign-in was cancelled or failed.'),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Apple sign-in error: $e'),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        onSignInWithGoogle: () async {
-                          try {
-                            final result = await authService.signInWithGoogle();
-                            if (result != null && context.mounted) {
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/personality_test_disclaimer',
-                              );
-                            } else if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Google sign-in was cancelled or failed.'),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Google sign-in error: $e'),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    );
-                  case '/personality_test_disclaimer':
-                    return MaterialPageRoute(
-                      builder: (context) => FutureBuilder<bool>(
-                        future: PersonalityTestService.isTestCompleted(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Scaffold(
-                              body: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          
-                          if (snapshot.data == true) {
-                            // Test already completed, check if full onboarding is complete
-                            WidgetsBinding.instance.addPostFrameCallback((_) async {
-                              final onboardingService = OnboardingService.instance;
-                              final isOnboardingComplete = await onboardingService.isOnboardingComplete();
-                              
-                              if (isOnboardingComplete) {
-                                // Returning user - go to main app
-                                Navigator.pushReplacementNamed(context, '/main');
-                              } else {
-                                // New user who completed test but not full onboarding - go to premium
-                                Navigator.pushReplacementNamed(context, '/premium');
+                title: 'Unsaid',
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.lightTheme,
+                initialRoute: '/splash', // Always start with splash screen
+                navigatorObservers: [MyNavigatorObserver()],
+                onGenerateRoute: (settings) {
+                  switch (settings.name) {
+                    case '/splash':
+                      return MaterialPageRoute(
+                        builder: (context) => const SplashScreenProfessional(),
+                      );
+                    case '/onboarding':
+                      return MaterialPageRoute(
+                        builder: (context) =>
+                            OnboardingAccountScreenProfessional(
+                          onContinueAsGuest: () async {
+                            try {
+                              final result =
+                                  await authService.signInAnonymously();
+                              if (result != null && context.mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/personality_test_disclaimer',
+                                );
+                              } else if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Failed to sign in as guest. Please try again.'),
+                                  ),
+                                );
                               }
-                            });
-                            return const Scaffold(
-                              body: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          
-                          // Test not completed, show disclaimer
-                          return PersonalityTestDisclaimerScreenProfessional(
-                            onAgree: () => Navigator.pushReplacementNamed(
-                              context,
-                              '/personality_test',
-                            ),
-                            onAgreeModern: () => Navigator.pushReplacementNamed(
-                              context,
-                              '/personality_test_modern',
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  case '/personality_test':
-                    return MaterialPageRoute(
-                      builder: (context) => FutureBuilder<bool>(
-                        future: PersonalityTestService.isTestCompleted(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Scaffold(
-                              body: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          
-                          if (snapshot.data == true) {
-                            // Test already completed, check if full onboarding is complete
-                            WidgetsBinding.instance.addPostFrameCallback((_) async {
-                              final onboardingService = OnboardingService.instance;
-                              final isOnboardingComplete = await onboardingService.isOnboardingComplete();
-                              
-                              if (isOnboardingComplete) {
-                                // Returning user - go to main app
-                                Navigator.pushReplacementNamed(context, '/main');
-                              } else {
-                                // New user who completed test but not full onboarding - go to premium
-                                Navigator.pushReplacementNamed(context, '/premium');
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                  ),
+                                );
                               }
-                            });
-                            return const Scaffold(
-                              body: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          
-                          // Test not completed, show test
-                          final randomizedQuestions =
-                              RandomizedPersonalityTest.getRandomizedQuestions();
-                          return PersonalityTestScreenProfessional(
-                            currentIndex: 0,
-                            answers: List<String?>.filled(
-                              randomizedQuestions.length,
-                              null,
-                            ),
-                            questions: randomizedQuestions
-                                .map(
-                                  (q) => {
-                                    'question': q.question,
-                                    'options': q.options,
-                                  },
-                                )
-                                .toList(),
-                            onComplete: (answers) async {
-                              // Mark test as completed
-                              await PersonalityTestService.markTestCompleted(answers);
-                              // Navigate to premium screen with test answers
-                              Navigator.pushReplacementNamed(
-                                context, 
-                                '/premium',
-                                arguments: answers,
+                            }
+                          },
+                          onSignInWithApple: () async {
+                            try {
+                              final result =
+                                  await authService.signInWithApple();
+                              if (result != null && context.mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/personality_test_disclaimer',
+                                );
+                              } else if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Apple sign-in was cancelled or failed.'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Apple sign-in error: $e'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          onSignInWithGoogle: () async {
+                            try {
+                              final result =
+                                  await authService.signInWithGoogle();
+                              if (result != null && context.mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/personality_test_disclaimer',
+                                );
+                              } else if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Google sign-in was cancelled or failed.'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Google sign-in error: $e'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      );
+                    case '/personality_test_disclaimer':
+                      return MaterialPageRoute(
+                        builder: (context) => FutureBuilder<bool>(
+                          future: PersonalityTestService.isTestCompleted(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Scaffold(
+                                body:
+                                    Center(child: CircularProgressIndicator()),
                               );
-                            },
-                          );
-                        },
-                      ),
-                    );
-                  case '/personality_results':
-                    final args = settings.arguments as List<String>? ?? [];
-                    return MaterialPageRoute(
-                      builder: (context) =>
-                          PersonalityResultsScreenProfessional(answers: args),
-                    );
-                  case '/personality_test_modern':
-                    return MaterialPageRoute(
-                      builder: (context) => ModernPersonalityTestScreen(
-                        onComplete: (attachmentScores, goalRouting, mergedConfig) async {
-                          // Navigate to modern results with complete assessment data
-                          Navigator.pushReplacementNamed(
+                            }
+
+                            if (snapshot.data == true) {
+                              // Test already completed, check if full onboarding is complete
+                              WidgetsBinding.instance
+                                  .addPostFrameCallback((_) async {
+                                final onboardingService =
+                                    OnboardingService.instance;
+                                final isOnboardingComplete =
+                                    await onboardingService
+                                        .isOnboardingComplete();
+
+                                if (isOnboardingComplete) {
+                                  // Returning user - go to main app
+                                  Navigator.pushReplacementNamed(
+                                      context, '/main');
+                                } else {
+                                  // New user who completed test but not full onboarding - go to premium
+                                  Navigator.pushReplacementNamed(
+                                      context, '/premium');
+                                }
+                              });
+                              return const Scaffold(
+                                body:
+                                    Center(child: CircularProgressIndicator()),
+                              );
+                            }
+
+                            // Test not completed, show disclaimer
+                            return PersonalityTestDisclaimerScreenProfessional(
+                              onAgree: () => Navigator.pushReplacementNamed(
+                                context,
+                                '/personality_test',
+                              ),
+                              onAgreeModern: () =>
+                                  Navigator.pushReplacementNamed(
+                                context,
+                                '/personality_test_modern',
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    case '/personality_test':
+                      return MaterialPageRoute(
+                        builder: (context) => FutureBuilder<bool>(
+                          future: PersonalityTestService.isTestCompleted(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Scaffold(
+                                body:
+                                    Center(child: CircularProgressIndicator()),
+                              );
+                            }
+
+                            if (snapshot.data == true) {
+                              // Test already completed, check if full onboarding is complete
+                              WidgetsBinding.instance
+                                  .addPostFrameCallback((_) async {
+                                final onboardingService =
+                                    OnboardingService.instance;
+                                final isOnboardingComplete =
+                                    await onboardingService
+                                        .isOnboardingComplete();
+
+                                if (isOnboardingComplete) {
+                                  // Returning user - go to main app
+                                  Navigator.pushReplacementNamed(
+                                      context, '/main');
+                                } else {
+                                  // New user who completed test but not full onboarding - go to premium
+                                  Navigator.pushReplacementNamed(
+                                      context, '/premium');
+                                }
+                              });
+                              return const Scaffold(
+                                body:
+                                    Center(child: CircularProgressIndicator()),
+                              );
+                            }
+
+                            // Test not completed, show test
+                            final randomizedQuestions =
+                                RandomizedPersonalityTest
+                                    .getRandomizedQuestions();
+                            return PersonalityTestScreenProfessional(
+                              currentIndex: 0,
+                              answers: List<String?>.filled(
+                                randomizedQuestions.length,
+                                null,
+                              ),
+                              questions: randomizedQuestions
+                                  .map(
+                                    (q) => {
+                                      'question': q.question,
+                                      'options': q.options,
+                                    },
+                                  )
+                                  .toList(),
+                              onComplete: (answers) async {
+                                // Mark test as completed
+                                await PersonalityTestService.markTestCompleted(
+                                    answers);
+                                // Navigate to premium screen with test answers
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/premium',
+                                  arguments: answers,
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    case '/personality_results':
+                      final args = settings.arguments as List<String>? ?? [];
+                      return MaterialPageRoute(
+                        builder: (context) =>
+                            PersonalityResultsScreenProfessional(answers: args),
+                      );
+                    case '/personality_test_modern':
+                      return MaterialPageRoute(
+                        builder: (context) => ModernPersonalityTestScreen(
+                          currentIndex: 0,
+                          responses: const {},
+                          onComplete: (config, scores, routing) async {
+                            // Navigate to modern results with complete assessment data
+                            Navigator.pushReplacementNamed(
+                              context,
+                              '/personality_results_modern',
+                              arguments: {
+                                'config': config,
+                                'scores': scores,
+                                'routing': routing,
+                                'responses': {},
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    case '/personality_results_modern':
+                      final args =
+                          settings.arguments as Map<String, dynamic>? ?? {};
+                      return MaterialPageRoute(
+                        builder: (context) => ModernPersonalityResultsScreen(
+                          config: args['config'] as MergedConfig? ??
+                              const MergedConfig(
+                                weightModifiers: {},
+                                attachmentOverrides: {},
+                                guardrailsConfig: {},
+                                primaryProfile: 'unknown',
+                                attachmentQuadrant: 'secure',
+                                confidenceLevel: 'low',
+                                recommendationGating: true,
+                                reliabilityScore: 0.0,
+                              ),
+                          scores: args['scores'] as AttachmentScores? ??
+                              const AttachmentScores(
+                                anxiety: 0,
+                                avoidance: 0,
+                                reliabilityAlpha: 0.0,
+                                attentionPassed: false,
+                                socialDesirability: 0.0,
+                                disorganizedLean: false,
+                                quadrant: 'secure',
+                                confidenceLabel: 'low',
+                              ),
+                          routing: args['routing'] as GoalRoutingResult? ??
+                              const GoalRoutingResult(
+                                routeTags: <String>{},
+                                primaryProfile: 'unknown',
+                              ),
+                          responses:
+                              args['responses'] as Map<String, int>? ?? {},
+                        ),
+                      );
+                    case '/premium':
+                      final args = settings.arguments as List<String>?;
+                      return MaterialPageRoute(
+                        builder: (context) => PremiumScreenProfessional(
+                          personalityTestAnswers: args,
+                        ),
+                      );
+                    case '/keyboard_intro':
+                      return MaterialPageRoute(
+                        builder: (context) => KeyboardIntroScreenProfessional(
+                          onSkip: () => Navigator.pushReplacementNamed(
+                              context, '/emotional-state'),
+                        ),
+                      );
+                    case '/home':
+                      return MaterialPageRoute(
+                        builder: (context) => const MainShell(),
+                      );
+                    case '/emotional-state':
+                      return MaterialPageRoute(
+                        builder: (context) => const EmotionalStateScreen(),
+                      );
+                    case '/main':
+                      return MaterialPageRoute(
+                        builder: (context) => const MainShell(),
+                      );
+                    case '/relationship_questionnaire':
+                      return MaterialPageRoute(
+                        builder: (context) =>
+                            const RelationshipQuestionnaireScreenProfessional(),
+                      );
+                    case '/relationship_profile':
+                      return MaterialPageRoute(
+                        builder: (context) =>
+                            const RelationshipProfileScreenProfessional(),
+                      );
+                    // case '/analyze_tone':
+                    //   return MaterialPageRoute(builder: (context) => const AnalyzeToneScreenProfessional());
+                    // case '/settings':
+                    //   return MaterialPageRoute(
+                    //     builder: (context) => SettingsScreenProfessional(
+                    //       sensitivity: 0.5,
+                    //       onSensitivityChanged: (value) {},
+                    //       tone: 'Polite',
+                    //       onToneChanged: (tone) {},
+                    //     ),
+                    //   );
+                    // case '/keyboard_setup':
+                    //   return MaterialPageRoute(
+                    //     builder: (context) => const KeyboardSetupScreen(),
+                    //   );
+                    // case '/keyboard_detection':
+                    //   return MaterialPageRoute(
+                    //     builder: (context) => const KeyboardDetectionScreen(),
+                    //   );
+                    // case '/tone_demo':
+                    //   return MaterialPageRoute(
+                    //     builder: (context) => const ToneIndicatorDemoScreen(),
+                    //   );
+                    // case '/tone_test':
+                    //   return MaterialPageRoute(
+                    //     builder: (context) => const ToneIndicatorTestScreen(),
+                    //   );
+                    case '/tone_tutorial':
+                      return MaterialPageRoute(
+                        builder: (context) => ToneIndicatorTutorialScreen(
+                          onComplete: () => Navigator.pushReplacementNamed(
                             context,
-                            '/personality_results_modern',
-                            arguments: {
-                              'attachmentScores': attachmentScores,
-                              'goalRouting': goalRouting,
-                              'mergedConfig': mergedConfig,
-                            },
-                          );
-                        },
-                      ),
-                    );
-                  case '/personality_results_modern':
-                    final args = settings.arguments as Map<String, dynamic>? ?? {};
-                    return MaterialPageRoute(
-                      builder: (context) => ModernPersonalityResultsScreen(
-                        attachmentScores: args['attachmentScores'] as AttachmentScores? ?? 
-                            AttachmentScores(anxiety: 0, avoidance: 0, confidence: 'low'),
-                        goalRouting: args['goalRouting'] as GoalRoutingResult? ?? 
-                            GoalRoutingResult(primaryGoal: 'unknown', confidence: 'low', weightMultipliers: {}),
-                        mergedConfig: args['mergedConfig'] as MergedConfig? ?? 
-                            MergedConfig(weightModifiers: {}, attachmentOverrides: {}, guardrailsConfig: {}),
-                      ),
-                    );
-                  case '/premium':
-                    final args = settings.arguments as List<String>?;
-                    return MaterialPageRoute(
-                      builder: (context) => PremiumScreenProfessional(
-                        personalityTestAnswers: args,
-                      ),
-                    );
-                  case '/keyboard_intro':
-                    return MaterialPageRoute(
-                      builder: (context) => KeyboardIntroScreenProfessional(
-                        onSkip: () =>
-                            Navigator.pushReplacementNamed(context, '/emotional-state'),
-                      ),
-                    );
-                  case '/home':
-                    return MaterialPageRoute(
-                      builder: (context) => const MainShell(),
-                    );
-                  case '/emotional-state':
-                    return MaterialPageRoute(
-                      builder: (context) => const EmotionalStateScreen(),
-                    );
-                  case '/main':
-                    return MaterialPageRoute(
-                      builder: (context) => const MainShell(),
-                    );
-                  case '/relationship_questionnaire':
-                    return MaterialPageRoute(
-                      builder: (context) =>
-                          const RelationshipQuestionnaireScreenProfessional(),
-                    );
-                  case '/relationship_profile':
-                    return MaterialPageRoute(
-                      builder: (context) =>
-                          const RelationshipProfileScreenProfessional(),
-                    );
-                  // case '/analyze_tone':
-                  //   return MaterialPageRoute(builder: (context) => const AnalyzeToneScreenProfessional());
-                  // case '/settings':
-                  //   return MaterialPageRoute(
-                  //     builder: (context) => SettingsScreenProfessional(
-                  //       sensitivity: 0.5,
-                  //       onSensitivityChanged: (value) {},
-                  //       tone: 'Polite',
-                  //       onToneChanged: (tone) {},
-                  //     ),
-                  //   );
-                  // case '/keyboard_setup':
-                  //   return MaterialPageRoute(
-                  //     builder: (context) => const KeyboardSetupScreen(),
-                  //   );
-                  // case '/keyboard_detection':
-                  //   return MaterialPageRoute(
-                  //     builder: (context) => const KeyboardDetectionScreen(),
-                  //   );
-                  // case '/tone_demo':
-                  //   return MaterialPageRoute(
-                  //     builder: (context) => const ToneIndicatorDemoScreen(),
-                  //   );
-                  // case '/tone_test':
-                  //   return MaterialPageRoute(
-                  //     builder: (context) => const ToneIndicatorTestScreen(),
-                  //   );
-                  case '/tone_tutorial':
-                    return MaterialPageRoute(
-                      builder: (context) => ToneIndicatorTutorialScreen(
-                        onComplete: () => Navigator.pushReplacementNamed(
-                          context,
-                          '/onboarding',
+                            '/onboarding',
+                          ),
                         ),
-                      ),
-                    );
-                  // case '/tutorial_demo':
-                  //   return MaterialPageRoute(
-                  //     builder: (context) => const TutorialDemoScreen(),
-                  //   );
-                  // case '/color_test':
-                  //   return MaterialPageRoute(
-                  //     builder: (context) => const ColorTestScreen(),
-                  //   );
-                  case '/relationship_insights':
-                    return MaterialPageRoute(
-                      builder: (context) => const RelationshipInsightsDashboard(
-                        // Example: Pass attachment/communication style if needed
-                        // attachmentStyle: ...,
-                        // communicationStyle: ...,
-                      ),
-                    );
-                  case '/communication_coach':
-                    return MaterialPageRoute(
-                      builder: (context) => const RealTimeCommunicationCoach(),
-                    );
-                  // case '/message_templates':
-                  //   return MaterialPageRoute(
-                  //     builder: (context) => const SmartMessageTemplates(),
-                  //   );
-                  case '/predictive_ai':
-                    return MaterialPageRoute(
-                      builder: (context) => const PredictiveAITab(),
-                    );
-                  case '/emotional_state':
-                    return MaterialPageRoute(
-                      builder: (context) => const EmotionalStateScreen(),
-                    );
-                  // REMOVED: interactive_coaching_practice route
-                  case '/generate_invite_code':
-                    return MaterialPageRoute(
-                      builder: (context) => Scaffold(
-                        appBar: AppBar(title: const Text('Generate Invite Code')),
-                        body: const Center(
-                          child: Text('Invite code generation coming soon'),
+                      );
+                    // case '/tutorial_demo':
+                    //   return MaterialPageRoute(
+                    //     builder: (context) => const TutorialDemoScreen(),
+                    //   );
+                    // case '/color_test':
+                    //   return MaterialPageRoute(
+                    //     builder: (context) => const ColorTestScreen(),
+                    //   );
+                    case '/relationship_insights':
+                      return MaterialPageRoute(
+                        builder: (context) => const RelationshipInsightsDashboard(
+                            // Example: Pass attachment/communication style if needed
+                            // attachmentStyle: ...,
+                            // communicationStyle: ...,
+                            ),
+                      );
+                    case '/communication_coach':
+                      return MaterialPageRoute(
+                        builder: (context) =>
+                            const RealTimeCommunicationCoach(),
+                      );
+                    // case '/message_templates':
+                    //   return MaterialPageRoute(
+                    //     builder: (context) => const SmartMessageTemplates(),
+                    //   );
+                    case '/predictive_ai':
+                      return MaterialPageRoute(
+                        builder: (context) => const PredictiveAITab(),
+                      );
+                    case '/emotional_state':
+                      return MaterialPageRoute(
+                        builder: (context) => const EmotionalStateScreen(),
+                      );
+                    // REMOVED: interactive_coaching_practice route
+                    case '/generate_invite_code':
+                      return MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar:
+                              AppBar(title: const Text('Generate Invite Code')),
+                          body: const Center(
+                            child: Text('Invite code generation coming soon'),
+                          ),
                         ),
-                      ),
-                    );
-                  case '/code_generate':
-                    return MaterialPageRoute(
-                      builder: (context) => Scaffold(
-                        appBar: AppBar(title: const Text('Code Generator')),
-                        body: const Center(
-                          child: Text('Code generation coming soon'),
+                      );
+                    case '/code_generate':
+                      return MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar: AppBar(title: const Text('Code Generator')),
+                          body: const Center(
+                            child: Text('Code generation coming soon'),
+                          ),
                         ),
-                      ),
-                    );
-                  default:
-                    return MaterialPageRoute(
-                      builder: (context) => Scaffold(
-                        body: const Center(child: Text('404 - Page not found')),
-                      ),
-                    );
-                }
-              },
-            ),
+                      );
+                    default:
+                      return MaterialPageRoute(
+                        builder: (context) => const Scaffold(
+                          body: Center(child: Text('404 - Page not found')),
+                        ),
+                      );
+                  }
+                },
+              ),
             ),
           );
         },

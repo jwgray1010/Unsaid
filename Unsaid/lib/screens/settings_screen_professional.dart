@@ -11,8 +11,6 @@ import '../services/admin_service.dart';
 import '../services/personality_test_service.dart';
 import '../services/onboarding_service.dart';
 import '../services/trial_service.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
@@ -33,10 +31,12 @@ class SettingsScreenProfessional extends StatefulWidget {
   });
 
   @override
-  State<SettingsScreenProfessional> createState() => _SettingsScreenProfessionalState();
+  State<SettingsScreenProfessional> createState() =>
+      _SettingsScreenProfessionalState();
 }
 
-class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional> {
+class _SettingsScreenProfessionalState
+    extends State<SettingsScreenProfessional> {
   late double _sensitivity;
   late String _tone;
   bool _notificationsEnabled = true;
@@ -73,7 +73,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
     'Language & Accessibility': GlobalKey(),
   };
 
-  @override 
+  @override
   void initState() {
     super.initState();
     _sensitivity = widget.sensitivity;
@@ -90,269 +90,293 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)],
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)],
+                        ),
                       ),
-                    ),
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppTheme.spaceLG),
-                        child: Row(
-                          children: [
-                            Icon(Icons.settings, color: Colors.white, size: 28),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Settings',
-                              style: theme.textTheme.headlineLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppTheme.spaceLG),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.settings,
+                                  color: Colors.white, size: 28),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Settings',
+                                style: theme.textTheme.headlineLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // Search bar
-                  Container(
-                    margin: const EdgeInsets.all(AppTheme.spaceLG),
-                    child: Autocomplete<String>(
-                      optionsBuilder: (textEditingValue) {
-                        final query = textEditingValue.text.toLowerCase();
-                        if (query.isEmpty) return const Iterable<String>.empty();
-                        return _sectionKeys.keys.where((section) => 
-                          section.toLowerCase().contains(query));
-                      },
-                      onSelected: _jumpTo,
-                      fieldViewBuilder: (_, controller, focusNode, onFieldSubmitted) => TextField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurfaceVariant),
-                          hintText: 'Search settings',
-                          hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: theme.colorScheme.outline),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: theme.colorScheme.outline),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: theme.colorScheme.primary),
-                          ),
-                        ),
-                        onSubmitted: (value) {
-                          final match = _sectionKeys.keys.firstWhere(
-                            (section) => section.toLowerCase().contains(value.toLowerCase()), 
-                            orElse: () => '',
-                          );
-                          if (match.isNotEmpty) _jumpTo(match);
+                    // Search bar
+                    Container(
+                      margin: const EdgeInsets.all(AppTheme.spaceLG),
+                      child: Autocomplete<String>(
+                        optionsBuilder: (textEditingValue) {
+                          final query = textEditingValue.text.toLowerCase();
+                          if (query.isEmpty) {
+                            return const Iterable<String>.empty();
+                          }
+                          return _sectionKeys.keys.where((section) =>
+                              section.toLowerCase().contains(query));
                         },
+                        onSelected: _jumpTo,
+                        fieldViewBuilder:
+                            (_, controller, focusNode, onFieldSubmitted) =>
+                                TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(Icons.search,
+                                color: theme.colorScheme.onSurfaceVariant),
+                            hintText: 'Search settings',
+                            hintStyle: TextStyle(
+                                color: theme.colorScheme.onSurfaceVariant),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  BorderSide(color: theme.colorScheme.outline),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  BorderSide(color: theme.colorScheme.outline),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  BorderSide(color: theme.colorScheme.primary),
+                            ),
+                          ),
+                          onSubmitted: (value) {
+                            final match = _sectionKeys.keys.firstWhere(
+                              (section) => section
+                                  .toLowerCase()
+                                  .contains(value.toLowerCase()),
+                              orElse: () => '',
+                            );
+                            if (match.isNotEmpty) _jumpTo(match);
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                  
-                  // Content
-                  Padding(
-                    padding: const EdgeInsets.all(AppTheme.spaceLG),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // AI Analysis Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['AI Analysis']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('AI Analysis', Icons.psychology),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildAnalysisSettings(),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Keyboard Extension Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Keyboard Extension']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Keyboard Extension', Icons.keyboard),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildKeyboardExtensionSettings(),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Notification Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Notifications']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Notifications', Icons.notifications),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildNotificationSettings(),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Appearance Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Appearance']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Appearance', Icons.palette),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildAppearanceSettings(),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Privacy Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Privacy']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Privacy', Icons.privacy_tip),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildPrivacySettings(),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Account Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Account']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Account', Icons.account_circle),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildAccountSettings(),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Support Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Support']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Support', Icons.help),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildSupportSettings(),
-                            ],
-                          ),
-                        ),
-                        
-                        // Admin Settings (only visible to admins)
-                        if (AdminService.instance.isCurrentUserAdmin) ...[
-                          const SizedBox(height: AppTheme.spaceXL),
-                          _buildSectionHeader('Admin Controls', Icons.admin_panel_settings),
-                          const SizedBox(height: AppTheme.spaceMD),
-                          _buildAdminSettings(),
-                        ],
-                        
-                        // Debug Controls (always visible in debug mode)
-                        if (kDebugMode && !AdminService.instance.isCurrentUserAdmin) ...[
-                          const SizedBox(height: AppTheme.spaceXL),
-                          _buildSectionHeader('Debug Controls', Icons.bug_report),
-                          const SizedBox(height: AppTheme.spaceMD),
-                          _buildDebugControls(),
-                        ],
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Data Management Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Data Management']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Data Management', Icons.storage),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildDataManagementSettings(),
-                            ],
-                          ),
-                        ),
 
-                        const SizedBox(height: AppTheme.spaceXL),
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spaceLG),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // AI Analysis Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['AI Analysis']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                    'AI Analysis', Icons.psychology),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildAnalysisSettings(),
+                              ],
+                            ),
+                          ),
 
-                        // Danger Zone
-                        _buildDangerZone(),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Backup & Sync Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Backup & Sync']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Backup & Sync', Icons.cloud),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildBackupSettings(),
-                            ],
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Keyboard Extension Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Keyboard Extension']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                    'Keyboard Extension', Icons.keyboard),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildKeyboardExtensionSettings(),
+                              ],
+                            ),
                           ),
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                        
-                        // Language & Accessibility Settings
-                        KeyedSubtree(
-                          key: _sectionKeys['Language & Accessibility']!,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('Language & Accessibility', Icons.accessibility),
-                              const SizedBox(height: AppTheme.spaceMD),
-                              _buildLanguageAccessibilitySettings(),
-                            ],
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Notification Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Notifications']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                    'Notifications', Icons.notifications),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildNotificationSettings(),
+                              ],
+                            ),
                           ),
-                        ),
-                        
-                        const SizedBox(height: AppTheme.spaceXL),
-                      ],
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Appearance Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Appearance']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                    'Appearance', Icons.palette),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildAppearanceSettings(),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Privacy Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Privacy']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                    'Privacy', Icons.privacy_tip),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildPrivacySettings(),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Account Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Account']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                    'Account', Icons.account_circle),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildAccountSettings(),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Support Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Support']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader('Support', Icons.help),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildSupportSettings(),
+                              ],
+                            ),
+                          ),
+
+                          // Admin Settings (only visible to admins)
+                          if (AdminService.instance.isCurrentUserAdmin) ...[
+                            const SizedBox(height: AppTheme.spaceXL),
+                            _buildSectionHeader(
+                                'Admin Controls', Icons.admin_panel_settings),
+                            const SizedBox(height: AppTheme.spaceMD),
+                            _buildAdminSettings(),
+                          ],
+
+                          // Debug Controls (always visible in debug mode)
+                          if (kDebugMode &&
+                              !AdminService.instance.isCurrentUserAdmin) ...[
+                            const SizedBox(height: AppTheme.spaceXL),
+                            _buildSectionHeader(
+                                'Debug Controls', Icons.bug_report),
+                            const SizedBox(height: AppTheme.spaceMD),
+                            _buildDebugControls(),
+                          ],
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Data Management Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Data Management']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                    'Data Management', Icons.storage),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildDataManagementSettings(),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Danger Zone
+                          _buildDangerZone(),
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Backup & Sync Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Backup & Sync']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader(
+                                    'Backup & Sync', Icons.cloud),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildBackupSettings(),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: AppTheme.spaceXL),
+
+                          // Language & Accessibility Settings
+                          KeyedSubtree(
+                            key: _sectionKeys['Language & Accessibility']!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader('Language & Accessibility',
+                                    Icons.accessibility),
+                                const SizedBox(height: AppTheme.spaceMD),
+                                _buildLanguageAccessibilitySettings(),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: AppTheme.spaceXL),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
       ),
     );
   }
@@ -407,10 +431,11 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                   _sensitivity = value;
                 });
                 widget.onSensitivityChanged(value);
-                
+
                 // Debounced save
                 _sensDebounce?.cancel();
-                _sensDebounce = Timer(const Duration(milliseconds: 250), () async {
+                _sensDebounce =
+                    Timer(const Duration(milliseconds: 250), () async {
                   await _settingsManager.setSensitivity(value);
                   await _updateKeyboardSettings();
                 });
@@ -419,9 +444,9 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               label: '${(_sensitivity * 100).round()}%',
               activeColor: theme.colorScheme.primary,
             ),
-            
+
             const SizedBox(height: AppTheme.spaceLG),
-            
+
             // Default Tone
             Text(
               'Default Tone',
@@ -441,8 +466,10 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             DropdownButtonFormField<String>(
               value: _tone,
               decoration: InputDecoration(
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               items: const [
                 DropdownMenuItem(value: 'Polite', child: Text('Polite')),
@@ -462,13 +489,15 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 );
               },
             ),
-            
+
             const SizedBox(height: AppTheme.spaceLG),
-            
+
             // AI Analysis Toggle
             SwitchListTile(
-              title: Text('AI Analysis Enabled', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Enable AI-powered communication analysis', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              title: Text('AI Analysis Enabled',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Enable AI-powered communication analysis',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _aiAnalysisEnabled,
               onChanged: (value) => _setAndSave(
                 () => _aiAnalysisEnabled = value,
@@ -476,11 +505,13 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               ),
               activeColor: theme.colorScheme.primary,
             ),
-            
+
             // Real-time Analysis Toggle
             SwitchListTile(
-              title: Text('Real-time Analysis', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Analyze messages as you type', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              title: Text('Real-time Analysis',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Analyze messages as you type',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _realTimeAnalysis,
               onChanged: (value) => _setAndSave(
                 () => _realTimeAnalysis = value,
@@ -495,7 +526,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () async {
-                  await _settingsManager.resetAnalysisDefaults();
+                  // Reset analysis settings to defaults
                   if (!mounted) return;
                   setState(() {
                     _sensitivity = 0.5;
@@ -503,11 +534,19 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                     _aiAnalysisEnabled = true;
                     _realTimeAnalysis = false;
                   });
+
+                  // Save individual settings
+                  await _settingsManager.setSensitivity(0.5);
+                  await _settingsManager.setTone('Neutral');
+                  await _settingsManager.setAIAnalysisEnabled(true);
+                  await _settingsManager.setRealTimeAnalysis(false);
+
                   widget.onSensitivityChanged(_sensitivity);
                   widget.onToneChanged(_tone);
                   await _updateKeyboardSettings();
                 },
-                child: Text('Reset to defaults', style: TextStyle(color: theme.colorScheme.primary)),
+                child: Text('Reset to defaults',
+                    style: TextStyle(color: theme.colorScheme.primary)),
               ),
             ),
           ],
@@ -557,9 +596,9 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 ),
               ],
             ),
-            
+
             const SizedBox(height: AppTheme.spaceLG),
-            
+
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -618,11 +657,16 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 ],
               ),
             ),
-            
+
             const SizedBox(height: AppTheme.spaceMD),
-            
+
             // Features list
-            ...['Real-time tone analysis', 'Smart response suggestions', 'Relationship context awareness', 'Cross-app compatibility'].map(
+            ...[
+              'Real-time tone analysis',
+              'Smart response suggestions',
+              'Relationship context awareness',
+              'Cross-app compatibility'
+            ].map(
               (feature) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
@@ -659,9 +703,11 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             SwitchListTile(
-              title: Text('Push Notifications', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Receive notifications for insights and tips · ${_notificationsEnabled ? "On" : "Off"}', 
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              title: Text('Push Notifications',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(
+                  'Receive notifications for insights and tips · ${_notificationsEnabled ? "On" : "Off"}',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _notificationsEnabled,
               onChanged: (value) => _setAndSave(
                 () => _notificationsEnabled = value,
@@ -671,10 +717,14 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.schedule, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Notification Schedule', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Configure when to receive notifications', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.schedule,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Notification Schedule',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Configure when to receive notifications',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showNotificationScheduleDialog();
               },
@@ -686,13 +736,15 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () async {
-                  await _settingsManager.resetNotificationDefaults();
+                  // Reset notification settings to defaults
                   if (!mounted) return;
                   setState(() {
                     _notificationsEnabled = true;
                   });
+                  await _settingsManager.setNotificationsEnabled(true);
                 },
-                child: Text('Reset to defaults', style: TextStyle(color: theme.colorScheme.primary)),
+                child: Text('Reset to defaults',
+                    style: TextStyle(color: theme.colorScheme.primary)),
               ),
             ),
           ],
@@ -711,9 +763,11 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             SwitchListTile(
-              title: Text('Dark Mode', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Enable dark theme · ${_darkModeEnabled ? "On" : "Off"}', 
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              title: Text('Dark Mode',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(
+                  'Enable dark theme · ${_darkModeEnabled ? "On" : "Off"}',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _darkModeEnabled,
               onChanged: (value) => _setAndSave(
                 () => _darkModeEnabled = value,
@@ -723,11 +777,15 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.font_download, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Font Size', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Adjust text size · Current: ${_fontSize.round()}pt', 
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.font_download,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Font Size',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(
+                  'Adjust text size · Current: ${_fontSize.round()}pt',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showFontSizeDialog();
               },
@@ -739,14 +797,17 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () async {
-                  await _settingsManager.resetAppearanceDefaults();
+                  // Reset appearance settings to defaults
                   if (!mounted) return;
                   setState(() {
                     _darkModeEnabled = false;
                     _fontSize = 14.0;
                   });
+                  await _settingsManager.setDarkModeEnabled(false);
+                  await _settingsManager.setFontSize(14.0);
                 },
-                child: Text('Reset to defaults', style: TextStyle(color: theme.colorScheme.primary)),
+                child: Text('Reset to defaults',
+                    style: TextStyle(color: theme.colorScheme.primary)),
               ),
             ),
           ],
@@ -765,9 +826,11 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             SwitchListTile(
-              title: Text('Share Analytics', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Help improve the app by sharing anonymous usage data · ${_shareAnalytics ? "On" : "Off"}', 
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              title: Text('Share Analytics',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(
+                  'Help improve the app by sharing anonymous usage data · ${_shareAnalytics ? "On" : "Off"}',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _shareAnalytics,
               onChanged: (value) => _setAndSave(
                 () => _shareAnalytics = value,
@@ -777,20 +840,28 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.security, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Privacy Policy', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Review our privacy policy', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.security,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Privacy Policy',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Review our privacy policy',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _openPrivacyPolicy();
               },
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.data_usage, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Data Usage', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('View your data usage statistics', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.data_usage,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Data Usage',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('View your data usage statistics',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showDataUsageDialog();
               },
@@ -811,20 +882,28 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             ListTile(
-              leading: Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Profile', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Edit your profile information', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading:
+                  Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Profile',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Edit your profile information',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showProfileDialog();
               },
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.lock, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Change Password', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Update your account password', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading:
+                  Icon(Icons.lock, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Change Password',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Update your account password',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showChangePasswordDialog();
               },
@@ -832,8 +911,10 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             const Divider(),
             ListTile(
               leading: Icon(Icons.logout, color: theme.colorScheme.error),
-              title: Text('Sign Out', style: TextStyle(color: theme.colorScheme.error)),
-              subtitle: Text('Sign out of your account', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              title: Text('Sign Out',
+                  style: TextStyle(color: theme.colorScheme.error)),
+              subtitle: Text('Sign out of your account',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               onTap: () {
                 _showSignOutDialog(context);
               },
@@ -854,30 +935,42 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             ListTile(
-              leading: Icon(Icons.help_outline, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Help Center', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Get help and support', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.help_outline,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Help Center',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Get help and support',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _openHelpCenter();
               },
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.feedback, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Send Feedback', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Share your thoughts and suggestions', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.feedback,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Send Feedback',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Share your thoughts and suggestions',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _openFeedbackForm();
               },
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.info, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('About', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('App version and information', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading:
+                  Icon(Icons.info, color: theme.colorScheme.onSurfaceVariant),
+              title: Text('About',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('App version and information',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () {
                 _showAboutDialog(context);
               },
@@ -926,29 +1019,31 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   void _showAboutDialog(BuildContext context) async {
     final packageInfo = await PackageInfo.fromPlatform();
     final theme = Theme.of(context);
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('About Unsaid', style: TextStyle(color: theme.colorScheme.onSurface)),
+        title: Text('About Unsaid',
+            style: TextStyle(color: theme.colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Version: ${packageInfo.version} (${packageInfo.buildNumber})',
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
             const SizedBox(height: 8),
             Text('AI-powered communication analysis for better relationships.',
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
             const SizedBox(height: 8),
             Text('© 2025 Unsaid. All rights reserved.',
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(color: theme.colorScheme.primary)),
+            child: Text('Close',
+                style: TextStyle(color: theme.colorScheme.primary)),
           ),
         ],
       ),
@@ -975,7 +1070,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
     try {
       await _settingsManager.initialize();
       await _backupService.initialize();
-      
+
       // Load after services ready
       final settings = (
         sensitivity: _settingsManager.getSensitivity(),
@@ -990,7 +1085,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         font: _settingsManager.getFontSize(),
         lang: _settingsManager.getLanguage(),
       );
-      
+
       if (!mounted) return;
       setState(() {
         _sensitivity = settings.sensitivity;
@@ -1015,12 +1110,13 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   }
 
   // Helper for setting and saving in one go
-  Future<void> _setAndSave<T>(void Function() setLocal, Future<void> Function() persist) async {
+  Future<void> _setAndSave<T>(
+      void Function() setLocal, Future<void> Function() persist) async {
     setState(setLocal);
-    try { 
-      await persist(); 
-    } catch (_) { 
-      _showSnackBar('Failed to save'); 
+    try {
+      await persist();
+    } catch (_) {
+      _showSnackBar('Failed to save');
     }
   }
 
@@ -1051,17 +1147,20 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               children: [
                 Icon(Icons.warning_amber, color: theme.colorScheme.error),
                 const SizedBox(width: 8),
-                Text('Danger Zone', style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.error, 
-                  fontWeight: FontWeight.w700,
-                )),
+                Text('Danger Zone',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.error,
+                      fontWeight: FontWeight.w700,
+                    )),
               ],
             ),
             const SizedBox(height: 8),
             ListTile(
               leading: Icon(Icons.clear_all, color: theme.colorScheme.error),
-              title: Text('Clear All Data', style: TextStyle(color: theme.colorScheme.error)),
-              subtitle: const Text('Permanently delete all conversation history'),
+              title: Text('Clear All Data',
+                  style: TextStyle(color: theme.colorScheme.error)),
+              subtitle:
+                  const Text('Permanently delete all conversation history'),
               onTap: _showClearAllDataDialog,
             ),
           ],
@@ -1080,25 +1179,36 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             ListTile(
-              leading: Icon(Icons.analytics, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Data Usage', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('View your data usage statistics', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.analytics,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Data Usage',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('View your data usage statistics',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showDataUsageDialog(),
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.download, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Export Data', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Download your conversation insights', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.download,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Export Data',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Download your conversation insights',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showExportDataDialog(),
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.delete_sweep, color: theme.colorScheme.primary),
-              title: Text('Clear Old Data', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Remove data older than 90 days', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              leading:
+                  Icon(Icons.delete_sweep, color: theme.colorScheme.primary),
+              title: Text('Clear Old Data',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Remove data older than 90 days',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               onTap: () => _showClearOldDataDialog(),
             ),
           ],
@@ -1118,9 +1228,11 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             SwitchListTile(
-              title: Text('Auto Backup', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Automatically backup your data daily · ${_autoBackupEnabled ? "On" : "Off"}', 
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              title: Text('Auto Backup',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(
+                  'Automatically backup your data daily · ${_autoBackupEnabled ? "On" : "Off"}',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _autoBackupEnabled,
               onChanged: (value) async {
                 setState(() {
@@ -1137,32 +1249,56 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.cloud_upload, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Backup Now', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text(_backupService.isBackingUp ? 'Backing up...' : 'Manually backup your data',
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: _backupService.isBackingUp 
-                ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: theme.colorScheme.primary))
-                : Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.cloud_upload,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Backup Now',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(
+                  _backupService.isBackingUp
+                      ? 'Backing up...'
+                      : 'Manually backup your data',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: _backupService.isBackingUp
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          color: theme.colorScheme.primary))
+                  : Icon(Icons.arrow_forward_ios,
+                      color: theme.colorScheme.onSurfaceVariant),
               onTap: _backupService.isBackingUp ? null : () => _performBackup(),
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.cloud_download, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Sync from Cloud', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text(_backupService.isSyncing ? 'Syncing...' : 'Download latest data from cloud',
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: _backupService.isSyncing 
-                ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: theme.colorScheme.primary))
-                : Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.cloud_download,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Sync from Cloud',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(
+                  _backupService.isSyncing
+                      ? 'Syncing...'
+                      : 'Download latest data from cloud',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: _backupService.isSyncing
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          color: theme.colorScheme.primary))
+                  : Icon(Icons.arrow_forward_ios,
+                      color: theme.colorScheme.onSurfaceVariant),
               onTap: _backupService.isSyncing ? null : () => _performSync(),
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.import_export, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Import/Export Settings', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Backup or restore your app settings', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.import_export,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Import/Export Settings',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Backup or restore your app settings',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showImportExportDialog(),
             ),
           ],
@@ -1182,25 +1318,35 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         child: Column(
           children: [
             ListTile(
-              leading: Icon(Icons.language, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Language', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Current: $_selectedLanguage', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.language,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Language',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Current: $_selectedLanguage',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showLanguageDialog(),
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.text_fields, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Font Size', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Current: ${_fontSize.round()}pt', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.text_fields,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Font Size',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Current: ${_fontSize.round()}pt',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showFontSizeDialog(),
             ),
             const Divider(),
             SwitchListTile(
-              title: Text('High Contrast Mode', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Improve visibility for better accessibility · ${_highContrastMode ? "On" : "Off"}', 
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              title: Text('High Contrast Mode',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text(
+                  'Improve visibility for better accessibility · ${_highContrastMode ? "On" : "Off"}',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
               value: _highContrastMode,
               onChanged: (value) => _setAndSave(
                 () => _highContrastMode = value,
@@ -1210,10 +1356,14 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.accessibility_new, color: theme.colorScheme.onSurfaceVariant),
-              title: Text('Accessibility Settings', style: TextStyle(color: theme.colorScheme.onSurface)),
-              subtitle: Text('Screen reader and navigation options', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-              trailing: Icon(Icons.arrow_forward_ios, color: theme.colorScheme.onSurfaceVariant),
+              leading: Icon(Icons.accessibility_new,
+                  color: theme.colorScheme.onSurfaceVariant),
+              title: Text('Accessibility Settings',
+                  style: TextStyle(color: theme.colorScheme.onSurface)),
+              subtitle: Text('Screen reader and navigation options',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  color: theme.colorScheme.onSurfaceVariant),
               onTap: () => _showAccessibilityDialog(),
             ),
 
@@ -1223,15 +1373,19 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () async {
-                  await _settingsManager.resetAccessibilityDefaults();
+                  // Reset accessibility settings to defaults
                   if (!mounted) return;
                   setState(() {
                     _selectedLanguage = 'English';
                     _fontSize = 14.0;
                     _highContrastMode = false;
                   });
+                  await _settingsManager.setLanguage('English');
+                  await _settingsManager.setFontSize(14.0);
+                  await _settingsManager.setHighContrastMode(false);
                 },
-                child: Text('Reset to defaults', style: TextStyle(color: theme.colorScheme.primary)),
+                child: Text('Reset to defaults',
+                    style: TextStyle(color: theme.colorScheme.primary)),
               ),
             ),
           ],
@@ -1253,14 +1407,19 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildStatRow('Total Analyses', '${stats['total_analyses']}'),
-              _buildStatRow('Data Size', '${stats['data_size_mb'].toStringAsFixed(2)} MB'),
-              _buildStatRow('Storage Used', '${stats['storage_usage']['total_mb'].toStringAsFixed(2)} MB'),
+              _buildStatRow('Data Size',
+                  '${stats['data_size_mb'].toStringAsFixed(2)} MB'),
+              _buildStatRow('Storage Used',
+                  '${stats['storage_usage']['total_mb'].toStringAsFixed(2)} MB'),
               const SizedBox(height: 16),
-              const Text('Analysis Breakdown:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Analysis Breakdown:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               ...(stats['analysis_breakdown'] as Map<String, int>).entries.map(
-                (entry) => _buildStatRow(entry.key.replaceAll('_', ' ').toUpperCase(), '${entry.value}'),
-              ),
+                    (entry) => _buildStatRow(
+                        entry.key.replaceAll('_', ' ').toUpperCase(),
+                        '${entry.value}'),
+                  ),
             ],
           ),
         ),
@@ -1322,7 +1481,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear Old Data'),
-        content: const Text('This will permanently delete data older than 90 days. This action cannot be undone.'),
+        content: const Text(
+            'This will permanently delete data older than 90 days. This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1332,7 +1492,9 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             onPressed: () async {
               Navigator.pop(context);
               final success = await _dataManager.clearOldData(90);
-              _showSnackBar(success ? 'Old data cleared successfully' : 'Failed to clear old data');
+              _showSnackBar(success
+                  ? 'Old data cleared successfully'
+                  : 'Failed to clear old data');
             },
             child: const Text('Clear', style: TextStyle(color: Colors.orange)),
           ),
@@ -1346,7 +1508,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear All Data'),
-        content: const Text('This will permanently delete ALL your conversation history and insights. This action cannot be undone.'),
+        content: const Text(
+            'This will permanently delete ALL your conversation history and insights. This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1356,9 +1519,12 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             onPressed: () async {
               Navigator.pop(context);
               final success = await _dataManager.clearConversationHistory();
-              _showSnackBar(success ? 'All data cleared successfully' : 'Failed to clear data');
+              _showSnackBar(success
+                  ? 'All data cleared successfully'
+                  : 'Failed to clear data');
             },
-            child: const Text('Delete All', style: TextStyle(color: Colors.red)),
+            child:
+                const Text('Delete All', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1370,7 +1536,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Settings Backup'),
-        content: const Text('Export your settings to a file or import from a backup:'),
+        content: const Text(
+            'Export your settings to a file or import from a backup:'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1403,20 +1570,22 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         title: const Text('Select Language'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: languages.map((lang) => RadioListTile<String>(
-            title: Text(lang),
-            value: lang,
-            groupValue: _selectedLanguage,
-            onChanged: (value) async {
-              if (value != null) {
-                setState(() {
-                  _selectedLanguage = value;
-                });
-                await _settingsManager.setLanguage(value);
-                Navigator.pop(context);
-              }
-            },
-          )).toList(),
+          children: languages
+              .map((lang) => RadioListTile<String>(
+                    title: Text(lang),
+                    value: lang,
+                    groupValue: _selectedLanguage,
+                    onChanged: (value) async {
+                      if (value != null) {
+                        setState(() {
+                          _selectedLanguage = value;
+                        });
+                        await _settingsManager.setLanguage(value);
+                        Navigator.pop(context);
+                      }
+                    },
+                  ))
+              .toList(),
         ),
       ),
     );
@@ -1470,7 +1639,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Accessibility'),
-        content: const Text('Accessibility features are configured through your device settings. Enable VoiceOver (iOS) or TalkBack (Android) for screen reader support.'),
+        content: const Text(
+            'Accessibility features are configured through your device settings. Enable VoiceOver (iOS) or TalkBack (Android) for screen reader support.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1484,7 +1654,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   /// Build admin settings section (only visible to admins)
   Widget _buildAdminSettings() {
     final adminStatus = AdminService.instance.adminStatus;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1497,7 +1667,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.admin_panel_settings,
                 color: Colors.orange,
                 size: 20,
@@ -1513,7 +1683,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             ],
           ),
           const SizedBox(height: 12),
-          
+
           // Admin info
           Container(
             padding: const EdgeInsets.all(12),
@@ -1524,18 +1694,20 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('User ID: ${adminStatus['user_id'] ?? 'N/A'}', 
-                     style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
-                Text('Email: ${adminStatus['email'] ?? 'N/A'}', 
-                     style: const TextStyle(fontSize: 12)),
-                Text('Full Access: ${adminStatus['full_feature_access'] ? 'Yes' : 'No'}', 
-                     style: const TextStyle(fontSize: 12)),
+                Text('User ID: ${adminStatus['user_id'] ?? 'N/A'}',
+                    style:
+                        const TextStyle(fontSize: 12, fontFamily: 'monospace')),
+                Text('Email: ${adminStatus['email'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 12)),
+                Text(
+                    'Full Access: ${adminStatus['full_feature_access'] ? 'Yes' : 'No'}',
+                    style: const TextStyle(fontSize: 12)),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Admin actions
           Wrap(
             spacing: 8,
@@ -1550,7 +1722,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
               ElevatedButton.icon(
@@ -1562,7 +1735,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
               ElevatedButton.icon(
@@ -1574,12 +1748,13 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ],
           ),
-          
+
           // Trial & Subscription Controls (Debug Mode Only)
           if (kDebugMode) ...[
             const SizedBox(height: 16),
@@ -1588,10 +1763,14 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 return Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: trialService.isAdminMode ? Colors.red.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                    color: trialService.isAdminMode
+                        ? Colors.red.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: trialService.isAdminMode ? Colors.red.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+                      color: trialService.isAdminMode
+                          ? Colors.red.withOpacity(0.3)
+                          : Colors.grey.withOpacity(0.3),
                     ),
                   ),
                   child: Column(
@@ -1600,8 +1779,12 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                       Row(
                         children: [
                           Icon(
-                            trialService.isAdminMode ? Icons.admin_panel_settings : Icons.timer,
-                            color: trialService.isAdminMode ? Colors.red : Colors.grey[600],
+                            trialService.isAdminMode
+                                ? Icons.admin_panel_settings
+                                : Icons.timer,
+                            color: trialService.isAdminMode
+                                ? Colors.red
+                                : Colors.grey[600],
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -1609,13 +1792,15 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                             'Trial & Subscription Controls',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: trialService.isAdminMode ? Colors.red[800] : Colors.grey[800],
+                              color: trialService.isAdminMode
+                                  ? Colors.red[800]
+                                  : Colors.grey[800],
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      
+
                       // Status display
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -1626,27 +1811,28 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Current Status:',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              trialService.isAdminMode 
-                                ? "🔴 ADMIN MODE - Unlimited Access" 
-                                : trialService.hasSubscription 
-                                  ? "💎 Subscribed" 
-                                  : trialService.isTrialActive 
-                                    ? "⏰ Trial Active (${trialService.getTrialRemainingText()})" 
-                                    : "🔒 No Access",
-                              style: TextStyle(fontSize: 12),
+                              trialService.isAdminMode
+                                  ? "🔴 ADMIN MODE - Unlimited Access"
+                                  : trialService.hasSubscription
+                                      ? "💎 Subscribed"
+                                      : trialService.isTrialActive
+                                          ? "⏰ Trial Active (${trialService.getTrialRemainingText()})"
+                                          : "🔒 No Access",
+                              style: const TextStyle(fontSize: 12),
                             ),
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Control buttons
                       Wrap(
                         spacing: 8,
@@ -1655,14 +1841,20 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                           ElevatedButton.icon(
                             onPressed: () => trialService.toggleAdminMode(),
                             icon: Icon(
-                              trialService.isAdminMode ? Icons.person : Icons.admin_panel_settings, 
-                              size: 16
-                            ),
-                            label: Text(trialService.isAdminMode ? 'Disable Admin' : 'Enable Admin'),
+                                trialService.isAdminMode
+                                    ? Icons.person
+                                    : Icons.admin_panel_settings,
+                                size: 16),
+                            label: Text(trialService.isAdminMode
+                                ? 'Disable Admin'
+                                : 'Enable Admin'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: trialService.isAdminMode ? Colors.red : Colors.green,
+                              backgroundColor: trialService.isAdminMode
+                                  ? Colors.red
+                                  : Colors.green,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                             ),
                           ),
                           ElevatedButton.icon(
@@ -1672,27 +1864,32 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.orange,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                             ),
                           ),
                           ElevatedButton.icon(
-                            onPressed: () => trialService.activateSubscription(),
+                            onPressed: () =>
+                                trialService.activateSubscription(),
                             icon: const Icon(Icons.star, size: 16),
                             label: const Text('Activate Sub'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                             ),
                           ),
                           ElevatedButton.icon(
-                            onPressed: () => trialService.deactivateSubscription(),
+                            onPressed: () =>
+                                trialService.deactivateSubscription(),
                             icon: const Icon(Icons.star_border, size: 16),
                             label: const Text('Deactivate Sub'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.grey,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                             ),
                           ),
                         ],
@@ -1718,7 +1915,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
     try {
       // Import the personality test service
       await PersonalityTestService.resetTest();
-      AdminService.instance.logAdminAction('Reset personality test from settings');
+      AdminService.instance
+          .logAdminAction('Reset personality test from settings');
       _showSnackBar('Personality test reset successfully');
     } catch (e) {
       _showSnackBar('Failed to reset personality test: $e');
@@ -1744,7 +1942,7 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
   /// Show admin debug info
   void _showAdminDebugInfo() {
     final adminStatus = AdminService.instance.adminStatus;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1756,8 +1954,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                ...adminStatus.entries.map((entry) => 
-                  Padding(
+                ...adminStatus.entries.map(
+                  (entry) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1807,7 +2005,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
     try {
       if (Platform.isAndroid) {
         // Deep link to Android input settings
-        final url = 'intent://settings/action/INPUT_METHOD_SETTINGS#Intent;scheme=android-app;end';
+        const url =
+            'intent://settings/action/INPUT_METHOD_SETTINGS#Intent;scheme=android-app;end';
         if (await canLaunchUrl(Uri.parse(url))) {
           await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         } else {
@@ -1854,13 +2053,13 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant,
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 Platform.isIOS
-                  ? 'Settings → General → Keyboard → Keyboards → Add New Keyboard → Unsaid'
-                  : 'Settings → System → Languages & input → Virtual keyboard → Manage keyboards → Add Unsaid',
+                    ? 'Settings → General → Keyboard → Keyboards → Add New Keyboard → Unsaid'
+                    : 'Settings → System → Languages & input → Virtual keyboard → Manage keyboards → Add Unsaid',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -1948,10 +2147,14 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: trialService.isAdminMode ? Colors.red.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+            color: trialService.isAdminMode
+                ? Colors.red.withOpacity(0.1)
+                : Colors.grey.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: trialService.isAdminMode ? Colors.red.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+              color: trialService.isAdminMode
+                  ? Colors.red.withOpacity(0.3)
+                  : Colors.grey.withOpacity(0.3),
             ),
           ),
           child: Column(
@@ -1960,8 +2163,12 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
               Row(
                 children: [
                   Icon(
-                    trialService.isAdminMode ? Icons.admin_panel_settings : Icons.timer,
-                    color: trialService.isAdminMode ? Colors.red : Colors.grey[600],
+                    trialService.isAdminMode
+                        ? Icons.admin_panel_settings
+                        : Icons.timer,
+                    color: trialService.isAdminMode
+                        ? Colors.red
+                        : Colors.grey[600],
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -1969,13 +2176,15 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                     'Trial & Subscription Controls',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: trialService.isAdminMode ? Colors.red[800] : Colors.grey[800],
+                      color: trialService.isAdminMode
+                          ? Colors.red[800]
+                          : Colors.grey[800],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Status display
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1986,27 +2195,28 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Current Status:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      trialService.isAdminMode 
-                        ? "🔴 ADMIN MODE - Unlimited Access" 
-                        : trialService.hasSubscription 
-                          ? "💎 Subscribed" 
-                          : trialService.isTrialActive 
-                            ? "⏰ Trial Active (${trialService.getTrialRemainingText()})" 
-                            : "🔒 No Access",
-                      style: TextStyle(fontSize: 12),
+                      trialService.isAdminMode
+                          ? "🔴 ADMIN MODE - Unlimited Access"
+                          : trialService.hasSubscription
+                              ? "💎 Subscribed"
+                              : trialService.isTrialActive
+                                  ? "⏰ Trial Active (${trialService.getTrialRemainingText()})"
+                                  : "🔒 No Access",
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Control buttons
               Wrap(
                 spacing: 8,
@@ -2015,14 +2225,19 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                   ElevatedButton.icon(
                     onPressed: () => trialService.toggleAdminMode(),
                     icon: Icon(
-                      trialService.isAdminMode ? Icons.person : Icons.admin_panel_settings, 
-                      size: 16
-                    ),
-                    label: Text(trialService.isAdminMode ? 'Disable Admin' : 'Enable Admin'),
+                        trialService.isAdminMode
+                            ? Icons.person
+                            : Icons.admin_panel_settings,
+                        size: 16),
+                    label: Text(trialService.isAdminMode
+                        ? 'Disable Admin'
+                        : 'Enable Admin'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: trialService.isAdminMode ? Colors.red : Colors.green,
+                      backgroundColor:
+                          trialService.isAdminMode ? Colors.red : Colors.green,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
                   ),
                   ElevatedButton.icon(
@@ -2032,7 +2247,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
                   ),
                   ElevatedButton.icon(
@@ -2042,7 +2258,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
                   ),
                   ElevatedButton.icon(
@@ -2052,7 +2269,8 @@ class _SettingsScreenProfessionalState extends State<SettingsScreenProfessional>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
                   ),
                 ],

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
-import '../widgets/premium_button.dart';
 import '../services/secure_storage_service.dart';
 import '../data/attachment_assessment.dart';
 import '../data/assessment_integration.dart';
@@ -236,9 +235,9 @@ class _ModernPersonalityResultsScreenState
         ),
         child: Column(
           children: [
-            Text(
+            const Text(
               'Attachment Dimensions',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
@@ -312,9 +311,9 @@ class _ModernPersonalityResultsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Assessment Quality',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
@@ -579,14 +578,14 @@ class _ModernPersonalityResultsScreenState
                         elevation: 8,
                         shadowColor: quadrantColor.withOpacity(0.3),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.rocket_launch, size: 24),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           Text(
                             'Start Using Unsaid',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),

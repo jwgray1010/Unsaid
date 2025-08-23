@@ -9,10 +9,10 @@ class SubscriptionScreen extends StatefulWidget {
   final VoidCallback onSubscribe;
 
   const SubscriptionScreen({
-    Key? key,
+    super.key,
     required this.isTrialExpired,
     required this.onSubscribe,
-  }) : super(key: key);
+  });
 
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
@@ -50,13 +50,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFF6C47FF),
-              const Color(0xFF9C88FF),
+              Color(0xFF6C47FF),
+              Color(0xFF9C88FF),
             ],
           ),
         ),
@@ -227,7 +227,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
           margin: EdgeInsets.only(bottom: AppTheme.spacing.sm),
           child: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.check_circle,
                 color: Colors.white,
                 size: 20,
@@ -261,12 +261,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Subscription Purchase'),
-        content: Text('This would trigger the Apple subscription purchase flow. Once implemented, users would be charged automatically after the trial period.'),
+        title: const Text('Subscription Purchase'),
+        content: const Text('This would trigger the Apple subscription purchase flow. Once implemented, users would be charged automatically after the trial period.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK'),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -286,7 +286,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
     // 3. Activating subscription if found
     
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Restore purchases functionality would be implemented here'),
         backgroundColor: Colors.blue,
       ),

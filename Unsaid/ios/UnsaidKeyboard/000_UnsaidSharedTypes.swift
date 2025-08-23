@@ -418,7 +418,7 @@ enum ToneStatus: String, CaseIterable, Codable {
 
 /// Shared constants for the application
 struct SharedConstants {
-    static let appGroupIdentifier = "group.com.unsaid.keyboard"
+    static let appGroupIdentifier = "group.com.example.unsaid"
     static let maxAnalysisLength = 500
     static let analysisTimeoutInterval: TimeInterval = 5.0
     static let suggestionDisplayDuration: TimeInterval = 3.0
@@ -2925,5 +2925,5 @@ struct StrengthBuildingStrategy: Codable {
 
 // MARK: - UnsaidSharedTypes Access
 class UnsaidSharedTypes {
-    static let appGroupIdentifier = "group.com.unsaid.keyboard"
+    static let appGroupIdentifier = "group.com.example.unsaid"
 }

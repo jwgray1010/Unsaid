@@ -68,7 +68,7 @@ class _DataPrivacyDisclaimerState extends State<DataPrivacyDisclaimer>
         height: screenHeight * 0.85,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
           ),
@@ -77,7 +77,7 @@ class _DataPrivacyDisclaimerState extends State<DataPrivacyDisclaimer>
           children: [
             // Handle bar
             Container(
-              margin: EdgeInsets.only(top: 12),
+              margin: const EdgeInsets.only(top: 12),
               width: 40,
               height: 4,
               decoration: BoxDecoration(
@@ -107,7 +107,7 @@ class _DataPrivacyDisclaimerState extends State<DataPrivacyDisclaimer>
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close),
+                    icon: const Icon(Icons.close),
                   ),
                 ],
               ),
@@ -309,7 +309,7 @@ You always maintain control over your data and can opt out at any time.''',
                   
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel'),
+                    child: const Text('Cancel'),
                   ),
                 ],
               ),

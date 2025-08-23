@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 /// Utility class for managing keyboard preferences in specific contexts
 class StandardKeyboardWidget extends StatelessWidget {
@@ -22,7 +21,7 @@ class StandardKeyboardWidget extends StatelessWidget {
       // Override keyboard settings to ensure standard iOS keyboard
       data: MediaQuery.of(context).copyWith(
         // Prevent custom keyboard extensions from interfering
-        textScaleFactor: MediaQuery.of(context).textScaleFactor,
+        textScaler: TextScaler.linear(MediaQuery.of(context).textScaleFactor),
       ),
       child: child,
     );

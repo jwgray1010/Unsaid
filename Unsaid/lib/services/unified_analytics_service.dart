@@ -14,7 +14,8 @@ class UnifiedAnalyticsService extends ChangeNotifier {
   final KeyboardManager _keyboardManager = KeyboardManager();
   final RelationshipInsightsService _relationshipInsights =
       RelationshipInsightsService();
-  final ConversationDataService _conversationService = ConversationDataService();
+  final ConversationDataService _conversationService =
+      ConversationDataService();
 
   /// Get individual user analytics (for insights dashboard)
   Future<Map<String, dynamic>> getIndividualAnalytics() async {
@@ -41,7 +42,10 @@ class UnifiedAnalyticsService extends ChangeNotifier {
       return {
         'attachment_style': 'Secure Attachment',
         'communication_score': 0.75,
-        'insights': ['App is working in offline mode', 'Set up Firestore to sync data'],
+        'insights': [
+          'App is working in offline mode',
+          'Set up Firestore to sync data'
+        ],
         'offline_mode': true
       };
     }
@@ -233,9 +237,8 @@ class UnifiedAnalyticsService extends ChangeNotifier {
           }
         }
 
-        trends[dayKey] = scoreCount > 0
-            ? (avgScore / scoreCount * 100).round()
-            : 75;
+        trends[dayKey] =
+            scoreCount > 0 ? (avgScore / scoreCount * 100).round() : 75;
       } else {
         trends[dayKey] = 75; // Default neutral score
       }
@@ -248,9 +251,8 @@ class UnifiedAnalyticsService extends ChangeNotifier {
   double _calculateEmotionalProgress(List<Map<String, dynamic>> history) {
     if (history.length < 2) return 0.0;
 
-    final recentEntries = history.length > 5
-        ? history.sublist(history.length - 5)
-        : history;
+    final recentEntries =
+        history.length > 5 ? history.sublist(history.length - 5) : history;
     final olderEntries = history.length > 5
         ? history.sublist(0, history.length - 5)
         : <Map<String, dynamic>>[];
@@ -600,20 +602,21 @@ class UnifiedAnalyticsService extends ChangeNotifier {
     DateTime? endDate,
   }) async {
     try {
-      final conversationHistory = await _conversationService.getConversationHistory(
+      final conversationHistory =
+          await _conversationService.getConversationHistory(
         userId: userId,
         relationshipId: relationshipId,
         startDate: startDate,
         endDate: endDate,
       );
-      
+
       final stats = await _conversationService.getConversationStats(
         userId: userId,
         relationshipId: relationshipId,
         startDate: startDate,
         endDate: endDate,
       );
-      
+
       return {
         'conversation_history': conversationHistory,
         'conversation_stats': stats,
@@ -641,7 +644,8 @@ class UnifiedAnalyticsService extends ChangeNotifier {
   }
 
   /// Store message for analysis
-  Future<void> recordMessage(String conversationId, Map<String, dynamic> messageData) async {
+  Future<void> recordMessage(
+      String conversationId, Map<String, dynamic> messageData) async {
     try {
       await _conversationService.storeMessage(conversationId, messageData);
       notifyListeners(); // Refresh analytics
@@ -651,7 +655,8 @@ class UnifiedAnalyticsService extends ChangeNotifier {
   }
 
   /// Get recent conversations for quick insights
-  Future<List<Map<String, dynamic>>> getRecentConversations({int limit = 10}) async {
+  Future<List<Map<String, dynamic>>> getRecentConversations(
+      {int limit = 10}) async {
     try {
       return await _conversationService.getConversationHistory(
         endDate: DateTime.now(),
@@ -661,6 +666,24 @@ class UnifiedAnalyticsService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error getting recent conversations: $e');
       return [];
+    }
+  }
+
+  /// Log analytics event
+  Future<void> logEvent(
+      String eventName, Map<String, dynamic> parameters) async {
+    try {
+      // For now, just log the event. In a real app, you'd send this to analytics
+      debugPrint('Analytics Event: $eventName - $parameters');
+
+      // You could also store events locally if needed
+      // await _storageService.storeSecureJson('analytics_${DateTime.now().millisecondsSinceEpoch}', {
+      //   'event': eventName,
+      //   'parameters': parameters,
+      //   'timestamp': DateTime.now().toIso8601String(),
+      // });
+    } catch (e) {
+      debugPrint('Error logging analytics event: $e');
     }
   }
 

@@ -10,8 +10,8 @@ class SafeKeyboardDataStorage {
     private init() {}
     
     // MARK: - Properties
-    private let logger = Logger(subsystem: "com.example.unsaid.UnsaidKeyboard", category: "SafeDataStorage")
-    private let appGroupIdentifier = "group.com.unsaid.shared"
+    private let logger = Logger(subsystem: "com.example.unsaid.unsaid.UnsaidKeyboard", category: "SafeDataStorage")
+    private let appGroupIdentifier = "group.com.example.unsaid"
     private let maxQueueSize = 100  // Prevent memory issues
     private let maxRetries = 3
     

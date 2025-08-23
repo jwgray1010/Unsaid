@@ -12,7 +12,7 @@ import UIKit
 class UnsaidKeyboardHelper {
     
     // MARK: - App Group Configuration
-    static let appGroupID = "group.com.unsaid.shared"
+    static let appGroupID = "group.com.example.unsaid"
     static let appGroupIdentifier = appGroupID // Legacy compatibility
     
     // MARK: - Keyboard Status Detection (App Group Handshake)

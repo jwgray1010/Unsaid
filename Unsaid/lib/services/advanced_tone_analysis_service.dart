@@ -11,199 +11,199 @@ class AdvancedToneAnalysisService {
   final Map<String, Map<String, ToneIndicator>> _advancedToneMapping = {
     // Emotional Intelligence Dimensions
     'emotional_positivity': {
-      'elated': ToneIndicator(
+      'elated': const ToneIndicator(
         'elated',
         1.0,
         'joy',
         'Extremely happy and excited',
       ),
-      'thrilled': ToneIndicator(
+      'thrilled': const ToneIndicator(
         'thrilled',
         0.95,
         'joy',
         'Very excited and pleased',
       ),
-      'delighted': ToneIndicator(
+      'delighted': const ToneIndicator(
         'delighted',
         0.9,
         'joy',
         'Pleasantly surprised and happy',
       ),
-      'grateful': ToneIndicator(
+      'grateful': const ToneIndicator(
         'grateful',
         0.9,
         'appreciation',
         'Shows deep appreciation',
       ),
-      'appreciate': ToneIndicator(
+      'appreciate': const ToneIndicator(
         'appreciate',
         0.85,
         'appreciation',
         'Values others\' efforts',
       ),
-      'thankful': ToneIndicator(
+      'thankful': const ToneIndicator(
         'thankful',
         0.8,
         'appreciation',
         'Expresses gratitude',
       ),
-      'pleased': ToneIndicator(
+      'pleased': const ToneIndicator(
         'pleased',
         0.75,
         'satisfaction',
         'Content and satisfied',
       ),
-      'wonderful': ToneIndicator(
+      'wonderful': const ToneIndicator(
         'wonderful',
         0.8,
         'admiration',
         'Expresses admiration',
       ),
-      'fantastic': ToneIndicator(
+      'fantastic': const ToneIndicator(
         'fantastic',
         0.8,
         'enthusiasm',
         'High enthusiasm',
       ),
-      'amazing': ToneIndicator('amazing', 0.8, 'awe', 'Expresses wonder'),
-      'brilliant': ToneIndicator(
+      'amazing': const ToneIndicator('amazing', 0.8, 'awe', 'Expresses wonder'),
+      'brilliant': const ToneIndicator(
         'brilliant',
         0.75,
         'admiration',
         'Intellectual appreciation',
       ),
-      'excellent': ToneIndicator(
+      'excellent': const ToneIndicator(
         'excellent',
         0.75,
         'approval',
         'Strong approval',
       ),
-      'outstanding': ToneIndicator('outstanding', 0.8, 'praise', 'High praise'),
-      'impressive': ToneIndicator(
+      'outstanding': const ToneIndicator('outstanding', 0.8, 'praise', 'High praise'),
+      'impressive': const ToneIndicator(
         'impressive',
         0.7,
         'admiration',
         'Shows being impressed',
       ),
-      'thank': ToneIndicator(
+      'thank': const ToneIndicator(
         'thank',
         0.7,
         'gratitude',
         'Basic gratitude expression',
       ),
-      'thanks': ToneIndicator('thanks', 0.65, 'gratitude', 'Casual thanks'),
+      'thanks': const ToneIndicator('thanks', 0.65, 'gratitude', 'Casual thanks'),
     },
 
     'emotional_negativity': {
-      'furious': ToneIndicator(
+      'furious': const ToneIndicator(
         'furious',
         1.0,
         'rage',
         'Extreme anger - high conflict risk',
       ),
-      'livid': ToneIndicator(
+      'livid': const ToneIndicator(
         'livid',
         0.98,
         'rage',
         'Very angry - relationship damage likely',
       ),
-      'outraged': ToneIndicator(
+      'outraged': const ToneIndicator(
         'outraged',
         0.95,
         'indignation',
         'Moral anger - requires immediate attention',
       ),
-      'infuriated': ToneIndicator(
+      'infuriated': const ToneIndicator(
         'infuriated',
         0.9,
         'anger',
         'Very angry - de-escalation needed',
       ),
-      'disgusted': ToneIndicator(
+      'disgusted': const ToneIndicator(
         'disgusted',
         0.9,
         'revulsion',
         'Strong negative reaction',
       ),
-      'appalled': ToneIndicator(
+      'appalled': const ToneIndicator(
         'appalled',
         0.85,
         'shock',
         'Shocked disapproval',
       ),
-      'horrified': ToneIndicator(
+      'horrified': const ToneIndicator(
         'horrified',
         0.85,
         'horror',
         'Extreme shock and dismay',
       ),
-      'devastated': ToneIndicator(
+      'devastated': const ToneIndicator(
         'devastated',
         0.8,
         'grief',
         'Deep emotional pain',
       ),
-      'heartbroken': ToneIndicator(
+      'heartbroken': const ToneIndicator(
         'heartbroken',
         0.8,
         'grief',
         'Emotional devastation',
       ),
-      'hate': ToneIndicator(
+      'hate': const ToneIndicator(
         'hate',
         0.95,
         'hatred',
         'Strong negative emotion - avoid',
       ),
-      'stupid': ToneIndicator(
+      'stupid': const ToneIndicator(
         'stupid',
         0.9,
         'insult',
         'Insulting language - very damaging',
       ),
-      'idiot': ToneIndicator(
+      'idiot': const ToneIndicator(
         'idiot',
         0.95,
         'insult',
         'Personal attack - highly inappropriate',
       ),
-      'terrible': ToneIndicator(
+      'terrible': const ToneIndicator(
         'terrible',
         0.8,
         'strong_negative',
         'Very negative assessment',
       ),
-      'awful': ToneIndicator(
+      'awful': const ToneIndicator(
         'awful',
         0.8,
         'strong_negative',
         'Extremely negative',
       ),
-      'horrible': ToneIndicator(
+      'horrible': const ToneIndicator(
         'horrible',
         0.8,
         'strong_negative',
         'Highly negative reaction',
       ),
-      'disappointed': ToneIndicator(
+      'disappointed': const ToneIndicator(
         'disappointed',
         0.7,
         'disappointment',
         'Unmet expectations',
       ),
-      'frustrated': ToneIndicator(
+      'frustrated': const ToneIndicator(
         'frustrated',
         0.65,
         'frustration',
         'Blocked goals or progress',
       ),
-      'annoyed': ToneIndicator(
+      'annoyed': const ToneIndicator(
         'annoyed',
         0.6,
         'irritation',
         'Minor irritation',
       ),
-      'bothered': ToneIndicator(
+      'bothered': const ToneIndicator(
         'bothered',
         0.55,
         'mild_irritation',
@@ -213,95 +213,95 @@ class AdvancedToneAnalysisService {
 
     // Psychological Control & Power Dynamics
     'dominance_control': {
-      'demand': ToneIndicator(
+      'demand': const ToneIndicator(
         'demand',
         0.9,
         'dominance',
         'Controlling language - may trigger resistance',
       ),
-      'require': ToneIndicator(
+      'require': const ToneIndicator(
         'require',
         0.8,
         'authority',
         'Authoritative but appropriate',
       ),
-      'insist': ToneIndicator(
+      'insist': const ToneIndicator(
         'insist',
         0.85,
         'assertiveness',
         'Strong insistence - potential pushback',
       ),
-      'must': ToneIndicator(
+      'must': const ToneIndicator(
         'must',
         0.7,
         'necessity',
         'Expresses necessity - context dependent',
       ),
-      'should': ToneIndicator(
+      'should': const ToneIndicator(
         'should',
         0.6,
         'expectation',
         'Implies obligation',
       ),
-      'need to': ToneIndicator(
+      'need to': const ToneIndicator(
         'need to',
         0.55,
         'requirement',
         'Expresses necessity',
       ),
-      'have to': ToneIndicator(
+      'have to': const ToneIndicator(
         'have to',
         0.6,
         'obligation',
         'Indicates obligation',
       ),
-      'will': ToneIndicator('will', 0.4, 'determination', 'Shows resolve'),
+      'will': const ToneIndicator('will', 0.4, 'determination', 'Shows resolve'),
     },
 
     'submission_politeness': {
-      'if you don\'t mind': ToneIndicator(
+      'if you don\'t mind': const ToneIndicator(
         'if you don\'t mind',
         0.9,
         'deference',
         'Very polite request',
       ),
-      'when convenient': ToneIndicator(
+      'when convenient': const ToneIndicator(
         'when convenient',
         0.85,
         'consideration',
         'Respectful of others\' time',
       ),
-      'if possible': ToneIndicator(
+      'if possible': const ToneIndicator(
         'if possible',
         0.8,
         'flexibility',
         'Shows flexibility',
       ),
-      'could you please': ToneIndicator(
+      'could you please': const ToneIndicator(
         'could you please',
         0.85,
         'polite_request',
         'Very polite approach',
       ),
-      'would you mind': ToneIndicator(
+      'would you mind': const ToneIndicator(
         'would you mind',
         0.8,
         'courteous_request',
         'Courteous language',
       ),
-      'may I': ToneIndicator(
+      'may I': const ToneIndicator(
         'may I',
         0.75,
         'permission',
         'Asks permission respectfully',
       ),
-      'might I suggest': ToneIndicator(
+      'might I suggest': const ToneIndicator(
         'might I suggest',
         0.8,
         'diplomatic_suggestion',
         'Diplomatic approach',
       ),
-      'please': ToneIndicator(
+      'please': const ToneIndicator(
         'please',
         0.6,
         'politeness',
@@ -311,43 +311,43 @@ class AdvancedToneAnalysisService {
 
     // Urgency & Time Pressure
     'time_pressure': {
-      'immediately': ToneIndicator(
+      'immediately': const ToneIndicator(
         'immediately',
         0.95,
         'urgent_demand',
         'Creates high pressure - use sparingly',
       ),
-      'right now': ToneIndicator(
+      'right now': const ToneIndicator(
         'right now',
         0.9,
         'immediate_demand',
         'Very demanding - potential stress trigger',
       ),
-      'asap': ToneIndicator(
+      'asap': const ToneIndicator(
         'asap',
         0.8,
         'urgency',
         'Business urgency - context matters',
       ),
-      'urgent': ToneIndicator(
+      'urgent': const ToneIndicator(
         'urgent',
         0.75,
         'priority',
         'Indicates high priority',
       ),
-      'deadline': ToneIndicator(
+      'deadline': const ToneIndicator(
         'deadline',
         0.7,
         'time_constraint',
         'Time-bound requirement',
       ),
-      'soon': ToneIndicator(
+      'soon': const ToneIndicator(
         'soon',
         0.4,
         'mild_urgency',
         'Gentle time preference',
       ),
-      'eventually': ToneIndicator(
+      'eventually': const ToneIndicator(
         'eventually',
         0.2,
         'patience',
@@ -357,55 +357,55 @@ class AdvancedToneAnalysisService {
 
     // Cognitive & Intellectual Tone
     'intellectual_confidence': {
-      'obviously': ToneIndicator(
+      'obviously': const ToneIndicator(
         'obviously',
         0.8,
         'condescension',
         'May sound condescending - avoid',
       ),
-      'clearly': ToneIndicator(
+      'clearly': const ToneIndicator(
         'clearly',
         0.6,
         'assumption',
         'Assumes shared understanding',
       ),
-      'of course': ToneIndicator(
+      'of course': const ToneIndicator(
         'of course',
         0.7,
         'expectation',
         'May invalidate others\' perspective',
       ),
-      'naturally': ToneIndicator(
+      'naturally': const ToneIndicator(
         'naturally',
         0.5,
         'assumption',
         'Assumes agreement',
       ),
-      'certainly': ToneIndicator(
+      'certainly': const ToneIndicator(
         'certainly',
         0.4,
         'confidence',
         'Shows confidence',
       ),
-      'perhaps': ToneIndicator(
+      'perhaps': const ToneIndicator(
         'perhaps',
         0.3,
         'openness',
         'Shows openness to other views',
       ),
-      'maybe': ToneIndicator(
+      'maybe': const ToneIndicator(
         'maybe',
         0.25,
         'uncertainty',
         'Expresses uncertainty',
       ),
-      'I think': ToneIndicator(
+      'I think': const ToneIndicator(
         'I think',
         0.2,
         'opinion',
         'Personal opinion marker',
       ),
-      'in my opinion': ToneIndicator(
+      'in my opinion': const ToneIndicator(
         'in my opinion',
         0.2,
         'subjective_view',
@@ -415,32 +415,32 @@ class AdvancedToneAnalysisService {
 
     // Empathy & Emotional Intelligence
     'empathy_markers': {
-      'understand': ToneIndicator(
+      'understand': const ToneIndicator(
         'understand',
         0.6,
         'empathy',
         'Shows understanding',
       ),
-      'realize': ToneIndicator(
+      'realize': const ToneIndicator(
         'realize',
         0.5,
         'awareness',
         'Acknowledges situation',
       ),
-      'recognize': ToneIndicator(
+      'recognize': const ToneIndicator(
         'recognize',
         0.5,
         'acknowledgment',
         'Acknowledges others\' position',
       ),
-      'respect': ToneIndicator(
+      'respect': const ToneIndicator(
         'respect',
         0.6,
         'respect',
         'Shows respect for others',
       ),
-      'sorry': ToneIndicator('sorry', 0.6, 'apology', 'Takes responsibility'),
-      'apologize': ToneIndicator(
+      'sorry': const ToneIndicator('sorry', 0.6, 'apology', 'Takes responsibility'),
+      'apologize': const ToneIndicator(
         'apologize',
         0.7,
         'formal_apology',
@@ -450,61 +450,61 @@ class AdvancedToneAnalysisService {
 
     // Advanced Neurolinguistic Programming (NLP) Patterns
     'nlp_patterns': {
-      'always': ToneIndicator(
+      'always': const ToneIndicator(
         'always',
         0.8,
         'universal_quantifier',
         'Absolute statements can trigger resistance - overgeneralization',
       ),
-      'never': ToneIndicator(
+      'never': const ToneIndicator(
         'never',
         0.8,
         'universal_quantifier',
         'Absolute denial - may invalidate experiences',
       ),
-      'everyone': ToneIndicator(
+      'everyone': const ToneIndicator(
         'everyone',
         0.7,
         'universal_quantifier',
         'Assumes universal consensus - pressure tactic',
       ),
-      'no one': ToneIndicator(
+      'no one': const ToneIndicator(
         'no one',
         0.75,
         'universal_quantifier',
         'Isolating language - can create defensiveness',
       ),
-      'all': ToneIndicator(
+      'all': const ToneIndicator(
         'all',
         0.6,
         'universal_quantifier',
         'Blanket statement - consider exceptions',
       ),
-      'none': ToneIndicator(
+      'none': const ToneIndicator(
         'none',
         0.6,
         'universal_quantifier',
         'Absolute exclusion - may be inaccurate',
       ),
-      'can\'t': ToneIndicator(
+      'can\'t': const ToneIndicator(
         'can\'t',
         0.7,
         'modal_operator',
         'Limitation language - may limit possibilities',
       ),
-      'won\'t': ToneIndicator(
+      'won\'t': const ToneIndicator(
         'won\'t',
         0.75,
         'modal_operator',
         'Resistance language - signals unwillingness',
       ),
-      'impossible': ToneIndicator(
+      'impossible': const ToneIndicator(
         'impossible',
         0.8,
         'modal_operator',
         'Absolute limitation - closes down options',
       ),
-      'have to': ToneIndicator(
+      'have to': const ToneIndicator(
         'have to',
         0.6,
         'modal_operator',
@@ -514,37 +514,37 @@ class AdvancedToneAnalysisService {
 
     // Cultural Intelligence & Bias Detection
     'cultural_sensitivity': {
-      'you people': ToneIndicator(
+      'you people': const ToneIndicator(
         'you people',
         0.95,
         'othering',
         'Potentially discriminatory language - creates in-group/out-group division',
       ),
-      'those people': ToneIndicator(
+      'those people': const ToneIndicator(
         'those people',
         0.9,
         'othering',
         'Distancing language - may indicate bias',
       ),
-      'typical': ToneIndicator(
+      'typical': const ToneIndicator(
         'typical',
         0.7,
         'stereotyping',
         'May reinforce stereotypes - context dependent',
       ),
-      'all of you': ToneIndicator(
+      'all of you': const ToneIndicator(
         'all of you',
         0.6,
         'generalization',
         'Group generalization - may alienate individuals',
       ),
-      'your kind': ToneIndicator(
+      'your kind': const ToneIndicator(
         'your kind',
         0.95,
         'categorization',
         'Highly problematic categorization language',
       ),
-      'normal people': ToneIndicator(
+      'normal people': const ToneIndicator(
         'normal people',
         0.8,
         'normalization',
@@ -554,37 +554,37 @@ class AdvancedToneAnalysisService {
 
     // Advanced Cognitive Load & Processing Patterns
     'cognitive_load': {
-      'basically': ToneIndicator(
+      'basically': const ToneIndicator(
         'basically',
         0.6,
         'oversimplification',
         'May oversimplify complex topics',
       ),
-      'just': ToneIndicator(
+      'just': const ToneIndicator(
         'just',
         0.5,
         'minimization',
         'May minimize complexity or importance',
       ),
-      'simply': ToneIndicator(
+      'simply': const ToneIndicator(
         'simply',
         0.6,
         'oversimplification',
         'May underestimate difficulty',
       ),
-      'complicated': ToneIndicator(
+      'complicated': const ToneIndicator(
         'complicated',
         0.4,
         'complexity_acknowledgment',
         'Acknowledges complexity',
       ),
-      'complex': ToneIndicator(
+      'complex': const ToneIndicator(
         'complex',
         0.3,
         'complexity_acknowledgment',
         'Shows understanding of nuance',
       ),
-      'nuanced': ToneIndicator(
+      'nuanced': const ToneIndicator(
         'nuanced',
         0.2,
         'sophistication',
@@ -594,49 +594,49 @@ class AdvancedToneAnalysisService {
 
     // Persuasion & Influence Detection (Robert Cialdini's principles)
     'influence_patterns': {
-      'limited time': ToneIndicator(
+      'limited time': const ToneIndicator(
         'limited time',
         0.8,
         'scarcity',
         'Scarcity principle - creates urgency pressure',
       ),
-      'exclusive': ToneIndicator(
+      'exclusive': const ToneIndicator(
         'exclusive',
         0.7,
         'scarcity',
         'Exclusivity appeal - may create FOMO',
       ),
-      'everyone else': ToneIndicator(
+      'everyone else': const ToneIndicator(
         'everyone else',
         0.7,
         'social_proof',
         'Social proof appeal - bandwagon effect',
       ),
-      'popular choice': ToneIndicator(
+      'popular choice': const ToneIndicator(
         'popular choice',
         0.6,
         'social_proof',
         'Majority influence appeal',
       ),
-      'expert': ToneIndicator(
+      'expert': const ToneIndicator(
         'expert',
         0.5,
         'authority',
         'Authority appeal - legitimate if accurate',
       ),
-      'proven': ToneIndicator(
+      'proven': const ToneIndicator(
         'proven',
         0.5,
         'authority',
         'Authority/evidence appeal',
       ),
-      'return the favor': ToneIndicator(
+      'return the favor': const ToneIndicator(
         'return the favor',
         0.7,
         'reciprocity',
         'Reciprocity principle - obligation creation',
       ),
-      'owe me': ToneIndicator(
+      'owe me': const ToneIndicator(
         'owe me',
         0.8,
         'reciprocity',
@@ -646,37 +646,37 @@ class AdvancedToneAnalysisService {
 
     // Micro-Expression Text Patterns (emotional leakage)
     'micro_expressions': {
-      'fine.': ToneIndicator(
+      'fine.': const ToneIndicator(
         'fine.',
         0.8,
         'suppressed_anger',
         'Period after "fine" suggests irritation',
       ),
-      'whatever.': ToneIndicator(
+      'whatever.': const ToneIndicator(
         'whatever.',
         0.85,
         'dismissive_anger',
         'Dismissive resignation with anger undertones',
       ),
-      'sure...': ToneIndicator(
+      'sure...': const ToneIndicator(
         'sure...',
         0.7,
         'passive_resistance',
         'Ellipsis suggests reluctance or sarcasm',
       ),
-      'ok...': ToneIndicator(
+      'ok...': const ToneIndicator(
         'ok...',
         0.6,
         'uncertainty',
         'Trailing dots suggest hesitation or passive agreement',
       ),
-      'right.': ToneIndicator(
+      'right.': const ToneIndicator(
         'right.',
         0.7,
         'skepticism',
         'Curt agreement may indicate disbelief',
       ),
-      'interesting...': ToneIndicator(
+      'interesting...': const ToneIndicator(
         'interesting...',
         0.6,
         'polite_disagreement',
@@ -686,37 +686,37 @@ class AdvancedToneAnalysisService {
 
     // Emotional Contagion Predictors
     'emotional_contagion': {
-      'exciting': ToneIndicator(
+      'exciting': const ToneIndicator(
         'exciting',
         0.8,
         'positive_contagion',
         'Likely to spread enthusiasm',
       ),
-      'inspiring': ToneIndicator(
+      'inspiring': const ToneIndicator(
         'inspiring',
         0.85,
         'positive_contagion',
         'High potential for positive influence',
       ),
-      'exhausting': ToneIndicator(
+      'exhausting': const ToneIndicator(
         'exhausting',
         0.7,
         'negative_contagion',
         'May spread fatigue or discouragement',
       ),
-      'overwhelming': ToneIndicator(
+      'overwhelming': const ToneIndicator(
         'overwhelming',
         0.75,
         'negative_contagion',
         'May create anxiety in others',
       ),
-      'draining': ToneIndicator(
+      'draining': const ToneIndicator(
         'draining',
         0.8,
         'negative_contagion',
         'High risk of spreading negative energy',
       ),
-      'energizing': ToneIndicator(
+      'energizing': const ToneIndicator(
         'energizing',
         0.8,
         'positive_contagion',
@@ -726,37 +726,37 @@ class AdvancedToneAnalysisService {
 
     // Advanced Power Dynamics & Workplace Hierarchy
     'power_dynamics_advanced': {
-      'as your': ToneIndicator(
+      'as your': const ToneIndicator(
         'as your',
         0.8,
         'hierarchy_assertion',
         'Explicit hierarchy reminder - may create tension',
       ),
-      'under my': ToneIndicator(
+      'under my': const ToneIndicator(
         'under my',
         0.85,
         'dominance_assertion',
         'Strong dominance language',
       ),
-      'above your pay grade': ToneIndicator(
+      'above your pay grade': const ToneIndicator(
         'above your pay grade',
         0.95,
         'status_dismissal',
         'Highly dismissive status-based put-down',
       ),
-      'that\'s not your job': ToneIndicator(
+      'that\'s not your job': const ToneIndicator(
         'that\'s not your job',
         0.8,
         'boundary_assertion',
         'Role boundary enforcement - context dependent',
       ),
-      'stay in your lane': ToneIndicator(
+      'stay in your lane': const ToneIndicator(
         'stay in your lane',
         0.9,
         'territorial',
         'Territorial language - may shut down collaboration',
       ),
-      'know your place': ToneIndicator(
+      'know your place': const ToneIndicator(
         'know your place',
         0.95,
         'status_enforcement',
@@ -942,7 +942,7 @@ class AdvancedToneAnalysisService {
         ) &&
         (message.contains('...') || message.contains('!!'))) {
       patterns.add(
-        CommunicationPattern(
+        const CommunicationPattern(
           'passive_aggressive',
           0.7,
           'May come across as dismissive or sarcastic',
@@ -953,7 +953,7 @@ class AdvancedToneAnalysisService {
     // Pattern: Overwhelming information
     if (message.split(' ').length > 50 && message.split('.').length > 3) {
       patterns.add(
-        CommunicationPattern(
+        const CommunicationPattern(
           'information_overload',
           0.6,
           'Message may be too long and complex',
@@ -974,7 +974,7 @@ class AdvancedToneAnalysisService {
     }
     if (assumptionCount >= 2) {
       patterns.add(
-        CommunicationPattern(
+        const CommunicationPattern(
           'assumption_heavy',
           0.8,
           'Makes many assumptions about recipient\'s knowledge',
@@ -1075,7 +1075,7 @@ class AdvancedToneAnalysisService {
     if (dimensions.containsKey('emotional_negativity') &&
         dimensions['emotional_negativity']!.score > 0.6) {
       insights.add(
-        PsychologicalInsight(
+        const PsychologicalInsight(
           type: 'emotional_regulation',
           title: 'Emotional State Detection',
           description:
@@ -1091,7 +1091,7 @@ class AdvancedToneAnalysisService {
     if (dimensions.containsKey('dominance_control') &&
         dimensions['dominance_control']!.score > 0.7) {
       insights.add(
-        PsychologicalInsight(
+        const PsychologicalInsight(
           type: 'power_dynamics',
           title: 'Authority Language Detected',
           description:
@@ -1108,7 +1108,7 @@ class AdvancedToneAnalysisService {
         (dimensions.containsKey('dominance_control') ||
             dimensions.containsKey('emotional_negativity'))) {
       insights.add(
-        PsychologicalInsight(
+        const PsychologicalInsight(
           type: 'cognitive_empathy',
           title: 'Perspective-Taking Opportunity',
           description:
@@ -1165,7 +1165,7 @@ class AdvancedToneAnalysisService {
     // Context-specific recommendations
     if (context == 'conflict_resolution') {
       recommendations.add(
-        StrategicRecommendation(
+        const StrategicRecommendation(
           category: 'conflict_resolution',
           title: 'De-escalation Strategy',
           description:
@@ -1367,7 +1367,7 @@ class AdvancedToneAnalysisService {
       RegExp(r'\bmeans\b|\bequals\b|\bis\s+the\s+same\s+as\b'),
     )) {
       patterns.add(
-        NeurolinguisticPattern(
+        const NeurolinguisticPattern(
           type: 'complex_equivalence',
           trigger: 'equivalence language',
           cognitiveImpact: 'Creates oversimplified cause-effect relationships',
@@ -1705,7 +1705,7 @@ class AdvancedToneAnalysisService {
     if (relationship == 'superior' &&
         dimensions.containsKey('dominance_control')) {
       recommendations.add(
-        ContextualRecommendation(
+        const ContextualRecommendation(
           context: 'hierarchy',
           recommendation: 'Balance authority with respect for autonomy',
           rationale:
@@ -1720,7 +1720,7 @@ class AdvancedToneAnalysisService {
     if (culturalContext == 'eastern' &&
         dimensions.containsKey('dominance_control')) {
       recommendations.add(
-        ContextualRecommendation(
+        const ContextualRecommendation(
           context: 'cultural',
           recommendation: 'Consider more indirect communication approaches',
           rationale:
@@ -1745,7 +1745,7 @@ class AdvancedToneAnalysisService {
     // Pattern-based learning simulation
     if (patterns.any((p) => p.type == 'passive_aggressive')) {
       suggestions.add(
-        AdaptiveSuggestion(
+        const AdaptiveSuggestion(
           type: 'behavioral_pattern',
           suggestion:
               'Your communication style shows indirect patterns. Direct expression might be more effective.',
@@ -1759,7 +1759,7 @@ class AdvancedToneAnalysisService {
     // Relationship learning
     if (relationship == 'peer' && dimensions.containsKey('dominance_control')) {
       suggestions.add(
-        AdaptiveSuggestion(
+        const AdaptiveSuggestion(
           type: 'relationship_optimization',
           suggestion:
               'With peers, collaborative language often works better than directive language.',

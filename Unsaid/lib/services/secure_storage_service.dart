@@ -6,13 +6,13 @@ import 'personality_data_bridge.dart';
 /// Service for secure storage of sensitive data
 class SecureStorageService {
   static const String _keyPrefix = 'unsaid_secure_';
-  
+
   /// Store secure data with encryption
   Future<void> storeSecureData(String key, String value) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final secureKey = _keyPrefix + key;
-      
+
       // For now, using SharedPreferences. In production, consider using
       // flutter_secure_storage for better security
       await prefs.setString(secureKey, value);
@@ -21,32 +21,32 @@ class SecureStorageService {
       rethrow;
     }
   }
-  
+
   /// Retrieve secure data with decryption
   Future<String?> getSecureData(String key) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final secureKey = _keyPrefix + key;
-      
+
       return prefs.getString(secureKey);
     } catch (e) {
       debugPrint('Error retrieving secure data: $e');
       return null;
     }
   }
-  
+
   /// Delete secure data
   Future<void> deleteSecureData(String key) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final secureKey = _keyPrefix + key;
-      
+
       await prefs.remove(secureKey);
     } catch (e) {
       debugPrint('Error deleting secure data: $e');
     }
   }
-  
+
   /// Store secure JSON data
   Future<void> storeSecureJson(String key, Map<String, dynamic> data) async {
     try {
@@ -57,7 +57,7 @@ class SecureStorageService {
       rethrow;
     }
   }
-  
+
   /// Retrieve secure JSON data
   Future<Map<String, dynamic>?> getSecureJson(String key) async {
     try {
@@ -71,13 +71,13 @@ class SecureStorageService {
       return null;
     }
   }
-  
+
   /// Clear all secure data
   Future<void> clearAllSecureData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final keys = prefs.getKeys();
-      
+
       for (final key in keys) {
         if (key.startsWith(_keyPrefix)) {
           await prefs.remove(key);
@@ -117,15 +117,16 @@ class SecureStorageService {
   Future<void> storePersonalityTestResults(Map<String, dynamic> results) async {
     try {
       await storeSecureJson('personality_test_results', results);
-      
+
       // Also store in iOS UserDefaults for keyboard extension access
       try {
         await PersonalityDataBridge.storePersonalityData(results);
       } catch (e) {
-        print('⚠️ Warning: Could not store personality data in iOS UserDefaults: $e');
+        print(
+            '⚠️ Warning: Could not store personality data in iOS UserDefaults: $e');
         // Continue execution - secure storage succeeded
       }
-      
+
       print('✅ Personality test results stored successfully');
     } catch (e) {
       print('❌ Error storing personality test results: $e');
@@ -174,8 +175,38 @@ class SecureStorageService {
     }
   }
 
+  /// Get partner profile data (including personality test results and other data)
+  Future<Map<String, dynamic>?> getPartnerProfile() async {
+    try {
+      // For now, return partner personality test results as partner profile
+      // In a full implementation, this would include more partner data
+      final partnerResults = await getPartnerPersonalityTestResults();
+      if (partnerResults != null) {
+        return {
+          'name': 'Partner',
+          'email': '',
+          'phone': '',
+          'personality_type': partnerResults['dominant_type'] ?? '',
+          'personality_label': partnerResults['personality_label'] ?? 'Unknown',
+          'communication_style': partnerResults['communication_style'] ?? '',
+          'relationship_duration': '',
+          'last_analysis': null,
+          'profile_image': null,
+          'test_completed': true,
+          'joined_date': partnerResults['test_completed_at'],
+          ...partnerResults,
+        };
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error retrieving partner profile: $e');
+      return null;
+    }
+  }
+
   /// Save partner personality test results
-  Future<void> savePartnerPersonalityTestResults(Map<String, dynamic> results) async {
+  Future<void> savePartnerPersonalityTestResults(
+      Map<String, dynamic> results) async {
     try {
       await storeSecureJson('partner_personality_test_results', results);
       print('✅ Partner personality test results saved successfully');
@@ -256,5 +287,18 @@ class SecureStorageService {
       print('❌ Error removing child name: $e');
       rethrow;
     }
+  }
+
+  // Additional methods for dashboard compatibility
+  Future<String?> getString(String key) async {
+    return await getSecureData(key);
+  }
+
+  Future<void> setString(String key, String value) async {
+    await storeSecureData(key, value);
+  }
+
+  Future<void> removeKey(String key) async {
+    await deleteSecureData(key);
   }
 }

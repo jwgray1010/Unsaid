@@ -4,7 +4,7 @@ import '../services/personality_data_manager.dart';
 import '../navigation/app_router.dart';
 
 class EmotionalStateScreen extends StatefulWidget {
-  const EmotionalStateScreen({Key? key}) : super(key: key);
+  const EmotionalStateScreen({super.key});
 
   @override
   State<EmotionalStateScreen> createState() => _EmotionalStateScreenState();
@@ -20,60 +20,60 @@ class _EmotionalStateScreenState extends State<EmotionalStateScreen>
 
   // The 7 emotional state options that map to our bucket system
   final List<EmotionalStateOption> emotionalStates = [
-    EmotionalStateOption(
+    const EmotionalStateOption(
       id: "completely_overwhelmed",
       label: "Completely overwhelmed",
       description: "Feeling like everything is too much right now",
       icon: Icons.waves,
-      color: const Color(0xFFE57373), // Red
+      color: Color(0xFFE57373), // Red
       bucket: "highIntensity"
     ),
-    EmotionalStateOption(
+    const EmotionalStateOption(
       id: "tense_on_edge", 
       label: "Tense / on edge",
       description: "Feeling wound up and restless",
       icon: Icons.bolt,
-      color: const Color(0xFFFFB74D), // Orange
+      color: Color(0xFFFFB74D), // Orange
       bucket: "moderate"
     ),
-    EmotionalStateOption(
+    const EmotionalStateOption(
       id: "uneasy_unsettled",
       label: "Uneasy / unsettled", 
       description: "Something feels off but can't pinpoint what",
       icon: Icons.psychology,
-      color: const Color(0xFFFFD54F), // Yellow
+      color: Color(0xFFFFD54F), // Yellow
       bucket: "moderate"
     ),
-    EmotionalStateOption(
+    const EmotionalStateOption(
       id: "neutral_distracted",
       label: "Neutral / distracted",
       description: "Not particularly up or down, just scattered",
       icon: Icons.radio_button_unchecked,
-      color: const Color(0xFF90A4AE), // Blue Grey
+      color: Color(0xFF90A4AE), // Blue Grey
       bucket: "moderate"
     ),
-    EmotionalStateOption(
+    const EmotionalStateOption(
       id: "calm_centered",
       label: "Calm / centered",
       description: "Feeling balanced and present",
       icon: Icons.spa,
-      color: const Color(0xFF81C784), // Light Green
+      color: Color(0xFF81C784), // Light Green
       bucket: "regulated"
     ),
-    EmotionalStateOption(
+    const EmotionalStateOption(
       id: "content_grounded",
       label: "Content / grounded",
       description: "Feeling stable and satisfied",
       icon: Icons.self_improvement,
-      color: const Color(0xFF64B5F6), // Blue
+      color: Color(0xFF64B5F6), // Blue
       bucket: "regulated"
     ),
-    EmotionalStateOption(
+    const EmotionalStateOption(
       id: "relaxed_at_ease",
       label: "Relaxed / at ease",
       description: "Feeling peaceful and comfortable",
       icon: Icons.airline_seat_flat,
-      color: const Color(0xFFBA68C8), // Purple
+      color: Color(0xFFBA68C8), // Purple
       bucket: "regulated"
     ),
   ];

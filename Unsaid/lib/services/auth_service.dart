@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+// TODO: Re-enable when google_sign_in is added back to pubspec.yaml
+// import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'dart:io' show Platform;
 
 /// Authentication service for managing user authentication
 /// Supports anonymous authentication for beta testing and optional email/password
@@ -13,9 +13,12 @@ class AuthService extends ChangeNotifier {
   AuthService._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  // TODO: Re-enable when google_sign_in is added back to pubspec.yaml
+  /*
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb ? '831572355430-213f5564649c8b135240a7.apps.googleusercontent.com' : null,
   );
+  */
   User? _user;
 
   /// Current authenticated user
@@ -65,7 +68,15 @@ class AuthService extends ChangeNotifier {
   }
 
   /// Sign in with Google
+  /// TODO: Re-enable when google_sign_in is added back to pubspec.yaml
   Future<UserCredential?> signInWithGoogle() async {
+    if (kDebugMode) {
+      print(
+          '⚠️ Google Sign-In temporarily disabled - google_sign_in package not available');
+    }
+    return null;
+
+    /* TODO: Re-enable when google_sign_in is added back
     try {
       if (kIsWeb) {
         // Web-specific Google Sign-In implementation
@@ -119,6 +130,7 @@ class AuthService extends ChangeNotifier {
       }
       return null;
     }
+    */
   }
 
   /// Sign in with Apple
@@ -147,14 +159,17 @@ class AuthService extends ChangeNotifier {
       );
 
       // Sign in to Firebase with the Apple credential
-      final UserCredential result = await _auth.signInWithCredential(oauthCredential);
+      final UserCredential result =
+          await _auth.signInWithCredential(oauthCredential);
       _user = result.user;
 
       // Update display name if available and not already set
-      if (_user != null && 
+      if (_user != null &&
           (_user!.displayName == null || _user!.displayName!.isEmpty) &&
           appleCredential.givenName != null) {
-        final displayName = '${appleCredential.givenName} ${appleCredential.familyName ?? ''}'.trim();
+        final displayName =
+            '${appleCredential.givenName} ${appleCredential.familyName ?? ''}'
+                .trim();
         await _user!.updateDisplayName(displayName);
         await _user!.reload();
         _user = _auth.currentUser;
@@ -166,6 +181,17 @@ class AuthService extends ChangeNotifier {
       }
 
       return result;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (kDebugMode) {
+        print(' Apple sign-in authorization failed: ${e.code} - ${e.message}');
+      }
+      return null;
+    } on TypeError catch (e) {
+      if (kDebugMode) {
+        print(' Apple sign-in type error (plugin compatibility issue): $e');
+        print(' This may be due to a plugin version compatibility issue');
+      }
+      return null;
     } catch (e) {
       if (kDebugMode) {
         print(' Apple sign-in failed: $e');
@@ -297,11 +323,14 @@ class AuthService extends ChangeNotifier {
   /// Sign out
   Future<void> signOut() async {
     try {
+      // TODO: Re-enable when google_sign_in is added back
+      /*
       // Sign out from Google if signed in
       if (await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();
       }
-      
+      */
+
       // Sign out from Firebase
       await _auth.signOut();
       _user = null;

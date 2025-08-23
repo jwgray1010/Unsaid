@@ -34,18 +34,18 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Firebase core and authentication
-  firebase_core: ^3.14.0
-  firebase_auth: ^5.6.0
+  firebase_core: ^2.15.1
+  firebase_auth: ^4.8.0
 
   # Firestore (Cloud Firestore database)
-  cloud_firestore: ^5.6.9
+  cloud_firestore: ^4.8.5
 
   # Firebase Storage
-  firebase_storage: ^12.4.7
+  firebase_storage: ^11.2.6
 
   # Optional: Google sign-in and Apple sign-in
-  google_sign_in: ^6.2.1
-  sign_in_with_apple: ^7.0.1
+  # google_sign_in: ^6.1.5  # Temporarily disabled due to version conflicts
+  sign_in_with_apple: ^5.0.0  # Using older version for compatibility with older macOS
 
   # Optional: For picking images for profile photos
   image_picker: ^1.1.1
@@ -54,13 +54,13 @@ dependencies:
   file_picker: ^8.1.2
 
   # Firebase Cloud Messaging
-  firebase_messaging: ^15.2.7
+  firebase_messaging: ^14.6.7
 
   # Firebase Analytics
-  firebase_analytics: ^11.5.0
+  firebase_analytics: ^10.4.5
 
   # Firebase Crashlytics
-  firebase_crashlytics: ^4.3.7
+  firebase_crashlytics: ^3.3.5
 
   # Share functionality
   share_plus: ^11.0.0
@@ -82,11 +82,14 @@ dependencies:
   # HTTP package
   http: ^1.2.1
 
-  # Google Fonts
-  google_fonts: ^6.1.0
+  # Google Fonts - using older version for compatibility
+  google_fonts: ^4.0.0
   
-  # Shared preferences for keyboard settings
-  shared_preferences: ^2.2.2
+  # Shared preferences for keyboard settings - using older compatible version
+  shared_preferences: ^2.0.18
+  
+  # Path provider - explicit older version for compatibility
+  path_provider: ^2.0.15
 
 dev_dependencies:
   flutter_test:

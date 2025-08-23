@@ -100,7 +100,7 @@ class SecureConfig {
 
   /// Get fallback API key with proper validation
   String _getFallbackKey() {
-    final key = _fallbackApiKey;
+    const key = _fallbackApiKey;
     if (key.isEmpty) {
       throw SecurityException('No API key available - please configure backend or environment variables');
     }

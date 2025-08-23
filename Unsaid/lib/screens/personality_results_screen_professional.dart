@@ -4,10 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import '../widgets/premium_button.dart';
 import '../services/secure_storage_service.dart';
-import '../data/randomized_personality_questions.dart';
-import '../data/attachment_assessment.dart';
-import '../data/assessment_integration.dart';
-import 'modern_personality_results_screen.dart';
+import '../data/personality_questions.dart';
 
 class PersonalityResultsScreenProfessional extends StatefulWidget {
   final List<String> answers;
@@ -140,32 +137,12 @@ class _PersonalityResultsScreenProfessionalState
     }
   }
 
-    /// Save personality test results to secure storage
+  /// Save personality test results to secure storage
   Future<void> _savePersonalityResults() async {
     try {
       final storage = SecureStorageService();
 
-      // Check if we can upgrade to modern assessment
-      if (await _canUpgradeToModernAssessment()) {
-        final modernResult = await _upgradeToModernAssessment();
-        if (modernResult != null) {
-          // Navigate to modern results instead
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ModernPersonalityResultsScreen(
-                config: modernResult['config'],
-                scores: modernResult['scores'],
-                routing: modernResult['routing'],
-                responses: modernResult['responses'],
-              ),
-            ),
-          );
-          return;
-        }
-      }
-
-      // Continue with legacy saving
+      // Get the questions to match answers for modern scoring
       final questions = PersonalityTest.getQuestionsWithShuffledAnswers();
 
       // Use modern dimensional scoring
@@ -214,7 +191,6 @@ class _PersonalityResultsScreenProfessionalState
         'communication_style': commStyle,
         'communication_style_label': commLabels[commStyle] ?? 'Unknown',
         'test_completed_at': DateTime.now().toIso8601String(),
-        'assessment_version': 'legacy_v1.0',
       });
 
       // Also push to iOS so the keyboard bridge can see it immediately
@@ -234,68 +210,6 @@ class _PersonalityResultsScreenProfessionalState
       print('Personality test results saved successfully');
     } catch (e) {
       print('Error saving personality test results: $e');
-    }
-  }
-
-  /// Check if we can upgrade legacy answers to modern assessment
-  Future<bool> _canUpgradeToModernAssessment() async {
-    // We can upgrade if we have enough answers and they map to modern questions
-    return widget.answers.length >= 15; // Minimum threshold
-  }
-
-  /// Attempt to upgrade legacy answers to modern assessment format
-  Future<Map<String, dynamic>?> _upgradeToModernAssessment() async {
-    try {
-      // Map legacy answers to modern assessment format
-      final modernResponses = <String, int>{};
-      final legacyQuestions = PersonalityTest.getQuestionsWithShuffledAnswers();
-      
-      // This is a simplified mapping - you might want to enhance this
-      // For now, we'll create mock responses for demonstration
-      for (int i = 0; i < widget.answers.length && i < legacyQuestions.length; i++) {
-        final answer = widget.answers[i];
-        final question = legacyQuestions[i];
-        
-        // Find which option was selected and convert to 1-5 scale
-        final optionIndex = question.options.indexWhere((opt) => opt.text == answer);
-        if (optionIndex != -1) {
-          // Convert option index to likert scale (simplified)
-          final likertValue = (optionIndex + 1).clamp(1, 5);
-          
-          // Map to modern question IDs (this is simplified - you'd want better mapping)
-          if (question.isGoalQuestion) {
-            final goalQuestionIndex = i % goalItems.length;
-            if (goalQuestionIndex < goalItems.length) {
-              modernResponses[goalItems[goalQuestionIndex].id] = likertValue;
-            }
-          } else {
-            final attachmentQuestionIndex = i % attachmentItems.length;
-            if (attachmentQuestionIndex < attachmentItems.length) {
-              modernResponses[attachmentItems[attachmentQuestionIndex].id] = likertValue;
-            }
-          }
-        }
-      }
-
-      // Only proceed if we have enough modern responses
-      if (modernResponses.length < 10) return null;
-
-      // Run modern assessment
-      final result = AttachmentAssessment.run(modernResponses);
-      final config = await AssessmentIntegration.selectConfiguration(
-        result.scores,
-        result.routing,
-      );
-
-      return {
-        'config': config,
-        'scores': result.scores,
-        'routing': result.routing,
-        'responses': modernResponses,
-      };
-    } catch (e) {
-      print('Error upgrading to modern assessment: $e');
-      return null;
     }
   }
 
@@ -377,6 +291,116 @@ class _PersonalityResultsScreenProfessionalState
       default:
         return "Growth Tip: Focus on understanding your attachment patterns and how they affect your relationships.";
     }
+  }
+
+  /// Check if user qualifies for modern assessment upgrade
+  bool _shouldOfferUpgrade(
+      String dominantType, Map<String, double> dimensions) {
+    // Offer upgrade if:
+    // 1. User shows mixed attachment patterns (close dimensional scores)
+    // 2. Has anxious or disorganized attachment (could benefit from detailed insights)
+    // 3. Dimensional scores are close to boundaries (uncertain results)
+
+    final anxiety = dimensions['anxiety'] ?? 3.0;
+    final avoidance = dimensions['avoidance'] ?? 3.0;
+    final disorganized = dimensions['disorganized'] ?? 3.0;
+
+    // Check for mixed patterns (scores close to thresholds)
+    bool mixedPattern =
+        (anxiety - 2.5).abs() < 0.5 || (avoidance - 2.5).abs() < 0.5;
+
+    // Check for anxious or disorganized patterns that could benefit from detailed assessment
+    bool complexPattern = dominantType == 'A' || dominantType == 'D';
+
+    // Check for high dimensional scores (intense patterns)
+    bool intensePattern =
+        anxiety > 4.0 || avoidance > 4.0 || disorganized > 4.0;
+
+    return mixedPattern || complexPattern || intensePattern;
+  }
+
+  Widget _buildUpgradeOption(BuildContext context, AppThemeWrapper theme,
+      String dominantType, Map<String, double> dimensions) {
+    if (!_shouldOfferUpgrade(dominantType, dimensions)) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: EdgeInsets.all(theme.spacing.lg),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.primary.withOpacity(0.1),
+            theme.secondary.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(theme.radiusLG),
+        border: Border.all(
+          color: theme.primary.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.psychology_outlined,
+                color: theme.primary,
+                size: 24,
+              ),
+              SizedBox(width: theme.spacing.sm),
+              Expanded(
+                child: Text(
+                  'Enhanced Assessment Available',
+                  style: theme.typography.titleMedium.copyWith(
+                    color: theme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: theme.spacing.sm),
+          Text(
+            'Your results suggest you might benefit from our enhanced attachment assessment. Get deeper insights with validated psychological measures and personalized recommendations.',
+            style: theme.typography.bodyMedium.copyWith(
+              color: theme.textSecondary,
+            ),
+          ),
+          SizedBox(height: theme.spacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pushNamed(context, '/personality_test_modern');
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.primary,
+                side: BorderSide(color: theme.primary, width: 1.5),
+                padding: EdgeInsets.symmetric(
+                  vertical: theme.spacing.md,
+                  horizontal: theme.spacing.lg,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(theme.radiusMD),
+                ),
+              ),
+              icon: const Icon(Icons.upgrade, size: 20),
+              label: Text(
+                'Take Enhanced Assessment',
+                style: theme.typography.button.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -904,6 +928,12 @@ class _PersonalityResultsScreenProfessionalState
                       ),
 
                       SizedBox(height: theme.spacing.xl),
+
+                      // Modern Assessment Upgrade Option
+                      _buildUpgradeOption(
+                          context, theme, dominantType, dimensions),
+
+                      SizedBox(height: theme.spacing.lg),
 
                       // Next button
                       PremiumButton(

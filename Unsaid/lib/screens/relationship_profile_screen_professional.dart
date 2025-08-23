@@ -464,7 +464,7 @@ With emotional awareness and gentle boundaries, trust can grow.''';
                                   },
                                   child: Row(
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.warning_amber_outlined,
                                         color: Colors.orange,
                                         size: 24,
@@ -504,7 +504,7 @@ With emotional awareness and gentle boundaries, trust can grow.''';
                                           ),
                                           child: Row(
                                             children: [
-                                              Icon(
+                                              const Icon(
                                                 Icons.circle,
                                                 size: 6,
                                                 color: Colors.orange,

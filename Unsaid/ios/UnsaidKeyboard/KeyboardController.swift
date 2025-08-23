@@ -1,4 +1,4 @@
-You said:
+
 //
 //  KeyboardController.swift
 //
@@ -7,6 +7,15 @@ import Foundation
 import os.log
 import AudioToolbox
 import UIKit
+
+// MARK: - UIColor Extensions
+private extension UIColor {
+    static var keyboardBackground: UIColor { .systemGray6 }
+    static var keyboardRose: UIColor { .systemPink }
+    static var keyBorder: UIColor { .systemGray3 }
+    static var keyShadow: UIColor { .systemGray2 }
+}
+
 
 // MARK: - UndoManagerLite for autocorrect undo
 final class UndoManagerLite {
@@ -481,44 +490,44 @@ final class SuggestionChipView: UIControl {
         }
         
         // Update chevron rotation immediately for better UX
-        UIView.animate(withDuration: 0.2) {
-            if self.isExpanded {
-                self.chevronButton.transform = CGAffineTransform(rotationAngle: .pi / 2)
+        UIView.animate(withDuration: 0.2) { [weak self] in
+            if self?.isExpanded == true {
+                self?.chevronButton.transform = CGAffineTransform(rotationAngle: .pi / 2)
             } else {
-                self.chevronButton.transform = .identity
+                self?.chevronButton.transform = .identity
             }
         }
         
-        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0) {
-            if self.isExpanded {
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0) { [weak self] in
+            if self?.isExpanded == true {
                 // Deactivate compact constraints first
-                NSLayoutConstraint.deactivate(self.compactConstraints)
+                NSLayoutConstraint.deactivate(self?.compactConstraints ?? [])
                 
                 // Allow line wrapping in expanded mode - up to 4 lines when space permits
-                self.titleLabel.font = .systemFont(ofSize: 13, weight: .medium)
-                self.titleLabel.numberOfLines = 4
+                self?.titleLabel.font = .systemFont(ofSize: 13, weight: .medium)
+                self?.titleLabel.numberOfLines = 4
                 
                 // Show CTA button
-                self.ctaButton.alpha = 1.0
+                self?.ctaButton.alpha = 1.0
                 
                 // Activate expanded constraints
-                NSLayoutConstraint.activate(self.expandedConstraints)
+                NSLayoutConstraint.activate(self?.expandedConstraints ?? [])
             } else {
                 // Deactivate expanded constraints first
-                NSLayoutConstraint.deactivate(self.expandedConstraints)
+                NSLayoutConstraint.deactivate(self?.expandedConstraints ?? [])
                 
                 // Return to normal size
-                self.titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
-                self.titleLabel.numberOfLines = 2
-                self.ctaButton.alpha = 0.0
+                self?.titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+                self?.titleLabel.numberOfLines = 2
+                self?.ctaButton.alpha = 0.0
                 
                 // Activate compact constraints
-                NSLayoutConstraint.activate(self.compactConstraints)
+                NSLayoutConstraint.activate(self?.compactConstraints ?? [])
             }
             
             // Force layout update on both the chip and its superview
-            self.layoutIfNeeded()
-            self.superview?.layoutIfNeeded()
+            self?.layoutIfNeeded()
+            self?.superview?.layoutIfNeeded()
         }
         
         // Update accessibility
@@ -664,17 +673,17 @@ final class SuggestionChipView: UIControl {
 
     private func applyTone(_ tone: Tone, animated: Bool) {
         let (bg, icon, textColor, iconColor) = toneColors(tone)
-        let apply = {
-            self.content.backgroundColor = bg
-            self.iconView.image = UIImage(systemName: icon)
-            self.iconView.tintColor = iconColor
-            self.titleLabel.textColor = textColor
-            self.closeButton.tintColor = iconColor.withAlphaComponent(0.9)
-            self.chevronButton.tintColor = iconColor.withAlphaComponent(0.8)
-            self.ctaButton.setTitleColor(textColor, for: .normal)
+        let apply = { [weak self] in
+            self?.content.backgroundColor = bg
+            self?.iconView.image = UIImage(systemName: icon)
+            self?.iconView.tintColor = iconColor
+            self?.titleLabel.textColor = textColor
+            self?.closeButton.tintColor = iconColor.withAlphaComponent(0.9)
+            self?.chevronButton.tintColor = iconColor.withAlphaComponent(0.8)
+            self?.ctaButton.setTitleColor(textColor, for: .normal)
             
             // Update pager dots color
-            for dot in self.pagerDots {
+            for dot in self?.pagerDots ?? [] {
                 dot.backgroundColor = iconColor.withAlphaComponent(
                     dot.backgroundColor?.cgColor.alpha == 0.8 ? 0.8 : 0.3
                 )
@@ -698,14 +707,14 @@ final class SuggestionChipView: UIControl {
     }
 
     private func animateTap() {
-        UIView.animate(withDuration: 0.08, animations: {
-            self.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
-        }) { _ in
+        UIView.animate(withDuration: 0.08, animations: { [weak self] in
+            self?.transform = CGAffineTransform(scaleX: 0.97, y: 0.97)
+        }) { [weak self] _ in
             UIView.animate(withDuration: 0.18,
                            delay: 0,
                            usingSpringWithDamping: 0.7,
                            initialSpringVelocity: 0) {
-                self.transform = .identity
+                self?.transform = .identity
             }
         }
     }
@@ -714,9 +723,9 @@ final class SuggestionChipView: UIControl {
         if superview == nil { container.addSubview(self) }
         alpha = startAlpha
         transform = CGAffineTransform(translationX: 0, y: 6)
-        UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut]) {
-            self.alpha = 1
-            self.transform = .identity
+        UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut]) { [weak self] in
+            self?.alpha = 1
+            self?.transform = .identity
         }
         startAutoHideTimer()
     }
@@ -725,13 +734,13 @@ final class SuggestionChipView: UIControl {
         autoHideTimer?.invalidate()
         autoHideTimer = nil
         
-        let work = {
-            self.alpha = 0
-            self.transform = CGAffineTransform(translationX: 0, y: 6)
+        let work = { [weak self] in
+            self?.alpha = 0
+            self?.transform = CGAffineTransform(translationX: 0, y: 6)
         }
-        let done: (Bool) -> Void = { _ in
-            self.removeFromSuperview()
-            self.onDismiss?()
+        let done: (Bool) -> Void = { [weak self] _ in
+            self?.removeFromSuperview()
+            self?.onDismiss?()
         }
         if animated {
             UIView.animate(withDuration: 0.18,
@@ -754,7 +763,7 @@ final class SuggestionChipView: UIControl {
 final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputViewAudioFeedback, UIGestureRecognizerDelegate {
 
     // MARK: - Services
-    private let logger = Logger(subsystem: "com.example.unsaid.UnsaidKeyboard", category: "KeyboardController")
+    private let logger = Logger(subsystem: "com.example.unsaid.unsaid.UnsaidKeyboard", category: "KeyboardController")
     private var coordinator: ToneSuggestionCoordinator?
     
     // MARK: - OpenAI Configuration
@@ -913,13 +922,37 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
     private enum KeyID: String {
         case character         // dynamic letters/numbers, use payload
         case space     = "SPACE"
-        case return  = "RETURN"
+        case returnKey = "RETURN"
         case backspace = "BACKSPACE"
         case shift     = "SHIFT"
         case mode      = "MODE"     // "123" / "ABC"
         case symbols   = "SYMBOLS"  // "#+=" / "123" depending on mode
         case globe     = "GLOBE"
         case quickFix  = "QUICKFIX" // "Secure"
+    }
+
+    // MARK: - FatFingerEngine
+    private class FatFingerEngine {
+        struct KeyFrame {
+            let id: String
+            let frame: CGRect
+        }
+        
+        enum Event {
+            case highlight(String)
+            case unhighlight(String)
+            case commit(String)
+            case cancel(String)
+        }
+        
+        func configure(keys: [KeyFrame]) {
+            // Fat finger configuration logic
+        }
+        
+        func handleTouch(at point: CGPoint) -> Event? {
+            // Fat finger touch handling
+            return nil
+        }
     }
 
     // Fat-finger tracking properties
@@ -1099,7 +1132,7 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
 
     func configure(with inputVC: UIInputViewController) {
         parentInputVC = inputVC
-        if let lang = UserDefaults(suiteName: "group.com.unsaid.shared")?.string(forKey: "keyboard_language") {
+        if let lang = UserDefaults(suiteName: "group.com.example.unsaid")?.string(forKey: "keyboard_language") {
             spellChecker.setPreferredLanguage(lang)
         }
         coordinator = ToneSuggestionCoordinator()
@@ -1162,7 +1195,7 @@ private func keyIdentifier(for button: UIButton) -> (id: KeyID, payload: String?
     let raw = button.accessibilityValue ?? button.title(for: .normal) ?? ""
     switch raw {
     case "SPACE":           return (.space, nil)
-    case "return":          return (.return, nil)
+    case "return":          return (.returnKey, nil)
     case "⌫":               return (.backspace, nil)
     case "⇧":               return (.shift, nil)
     case "123", "ABC":      return (.mode, nil)
@@ -1308,7 +1341,7 @@ private func commit(button: UIButton) {
 
         switch upper {
         case "SPACE":               return .init(id: .space, label: nil)
-        case "RETURN", "ENTER":     return .init(id: .return, label: nil)
+        case "RETURN", "ENTER":     return .init(id: .returnKey, label: nil)
         case "⌫", "BACKSPACE":      return .init(id: .backspace, label: nil)
         case "⇧", "SHIFT":          return .init(id: .shift, label: nil)
         case "🌐", "GLOBE":         return .init(id: .globe, label: nil)
@@ -1363,7 +1396,7 @@ private func commit(button: UIButton) {
         switch id {
         case KeyID.space.rawValue:
             handleSpaceTap()
-        case KeyID.return.rawValue:
+        case KeyID.returnKey.rawValue:
             commitAndCleanup()
             proxy.insertText("\n")
             currentText += "\n"
@@ -1385,7 +1418,7 @@ private func commit(button: UIButton) {
         default:
             // character or number/symbol
             let ch = id
-            let isAlphaMode = [.letters, .standard, .compact, .expanded].contains(currentMode)
+            let isAlphaMode = [.letters, .compact, .expanded].contains(currentMode)
             let out = isAlphaMode ? (isShifted ? ch.uppercased() : ch.lowercased()) : ch
             proxy.insertText(out)
             currentText += out
@@ -1410,7 +1443,7 @@ private func commit(button: UIButton) {
 
     // MARK: - Secure Fix profile builders (kept as-is)
     private func buildUserProfileForSecureFix() -> [String: Any] {
-        let shared = UserDefaults(suiteName: "group.com.unsaid.shared")
+        let shared = UserDefaults(suiteName: "group.com.example.unsaid")
         var profile: [String: Any] = [:]
         if let v = shared?.string(forKey: "attachment_style") { profile["attachment_style"] = v }
         if let v = shared?.string(forKey: "currentEmotionalState") { profile["emotional_state"] = v }
@@ -1420,7 +1453,7 @@ private func commit(button: UIButton) {
         return profile
     }
     private func buildUserPersonalityProfile() -> [String: Any] {
-        let shared = UserDefaults(suiteName: "group.com.unsaid.shared")
+        let shared = UserDefaults(suiteName: "group.com.example.unsaid")
         var profile: [String: Any] = [:]
         if let v = shared?.string(forKey: "attachment_style") { profile["attachment_style"] = v }
         if let v = shared?.string(forKey: "currentEmotionalState") { profile["emotional_state"] = v }
@@ -1648,7 +1681,7 @@ private func commit(button: UIButton) {
         let midRow = rowStack(for: mid, centerNine: true)
         let botLetters = rowStack(for: bot)
 
-        let left = ([.letters, .standard, .compact, .expanded].contains(currentMode)) ? shiftButton : symbolsButton
+        let left = ([.letters, .compact, .expanded].contains(currentMode)) ? shiftButton : symbolsButton
         let bottomRow = UIStackView(arrangedSubviews: [left, botLetters, deleteButton].compactMap { $0 as UIView? })
         bottomRow.axis = .horizontal
         bottomRow.spacing = horizontalSpacing
@@ -1911,14 +1944,14 @@ private func commit(button: UIButton) {
             return
         default:
             let ch: String
-            if [.letters, .standard, .compact, .expanded].contains(currentMode) {
+            if [.letters, .compact, .expanded].contains(currentMode) {
                 ch = isShifted ? original.uppercased() : original.lowercased()
             } else { ch = original }
             proxy.insertText(ch)
             currentText += ch
 
             // auto-unshift for single letters
-            if isShifted && !isCapsLocked && [.letters, .standard, .compact, .expanded].contains(currentMode) && ![".", "!", "?"].contains(ch) {
+            if isShifted && !isCapsLocked && [.letters, .compact, .expanded].contains(currentMode) && ![".", "!", "?"].contains(ch) {
                 isShifted = false
                 updateShiftButtonAppearance()
                 updateKeyTitlesForShiftState()
@@ -1951,25 +1984,32 @@ private func commit(button: UIButton) {
     private func handleSpaceTap() {
         guard let proxy = textDocumentProxy else { return }
 
-        // (A) If you implement your OWN double-space-to-period, detect it *here*.
-        // Otherwise, leave this block out entirely.
-        let now = CACurrentMediaTime()
-        let isDoubleSpace = (now - lastSpaceTapTime) < doubleSpaceWindow
-        lastSpaceTapTime = now
+        // Sync traits with spell checker for Apple-like behavior
+        spellChecker.syncFromTextTraits(proxy)
 
-        if isDoubleSpace {
-            // Replace the previous space with ". "
-            proxy.deleteBackward()           // remove prior space
-            proxy.insertText(". ")
-            currentText = String(currentText.dropLast()) + ". "
+        // (A) Apple-like double-space period handling
+        if spellChecker.handleDoubleSpace(proxy) {
+            // Spell checker handled it, update our current text
+            let before = proxy.documentContextBeforeInput ?? ""
+            if before.hasSuffix(". ") {
+                // Update currentText to match the spell checker's change
+                if currentText.hasSuffix("  ") {
+                    currentText = String(currentText.dropLast(2)) + ". "
+                }
+            }
             autocorrectLastWordIfNeeded(afterTyping: ".")
             handleTextChange()
+            enableShiftForNextCharacter()
             return
         }
 
         // (B) Insert exactly ONE space
         proxy.insertText(" ")
         currentText += " "
+        
+        // Apple-like: reevaluate previous word after space
+        _ = spellChecker.reevaluatePreviousWord(before: proxy)
+        
         autocorrectLastWordIfNeeded(afterTyping: " ")
 
         // (C) Normalize "!. " or "?. " → "! " / "? " and ".. " → ". "
@@ -2005,6 +2045,12 @@ private func commit(button: UIButton) {
         // Don't run heavy autocorrect on every space - save for commit/send
         refreshSpellCandidates()
         handleTextChange()
+        
+        // Check if we should enable shift for next character after space
+        let fullText = (proxy.documentContextBeforeInput ?? "") + currentText
+        if LightweightSpellChecker.shared.shouldCapitalizeNext(afterText: fullText) {
+            enableShiftForNextCharacter()
+        }
     }
 
     @objc private func handleGlobeKey() {
@@ -2046,7 +2092,7 @@ private func commit(button: UIButton) {
         let now = Date()
         guard now.timeIntervalSince(lastShiftUpdateTime) > 0.1 else { return }
         lastShiftUpdateTime = now
-        guard [.letters, .standard, .compact, .expanded].contains(currentMode),
+        guard [.letters, .compact, .expanded].contains(currentMode),
               let stack = keyboardStackView else { return }
         updateKeysInStackView(stack)
     }
@@ -2067,15 +2113,16 @@ private func commit(button: UIButton) {
 
     private func getKeysForCurrentMode() -> ([String], [String], [String]) {
         switch currentMode {
-        case .letters, .standard, .compact, .expanded: return (topRowKeys, midRowKeys, botRowKeys)
+        case .letters, .compact, .expanded: return (topRowKeys, midRowKeys, botRowKeys)
         case .numbers: return (topRowNumbers, midRowNumbers, botRowNumbers)
         case .symbols: return (topRowSymbols, midRowSymbols, botRowSymbols)
+        case .suggestion, .analysis, .settings: return (topRowKeys, midRowKeys, botRowKeys)
         }
     }
 
     private func updateModeButtonTitle() {
         switch currentMode {
-        case .letters, .standard, .compact, .expanded:
+        case .letters, .compact, .expanded:
             modeButton?.setTitle("123", for: .normal)
             symbolsButton?.setTitle("#+=", for: .normal)
         case .numbers:
@@ -2084,12 +2131,15 @@ private func commit(button: UIButton) {
         case .symbols:
             modeButton?.setTitle("ABC", for: .normal)
             symbolsButton?.setTitle("123", for: .normal)
+        case .suggestion, .analysis, .settings:
+            modeButton?.setTitle("123", for: .normal)
+            symbolsButton?.setTitle("#+=", for: .normal)
         }
     }
 
     @objc private func handleModeSwitch() {
         triggerHapticFeedback()
-        currentMode = ([.letters, .standard, .compact, .expanded].contains(currentMode)) ? .numbers : .letters
+        currentMode = ([.letters, .compact, .expanded].contains(currentMode)) ? .numbers : .letters
         updateKeyboardForCurrentMode()
     }
 
@@ -2215,7 +2265,7 @@ private func commit(button: UIButton) {
     func didUpdateSuggestions(_ suggestions: [String]) {
         #if DEBUG
         logger.debug("🎯 didUpdateSuggestions called with: \(suggestions)")
-        logger.debug("📊 Current state - suggestionChip exists: \(suggestionChip != nil), isSuggestionBarVisible: \(isSuggestionBarVisible)")
+        logger.debug("📊 Current state - suggestionChip exists: \(self.suggestionChip != nil), isSuggestionBarVisible: \(self.isSuggestionBarVisible)")
         #endif
         
         let filteredSuggestions = suggestions.first.map { [$0] } ?? []
@@ -2464,7 +2514,7 @@ private func commit(button: UIButton) {
         spellStrip.isHidden = true
         
         #if DEBUG
-        logger.debug("Suggestion chip \(shouldCreateNew ? "created" : "updated") with stickiness until: \(suggestionStickyUntil)")
+        logger.debug("Suggestion chip \(shouldCreateNew ? "created" : "updated") with stickiness until: \(self.suggestionStickyUntil)")
         #endif
     }
     
@@ -2556,7 +2606,7 @@ private func commit(button: UIButton) {
         
         // Send lightweight analytics event (implement based on your analytics system)
         #if DEBUG
-        logger.debug("📊 Analytics: \(key) = \(analyticsCounters[key] ?? 0)")
+        logger.debug("📊 Analytics: \(key) = \(self.analyticsCounters[key] ?? 0)")
         #endif
         
         // You can add your analytics service call here
@@ -2649,7 +2699,7 @@ private func commit(button: UIButton) {
             spellStrip.isHidden = true
         }
         }
-    }
+    
 
     // Optional: still allow fully hiding the bar with a long-press
     @objc private func toggleSuggestionsDisplayLongPress(_ gr: UILongPressGestureRecognizer) {
@@ -2719,8 +2769,8 @@ private func commit(button: UIButton) {
             #if DEBUG
             logger.debug("❌ Text doesn't meet thresholds or is nil")
             if let s = candidate {
-                logger.debug("   - Text length: \(s.count) (min: \(minCharsForAnalysis))")
-                logger.debug("   - Word count: \(s.split { $0.isWhitespace }.count) (min: \(minWordsForAnalysis))")
+                logger.debug("   - Text length: \(s.count) (min: \(self.minCharsForAnalysis))")
+                logger.debug("   - Word count: \(s.split { $0.isWhitespace }.count) (min: \(self.minWordsForAnalysis))")
             }
             logger.debug("🔄 Requesting suggestions directly from coordinator")
             #endif
@@ -2907,16 +2957,29 @@ private func commit(button: UIButton) {
         proxy.insertText(punctuation)
         currentText += punctuation
         
+        // Get current context for spell checker recommendations
+        let fullText = (proxy.documentContextBeforeInput ?? "") + currentText
+        
         // For sentence-ending punctuation, add space and switch to alphabetic mode
         if [".", "!", "?"].contains(punctuation) {
             if let b = punctuation.first { autocorrectLastWordIfNeeded(afterTyping: b) }
             proxy.insertText(" ")
             currentText += " "
+            // Apple-like: reevaluate previous word after punctuation
+            _ = spellChecker.reevaluatePreviousWord(before: proxy)
             switchToAlphabeticKeyboard()
         } else if [",", ";", ":"].contains(punctuation) {
             if let b = punctuation.first { autocorrectLastWordIfNeeded(afterTyping: b) }
             proxy.insertText(" ")
             currentText += " "
+            // Apple-like: reevaluate previous word after punctuation
+            _ = spellChecker.reevaluatePreviousWord(before: proxy)
+            
+            // Check if spell checker recommends switching to ABC mode
+            if let lastChar = punctuation.first,
+               LightweightSpellChecker.shared.shouldSwitchToABCMode(afterText: fullText + " ", lastCharacter: lastChar) {
+                switchToAlphabeticKeyboard()
+            }
         }
         
          // Don't run autocorrect on every punctuation keystroke - save for commit/send
@@ -2929,6 +2992,20 @@ private func commit(button: UIButton) {
             triggerHapticFeedback()
             currentMode = .letters
             updateKeyboardForCurrentMode()
+        }
+        // Enable shift for next character using spell checker logic
+        enableShiftForNextCharacter()
+    }
+    
+    private func enableShiftForNextCharacter() {
+        guard let proxy = textDocumentProxy else { return }
+        let fullText = (proxy.documentContextBeforeInput ?? "") + currentText
+        
+        if LightweightSpellChecker.shared.shouldCapitalizeNext(afterText: fullText) {
+            isShifted = true
+            isCapsLocked = false
+            updateShiftButtonAppearance()
+            updateKeyTitlesForShiftState()
         }
     }
     
@@ -2992,7 +3069,7 @@ private func commit(button: UIButton) {
     private func triggerHapticFeedback() {
         impact.impactOccurred(intensity: 0.5)
     }
-
+}
 // MARK: - ExtendedTouchButton (bigger touch target)
 private final class ExtendedTouchButton: UIButton {
     private let mainTouchTargetSize: CGFloat = 46.0
@@ -3002,7 +3079,6 @@ private final class ExtendedTouchButton: UIButton {
         let expanded = bounds.insetBy(dx: -w/2, dy: -h/2)
         return expanded.contains(point)
     }
-}
 }
 private extension CGRect {
     var center: CGPoint { CGPoint(x: midX, y: midY) }

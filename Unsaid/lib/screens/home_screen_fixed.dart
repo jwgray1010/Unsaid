@@ -25,28 +25,35 @@ class _HomeScreenState extends State<HomeScreen> {
   double sensitivity = 0.5;
   String selectedTone = 'neutral';
   List<Map<String, dynamic>> savedProfiles = [];
-  final SecureCommunicationProgressService _progressService = SecureCommunicationProgressService();
+  final SecureCommunicationProgressService _progressService =
+      SecureCommunicationProgressService();
   final SecureStorageService _storageService = SecureStorageService();
   final UnifiedAnalyticsService _analyticsService = UnifiedAnalyticsService();
   final KeyboardManager _keyboardManager = KeyboardManager();
   final NewUserExperienceService _newUserService = NewUserExperienceService();
-  final UsageTrackingService _usageTracker = UsageTrackingService();
+  final UsageTrackingService _usageTracker = UsageTrackingService.instance;
   Map<String, dynamic>? _progressData;
   Map<String, dynamic>? _personalityData;
   Map<String, dynamic>? _analyticsData;
   Map<String, dynamic>? _realKeyboardData;
-  String _relationshipType = 'couples';
+  final String _relationshipType = 'couples';
+  bool hasPartner = false;
+  Map<String, dynamic>? partnerProfile;
 
   String get userName {
     final authService = AuthService.instance;
-    if (authService.user?.displayName != null && authService.user!.displayName!.isNotEmpty) {
-      return authService.user!.displayName!.split(' ').first; // Get first name only
+    if (authService.user?.displayName != null &&
+        authService.user!.displayName!.isNotEmpty) {
+      return authService.user!.displayName!
+          .split(' ')
+          .first; // Get first name only
     } else if (authService.user?.email != null) {
       // Fallback to email prefix if no display name
       return authService.user!.email!.split('@').first;
     }
     return 'User'; // Final fallback
   }
+
   // Real personality data from user's test results
   Map<String, int> get personalityData {
     if (_personalityData != null && _personalityData!['counts'] != null) {
@@ -74,7 +81,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String get personalityTypeLabel {
-    if (_personalityData != null && _personalityData!['dominant_type_label'] != null) {
+    if (_personalityData != null &&
+        _personalityData!['dominant_type_label'] != null) {
       return _personalityData!['dominant_type_label'];
     }
     const typeLabels = {
@@ -92,11 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'neutral', 'color': Colors.grey, 'icon': Icons.balance},
   ];
 
-  // Partner profile state
-  Map<String, dynamic>? partnerProfile;
-  bool hasPartner =
-      false; // This would be determined by checking if partner exists in database
-
   @override
   @override
   void initState() {
@@ -108,32 +111,33 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // Initialize new user experience service first
       await _newUserService.checkUserHasData();
-      
+
       final results = await Future.wait([
         _storageService.getPersonalityTestResults(),
         _analyticsService.getIndividualAnalytics(),
         _progressService.getSecureCommunicationProgress(
           userPersonalityType: personalityTypeLabel,
-          userCommunicationStyle: _personalityData?['communication_style_label'] ?? 'Assertive',
+          userCommunicationStyle:
+              _personalityData?['communication_style_label'] ?? 'Assertive',
         ),
         _keyboardManager.getComprehensiveRealData(),
         _storageService.getPartnerProfile(),
       ]);
-      
+
       // Track home screen usage
       _usageTracker.trackScreenView('home', {
         'is_new_user': _newUserService.isNewUser,
         'total_interactions': _newUserService.totalInteractions,
       });
-      
+
       if (!mounted) return;
       setState(() {
-        _personalityData = results[0] as Map<String, dynamic>?;
-        _analyticsData   = results[1] as Map<String, dynamic>?;
-        _progressData    = results[2] as Map<String, dynamic>?;
-        _realKeyboardData= results[3] as Map<String, dynamic>?;
-        final partner    = results[4] as Map<String, dynamic>?;
-        
+        _personalityData = results[0];
+        _analyticsData = results[1];
+        _progressData = results[2];
+        _realKeyboardData = results[3];
+        final partner = results[4];
+
         // Handle partner data with proper fallbacks
         if (partner != null && partner.isNotEmpty) {
           hasPartner = true;
@@ -154,23 +158,26 @@ class _HomeScreenState extends State<HomeScreen> {
             'joined_date': null,
           };
         }
-        
+
         // Handle keyboard data with proper fallbacks
-        if (_realKeyboardData?['real_data'] != true || (_realKeyboardData?['total_interactions'] ?? 0) == 0) {
+        if (_realKeyboardData?['real_data'] != true ||
+            (_realKeyboardData?['total_interactions'] ?? 0) == 0) {
           _realKeyboardData = {
             'real_data': false,
             'total_interactions': 0,
             'isNewUser': true,
             'welcomeMessage': '🎉 Welcome to Unsaid!',
-            'subtitle': 'Your personalized insights will appear here as you start using the keyboard',
-            'actionPrompt': 'Enable the Unsaid keyboard to begin your communication journey',
+            'subtitle':
+                'Your personalized insights will appear here as you start using the keyboard',
+            'actionPrompt':
+                'Enable the Unsaid keyboard to begin your communication journey',
             'tone_distribution': {'positive': 0, 'neutral': 0, 'negative': 0},
             'attachment_style': 'discovering',
             'suggestion_acceptance_rate': 0,
             'current_tone_status': 'ready',
           };
         }
-        
+
         loading = false;
       });
     } catch (e) {
@@ -196,7 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
           'error': true,
           'welcomeMessage': '🎉 Welcome to Unsaid!',
           'subtitle': 'Setting up your personalized experience...',
-          'actionPrompt': 'Make sure the Unsaid keyboard is enabled in Settings',
+          'actionPrompt':
+              'Make sure the Unsaid keyboard is enabled in Settings',
           'tone_distribution': {'positive': 0, 'neutral': 0, 'negative': 0},
         };
         loading = false;
@@ -207,10 +215,9 @@ class _HomeScreenState extends State<HomeScreen> {
   CTAModel _decidePrimaryCTA(BuildContext context) {
     // Use new user experience service for better detection
     final isNewUser = _newUserService.isNewUser;
-    final totalInteractions = _newUserService.totalInteractions;
-    
+
     final hasReal = (_realKeyboardData?['real_data'] == true) &&
-                    ((_realKeyboardData?['total_interactions'] ?? 0) > 0);
+        ((_realKeyboardData?['total_interactions'] ?? 0) > 0);
 
     // Track CTA shown for analytics
     _usageTracker.trackCTAShown(_getCTAType(isNewUser, hasReal));
@@ -262,11 +269,13 @@ class _HomeScreenState extends State<HomeScreen> {
       onPressed: () {
         _usageTracker.trackCTAClicked('relationship_hub');
         Navigator.push(
-          context, MaterialPageRoute(builder: (_) => const RelationshipInsightsDashboard()));
+            context,
+            MaterialPageRoute(
+                builder: (_) => const RelationshipInsightsDashboard()));
       },
     );
   }
-  
+
   String _getCTAType(bool isNewUser, bool hasReal) {
     if (isNewUser || !hasReal) return 'enable_keyboard';
     if (_personalityData == null) return 'personality_test';
@@ -289,33 +298,45 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           Container(
-            width: 48, height: 48,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)]),
+              gradient: const LinearGradient(
+                  colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)]),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(Icons.favorite, size: 24, color: Colors.white),
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Welcome back, $userName',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.black)),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold, color: Colors.black)),
               const SizedBox(height: 2),
               Text('What would you like to do today?',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black.withOpacity(0.6))),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.black.withOpacity(0.6))),
             ]),
           ),
           GestureDetector(
             onTap: () => Navigator.pushNamed(context, '/premium'),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF7B61FF), borderRadius: BorderRadius.circular(8)),
+                  color: const Color(0xFF7B61FF),
+                  borderRadius: BorderRadius.circular(8)),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: const Row(children: [
                 Icon(Icons.star, color: Colors.white, size: 16),
                 SizedBox(width: 4),
-                Text('Premium', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text('Premium',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13)),
               ]),
             ),
           ),
@@ -347,7 +368,8 @@ class _HomeScreenState extends State<HomeScreen> {
             final results = await _storageService.getPersonalityTestResults();
             if (!mounted) return;
             if (results != null && results.isNotEmpty) {
-              Navigator.pushNamed(context, '/personality_results', arguments: results['answers'] ?? []);
+              Navigator.pushNamed(context, '/personality_results',
+                  arguments: results['answers'] ?? []);
             } else {
               Navigator.pushNamed(context, '/personality_test_modern');
             }
@@ -365,7 +387,10 @@ class _HomeScreenState extends State<HomeScreen> {
         'onTap': () {
           _usageTracker.trackActionGridClick('relationship_hub');
           if (hasPartner) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const RelationshipInsightsDashboard()));
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const RelationshipInsightsDashboard()));
           } else {
             _invitePartner();
           }
@@ -377,7 +402,10 @@ class _HomeScreenState extends State<HomeScreen> {
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.9),
+          crossAxisCount: 3,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.9),
       itemCount: items.length,
       itemBuilder: (_, i) {
         final it = items[i];
@@ -391,16 +419,19 @@ class _HomeScreenState extends State<HomeScreen> {
               border: Border.all(color: c.withOpacity(0.18)),
             ),
             padding: const EdgeInsets.all(12),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            child:
+                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(it['icon'] as IconData, color: c, size: 28),
               const SizedBox(height: 10),
               Text(it['title'] as String,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 12)),
               const SizedBox(height: 4),
               Text(it['subtitle'] as String,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11, color: Colors.black.withOpacity(0.6))),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 11, color: Colors.black.withOpacity(0.6))),
             ]),
           ),
         );
@@ -414,9 +445,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void handleDelete(String id) {
     // Delete implementation
-  }
-
-  /// Load real keyboard data from Swift extension with new user fallbacks
   }
 
   @override
@@ -433,11 +461,11 @@ class _HomeScreenState extends State<HomeScreen> {
       // Hero Header
       _buildHeroHeader(),
       const SizedBox(height: 20),
-      
+
       // Primary CTA Banner
       PrimaryCTABanner(model: _decidePrimaryCTA(context)),
       const SizedBox(height: 24),
-      
+
       // Action Grid
       _buildActionGrid(),
       const SizedBox(height: 24),
@@ -457,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       const SizedBox(height: 32),
 
-      // Relationship Hub Summary  
+      // Relationship Hub Summary
       _buildRelationshipHubSummaryCard(),
 
       const SizedBox(height: 32),
@@ -483,9 +511,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               'Current Communication Tips',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -558,19 +586,18 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.favorite, color: const Color(0xFF7B61FF), size: 24),
+              const Icon(Icons.favorite, color: Color(0xFF7B61FF), size: 24),
               const SizedBox(width: 12),
               Text(
                 'Relationship Partner',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-
           if (!hasPartner)
             _buildInvitePartnerCard()
           else
@@ -593,22 +620,22 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          Icon(Icons.person_add, color: const Color(0xFF7B61FF), size: 48),
+          const Icon(Icons.person_add, color: Color(0xFF7B61FF), size: 48),
           const SizedBox(height: 16),
           Text(
             'Invite Your Partner',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Connect with your partner to get personalized communication insights based on both your personalities.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.black.withOpacity(0.7),
-            ),
+                  color: Colors.black.withOpacity(0.7),
+                ),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -623,11 +650,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.send, size: 18),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     'Send Invitation',
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -695,11 +722,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         partnerProfile!['name'],
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                       ),
                       const SizedBox(height: 4),
                       Column(
@@ -732,7 +759,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 Text(
                                   partnerProfile!['personality_label'],
-                                  style: Theme.of(context).textTheme.bodySmall
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
                                       ?.copyWith(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w500,
@@ -751,7 +780,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _mapCommunicationStyle(
                                   partnerProfile!['communication_style'],
                                 ),
-                                style: Theme.of(context).textTheme.bodySmall
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
                                     ?.copyWith(
                                       color: Colors.white.withOpacity(0.8),
                                       fontStyle: FontStyle.italic,
@@ -773,7 +804,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.green.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Icon(Icons.link, color: Colors.white, size: 20),
+                  child: const Icon(Icons.link, color: Colors.white, size: 20),
                 ),
               ],
             ),
@@ -792,8 +823,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                icon: Icon(Icons.link, color: Colors.white, size: 16),
-                label: Flexible(
+                icon: const Icon(Icons.link, color: Colors.white, size: 16),
+                label: const Flexible(
                   child: Text(
                     'Open Relationship Dashboard',
                     style: TextStyle(color: Colors.white, fontSize: 13),
@@ -821,15 +852,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         '${partnerProfile!['relationship_duration']}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                          fontWeight: FontWeight.w600,
-                        ),
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       Text(
                         'Together',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.7),
-                        ),
+                              color: Colors.white.withOpacity(0.7),
+                            ),
                       ),
                     ],
                   ),
@@ -845,15 +876,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         '87%',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                          fontWeight: FontWeight.w600,
-                        ),
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       Text(
                         'Compatibility',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.7),
-                        ),
+                              color: Colors.white.withOpacity(0.7),
+                            ),
                       ),
                     ],
                   ),
@@ -912,16 +943,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     'Invite Your Partner',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Send an invitation to your partner so they can take the personality test and you can get personalized communication insights.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.black.withOpacity(0.7),
-                    ),
+                          color: Colors.black.withOpacity(0.7),
+                        ),
                   ),
 
                   const SizedBox(height: 32),
@@ -966,17 +997,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           'Preview Message:',
-                          style: Theme.of(context).textTheme.titleSmall
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Hi! I\'ve been using Unsaid to improve our communication. Join me by taking a quick personality test so we can understand each other better: [invitation-link]',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Colors.black.withOpacity(0.8),
-                                fontStyle: FontStyle.italic,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.black.withOpacity(0.8),
+                                    fontStyle: FontStyle.italic,
+                                  ),
                         ),
                       ],
                     ),
@@ -1024,14 +1057,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.black.withOpacity(0.6),
-                    ),
+                          color: Colors.black.withOpacity(0.6),
+                        ),
                   ),
                 ],
               ),
@@ -1049,9 +1082,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _sendInviteViaSMS() async {
     Navigator.pop(context);
-    
-    const inviteMessage = "Hi! I've been using Unsaid to improve our communication. Join me by taking a quick personality test so we can understand each other better: https://unsaid.app/invite";
-    
+
+    const inviteMessage =
+        "Hi! I've been using Unsaid to improve our communication. Join me by taking a quick personality test so we can understand each other better: https://unsaid.app/invite";
+
     final Uri smsUri = Uri(
       scheme: 'sms',
       path: '', // Empty path opens SMS app without pre-filled number
@@ -1059,7 +1093,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'body': inviteMessage,
       },
     );
-    
+
     try {
       if (await canLaunchUrl(smsUri)) {
         await launchUrl(smsUri);
@@ -1073,10 +1107,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _sendInviteViaEmail() async {
     Navigator.pop(context);
-    
+
     const subject = 'Join me on Unsaid - Communication Personality Test';
-    const body = "Hi!\n\nI've been using Unsaid to improve our communication. Join me by taking a quick personality test so we can understand each other better.\n\nClick here to get started: https://unsaid.app/invite\n\nBest regards!";
-    
+    const body =
+        "Hi!\n\nI've been using Unsaid to improve our communication. Join me by taking a quick personality test so we can understand each other better.\n\nClick here to get started: https://unsaid.app/invite\n\nBest regards!";
+
     final Uri emailUri = Uri(
       scheme: 'mailto',
       queryParameters: {
@@ -1084,7 +1119,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'body': body,
       },
     );
-    
+
     try {
       if (await canLaunchUrl(emailUri)) {
         await launchUrl(emailUri);
@@ -1098,16 +1133,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _shareInviteLink() async {
     Navigator.pop(context);
-    
-    const inviteMessage = "Join me on Unsaid! Take a quick personality test so we can understand each other better: https://unsaid.app/invite";
-    
+
     try {
-      final Uri shareUri = Uri(
-        scheme: 'https',
-        host: 'unsaid.app',
-        path: '/invite',
-      );
-      
       // Use the share functionality
       await launchUrl(
         Uri.parse('https://unsaid.app/invite'),
@@ -1129,245 +1156,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildToneIndicatorCard() {
-    return _buildProfessionalCard(
-      title: 'Tone Indicator',
-      subtitle: 'Live feedback',
-      icon: Icons.psychology_outlined,
-      iconColor: const Color(0xFF4CAF50),
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFE8F5E8), Color(0xFFF1F8E9)],
-      ),
-      content: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildToneColorDot(const Color(0xFF00E676), 'Good', true),
-          const SizedBox(width: 8),
-          _buildToneColorDot(const Color(0xFFFFD600), 'Caution', false),
-          const SizedBox(width: 8),
-          _buildToneColorDot(const Color(0xFFFF1744), 'Alert', false),
-        ],
-      ),
-      onTap: () => Navigator.pushNamed(context, '/tone_test'),
-    );
-  }
-
-  Widget _buildToneColorDot(Color color, String label, bool isActive) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        isActive
-            ? TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 1500),
-                curve: Curves.easeInOut,
-                tween: Tween(begin: 0.8, end: 1.2),
-                builder: (context, scale, child) {
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: color.withOpacity(0.5),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                onEnd: () {
-                  // Create a repeating animation
-                  if (mounted) {
-                    setState(() {}); // Trigger rebuild to restart animation
-                  }
-                },
-              )
-            : Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-        const SizedBox(height: 3),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 8,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-            color: isActive ? color : Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPersonalityCard() {
-    return _buildProfessionalCard(
-      title: 'Personality',
-      subtitle: personalityTypeLabel.split(' ').first,
-      icon: Icons.account_circle_outlined,
-      iconColor: const Color(0xFFFF6B6B),
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFFF5F5), Color(0xFFFEF7F7)],
-      ),
-      content: Container(
-        width: 45,
-        height: 45,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.shade200, width: 2),
-        ),
-        child: CustomPaint(painter: MiniPieChartPainter(personalityData)),
-      ),
-      onTap: () async {
-        // Use real personality data from storage
-        try {
-          final results = await _storageService.getPersonalityTestResults();
-          if (results != null && results.isNotEmpty) {
-            // Navigate with real test results
-            Navigator.pushNamed(
-              context,
-              '/personality_results',
-              arguments: results['answers'] ?? [],
-            );
-          } else {
-            // Navigate to test if no results exist
-            Navigator.pushNamed(context, '/personality_test_modern');
-          }
-        } catch (e) {
-          print('Error accessing personality results: $e');
-          // Fallback to test screen
-          Navigator.pushNamed(context, '/personality_test_modern');
-        }
-      },
-    );
-  }
-
-  Widget _buildProfessionalCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color iconColor,
-    required LinearGradient gradient,
-    required Widget content,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 260,
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-              spreadRadius: 0,
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with icon
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, size: 16, color: iconColor),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 12,
-                    color: Colors.grey.shade400,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 25),
-              SizedBox(height: 70, child: Center(child: content)),
-
-              const SizedBox(height: 25),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                      letterSpacing: -0.1,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey.shade600,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Helper for quick tips
-  Widget _buildQuickTip(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Icon(Icons.circle, color: Color(0xFF7B61FF), size: 8),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 16, color: Colors.black),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Helper for horizontal tip cards
-  Widget _buildHorizontalTipCard(String title, String description, IconData icon, Color color) {
+  Widget _buildHorizontalTipCard(
+      String title, String description, IconData icon, Color color) {
     return Container(
       width: 200,
       padding: const EdgeInsets.all(16),
@@ -1389,7 +1180,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
@@ -1425,7 +1216,8 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'C':
         return const Color(0xFF2196F3); // Blue for Dismissive Avoidant
       case 'D':
-        return const Color(0xFFFF9800); // Orange for Disorganized/Fearful Avoidant
+        return const Color(
+            0xFFFF9800); // Orange for Disorganized/Fearful Avoidant
       default:
         return Colors.grey;
     }
@@ -1444,89 +1236,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return style;
   }
 
-  // Secure Communication Progress Section Builder
-  Widget _buildProgressSection() {
-    final attachmentStyle = _personalityData?['attachment_style'] ?? 'Secure';
-    final communicationStyle = _personalityData?['communication_style'] ?? 'Assertive';
-    
-    // Calculate different aspects of secure communication progress
-    final progressData = _calculateSecureCommunicationProgressAspects(attachmentStyle, communicationStyle);
-    
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.security, color: const Color(0xFF7B61FF), size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Secure Communication Progress',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          
-          // Multiple Progress Lines (Vertical Layout)
-          Column(
-            children: progressData.map((aspect) => _buildProgressLine(
-              aspect['title'] as String,
-              aspect['progress'] as double,
-              aspect['color'] as Color,
-            )).toList(),
-          ),
-          
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF7B61FF).withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Today\'s Focus',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF7B61FF),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _getSecureCommunicationTip(attachmentStyle),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[700],
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  /* UNUSED METHODS - Commented out to avoid linter errors
   // Build individual progress line
   Widget _buildProgressLine(String title, double progress, Color color) {
     final progressPercentage = (progress * 100).round();
@@ -1764,6 +1474,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return "Practice mindful communication by listening actively and expressing yourself clearly and kindly.";
     }
   }
+  */ // End of unused methods
 
   /// Build comprehensive personality results section
   Widget _buildPersonalityResultsSection() {
@@ -1785,14 +1496,14 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.psychology, color: const Color(0xFF7B61FF), size: 24),
+              const Icon(Icons.psychology, color: Color(0xFF7B61FF), size: 24),
               const SizedBox(width: 12),
               Text(
                 'Personality Insights',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
               ),
             ],
           ),
@@ -1804,7 +1515,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () async {
                   // Use real personality data from storage
                   try {
-                    final results = await _storageService.getPersonalityTestResults();
+                    final results =
+                        await _storageService.getPersonalityTestResults();
                     if (results != null && results.isNotEmpty) {
                       // Navigate with real test results
                       Navigator.pushNamed(
@@ -1822,10 +1534,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.pushNamed(context, '/personality_test_modern');
                   }
                 },
-                child: Text(
+                child: const Text(
                   'View Full Report',
                   style: TextStyle(
-                    color: const Color(0xFF7B61FF),
+                    color: Color(0xFF7B61FF),
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -1834,38 +1546,42 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
           const SizedBox(height: 20),
-
           if (_personalityData == null)
             Column(
               children: [
-                Icon(Icons.psychology_outlined, size: 48, color: Colors.grey.shade400),
+                Icon(Icons.psychology_outlined,
+                    size: 48, color: Colors.grey.shade400),
                 const SizedBox(height: 12),
                 Text(
                   'Take Personality Test',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade600,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade600,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Discover your attachment style to improve communication',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey.shade500,
-                  ),
+                        color: Colors.grey.shade500,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/personality_test'),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/personality_test'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7B61FF),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Start Test',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -1881,27 +1597,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             'Your Attachment Style',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             personalityTypeLabel,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
                           ),
                         ],
                       ),
                     ),
                     GestureDetector(
                       onTap: () async {
-                        // Use real personality data from storage  
+                        // Use real personality data from storage
                         try {
-                          final results = await _storageService.getPersonalityTestResults();
+                          final results =
+                              await _storageService.getPersonalityTestResults();
                           if (results != null && results.isNotEmpty) {
                             // Navigate with real test results
                             Navigator.pushNamed(
@@ -1911,23 +1634,26 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           } else {
                             // Navigate to test if no results exist
-                            Navigator.pushNamed(context, '/personality_test_modern');
+                            Navigator.pushNamed(
+                                context, '/personality_test_modern');
                           }
                         } catch (e) {
                           print('Error accessing personality results: $e');
                           // Fallback to test screen
-                          Navigator.pushNamed(context, '/personality_test_modern');
+                          Navigator.pushNamed(
+                              context, '/personality_test_modern');
                         }
-                      },
                       },
                       child: Container(
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade200, width: 2),
+                          border:
+                              Border.all(color: Colors.grey.shade200, width: 2),
                         ),
-                        child: CustomPaint(painter: MiniPieChartPainter(personalityData)),
+                        child: CustomPaint(
+                            painter: MiniPieChartPainter(personalityData)),
                       ),
                     ),
                   ],
@@ -1962,17 +1688,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   'Partner\'s Attachment Style',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  hasPartner ? (partnerProfile?['personality_label'] ?? 'Unknown') : 'Not Available',
+                  hasPartner
+                      ? (partnerProfile?['personality_label'] ?? 'Unknown')
+                      : 'Not Available',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: hasPartner ? Colors.black : Colors.grey.shade500,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: hasPartner ? Colors.black : Colors.grey.shade500,
+                      ),
                 ),
               ],
             ),
@@ -1980,10 +1708,10 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!hasPartner)
             GestureDetector(
               onTap: _invitePartner,
-              child: Text(
+              child: const Text(
                 'Invite Partner',
                 style: TextStyle(
-                  color: const Color(0xFF7B61FF),
+                  color: Color(0xFF7B61FF),
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
@@ -2014,14 +1742,14 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.insights, color: const Color(0xFF2196F3), size: 24),
+              const Icon(Icons.insights, color: Color(0xFF2196F3), size: 24),
               const SizedBox(width: 12),
               Text(
                 'Communication Insights',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
               ),
             ],
           ),
@@ -2035,10 +1763,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   // This would ideally set the tab index to 1
                 });
               },
-              child: Text(
+              child: const Text(
                 'View Details',
                 style: TextStyle(
-                  color: const Color(0xFF2196F3),
+                  color: Color(0xFF2196F3),
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -2046,7 +1774,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          
           if (_analyticsData == null)
             _buildDataLoadingState('Start using the keyboard to see insights')
           else
@@ -2122,14 +1849,14 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.favorite, color: const Color(0xFFE91E63), size: 24),
+              const Icon(Icons.favorite, color: Color(0xFFE91E63), size: 24),
               const SizedBox(width: 12),
               Text(
                 'Relationship Hub',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
               ),
             ],
           ),
@@ -2145,10 +1872,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
               },
-              child: Text(
+              child: const Text(
                 'Open Hub',
                 style: TextStyle(
-                  color: const Color(0xFFE91E63),
+                  color: Color(0xFFE91E63),
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -2156,9 +1883,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          
           if (!hasPartner)
-            _buildDataLoadingState('Invite your partner to unlock relationship insights')
+            _buildDataLoadingState(
+                'Invite your partner to unlock relationship insights')
           else
             Column(
               children: [
@@ -2212,6 +1939,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /* Unused method
   Widget _buildKeyboardActionButton(
     String label,
     IconData icon,
@@ -2245,6 +1973,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+  */
 
   /// Build data loading state
   Widget _buildDataLoadingState(String message) {
@@ -2257,8 +1986,8 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             message,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+                  color: Colors.grey.shade600,
+                ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -2266,7 +1995,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2290,7 +2020,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               color: Colors.black87,
               fontWeight: FontWeight.w500,
@@ -2329,42 +2059,63 @@ class PrimaryCTABanner extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF7B61FF), Color(0xFF9C27B0)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0,8))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 8))
+        ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12)),
             child: Icon(model.icon, color: Colors.white, size: 20),
           ),
           const Spacer(),
-          Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white.withOpacity(0.7)),
+          Icon(Icons.arrow_forward_ios,
+              size: 14, color: Colors.white.withOpacity(0.7)),
         ]),
         const SizedBox(height: 14),
-        Text(model.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, height: 1.15)),
+        Text(model.title,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                height: 1.15)),
         const SizedBox(height: 6),
-        Text(model.subtitle, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
+        Text(model.subtitle,
+            style:
+                TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
         const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white, foregroundColor: const Color(0xFF7B61FF),
-              elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF7B61FF),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
             onPressed: model.onPressed,
-            child: Text(model.button, style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(model.button,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
         ),
       ]),
     );
   }
 }
+
 /// Custom painter for mini pie chart
 class MiniPieChartPainter extends CustomPainter {
   final Map<String, int> data;
@@ -2401,4 +2152,3 @@ class MiniPieChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
-

@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'swift_keyboard_data_bridge.dart';
 import 'keyboard_manager.dart';
 
 /// Service to detect and manage new user experience across the app

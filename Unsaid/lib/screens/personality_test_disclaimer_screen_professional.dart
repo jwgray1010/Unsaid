@@ -257,7 +257,7 @@ class _PersonalityTestDisclaimerScreenProfessionalState
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.info_outline,
                                       color: Colors.blue,
                                       size: 20,
@@ -362,7 +362,7 @@ class _PersonalityTestDisclaimerScreenProfessionalState
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.security_outlined,
                                       color: Colors.green,
                                       size: 20,

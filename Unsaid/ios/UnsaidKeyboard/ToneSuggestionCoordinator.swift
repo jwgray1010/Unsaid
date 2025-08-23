@@ -109,28 +109,22 @@ final class ToneSuggestionCoordinator {
     // MARK: - Shared Defaults (App Group)
     private let personalityBridge = PersonalityDataBridge.shared
     private let sharedUserDefaults: UserDefaults? = {
-        UserDefaults(suiteName: "group.com.unsaid.shared")
+        UserDefaults(suiteName: "group.com.example.unsaid")
     }()
 
     // MARK: - Logging
-    private let logger = Logger(subsystem: "com.example.unsaid.UnsaidKeyboard", category: "ToneSuggestionCoordinator")
+    private let logger = Logger(subsystem: "com.example.unsaid.unsaid.UnsaidKeyboard", category: "ToneSuggestionCoordinator")
     private var logThrottle: [String: Date] = [:]
     private let logThrottleInterval: TimeInterval = 1.0
 
     // MARK: - Init / Deinit
     init() {
-        startNetworkMonitoring()
-        #if DEBUG
-        debugPrint("🤖 ToneSuggestionCoordinator init. API configured: \(isAPIConfigured)")
-        debugPrint(" - API Base URL: '\(apiBaseURL)'")
-        debugPrint(" - API Key: '\(apiKey.isEmpty ? "EMPTY" : "SET")'")
-        if let extBundle = Bundle(for: ToneSuggestionCoordinator.self).object(forInfoDictionaryKey: "UNSAID_API_BASE_URL") {
-            debugPrint(" - Extension bundle API URL: '\(extBundle)'")
-        } else {
-            debugPrint(" - Extension bundle API URL: NOT SET")
+        // Delay network initialization to prevent startup crashes
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.startNetworkMonitoringSafely()
         }
-        
-        // Debug personality data connection
+        #if DEBUG
+        // Debug personality data connection (safe)
         debugPrint("🧠 Personality Data Bridge Status:")
         debugPrint(" - Attachment Style: '\(getAttachmentStyle())'")
         debugPrint(" - Communication Style: '\(personalityBridge.getCommunicationStyle())'")
@@ -347,23 +341,31 @@ final class ToneSuggestionCoordinator {
     private func storeToneAnalysisResult(data: [String: Any], status: ToneStatus, confidence: Double) {
         // Store using the SafeKeyboardDataStorage for crash prevention
         SafeKeyboardDataStorage.shared.recordToneAnalysis(
-            tone: status.rawValue,
+            text: currentText,
+            tone: status,
             confidence: confidence,
-            textLength: currentText.count,
             analysisTime: 0.0
         )
         
         // Also record as a general interaction
-        let interaction: [String: Any] = [
-            "text_length": currentText.count,
-            "tone_status": status.rawValue,
-            "suggestion_accepted": false,
-            "analysis_time": 0.0,
-            "context": "ml_tone_analysis",
-            "interaction_type": "tone_analysis",
-            "word_count": currentText.split(separator: " ").count,
-            "app_context": "keyboard_extension"
-        ]
+        let interaction = KeyboardInteraction(
+            timestamp: Date(),
+            textBefore: currentText,
+            textAfter: currentText,
+            toneStatus: status,
+            suggestionAccepted: false,
+            suggestionText: nil,
+            analysisTime: 0.0,
+            context: "ml_tone_analysis",
+            interactionType: .toneAnalysis,
+            userAcceptedSuggestion: false,
+            communicationPattern: .neutral,
+            attachmentStyleDetected: .unknown,
+            relationshipContext: .unknown,
+            sentimentScore: 0.0,
+            wordCount: currentText.split(separator: " ").count,
+            appContext: "keyboard_extension"
+        )
         SafeKeyboardDataStorage.shared.recordInteraction(interaction)
     }
 
@@ -709,6 +711,18 @@ final class ToneSuggestionCoordinator {
             }
         }
         monitor.start(queue: networkQueue)
+    }
+
+    private func startNetworkMonitoringSafely() {
+        do {
+            startNetworkMonitoring()
+        } catch {
+            #if DEBUG
+            debugPrint("❌ Failed to start network monitoring: \(error)")
+            #endif
+            // Fall back to assuming network is available
+            isNetworkAvailable = true
+        }
     }
 
     func stopNetworkMonitoring() {

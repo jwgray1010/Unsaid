@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:async';
 import 'keyboard_extension.dart';
 import 'secure_config.dart';
-import 'secure_storage_service.dart';
 import 'conversation_data_service.dart';
 // Adding imports for AI services integration
 import 'co_parenting_ai_service.dart' as coparenting;
@@ -14,7 +13,8 @@ import 'advanced_tone_analysis_service.dart';
 import 'package:flutter/services.dart';
 
 class KeyboardManager extends ChangeNotifier {
-  static const MethodChannel _channel = MethodChannel('com.unsaid/keyboard_analytics');
+  static const MethodChannel _channel =
+      MethodChannel('com.unsaid/keyboard_analytics');
 
   static final KeyboardManager _instance = KeyboardManager._internal();
   factory KeyboardManager() => _instance;
@@ -55,9 +55,10 @@ class KeyboardManager extends ChangeNotifier {
   // Store recent emotion/tone history for analytics
   final List<Map<String, dynamic>> _toneHistory = [];
   List<Map<String, dynamic>> get toneHistory => List.unmodifiable(_toneHistory);
-  
+
   // Conversation service for storing interaction data
-  final ConversationDataService _conversationService = ConversationDataService();
+  final ConversationDataService _conversationService =
+      ConversationDataService();
 
   // Store trigger/conflict words for alerts
   static const List<String> _triggerWords = [
@@ -123,15 +124,16 @@ class KeyboardManager extends ChangeNotifier {
       'timestamp': DateTime.now().toIso8601String(),
     });
     if (_toneHistory.length > 50) _toneHistory.removeAt(0); // keep last 50
-    
+
     // Store in conversation service for deeper analytics
     _storeAnalysisForConversation(analysis);
-    
+
     notifyListeners();
   }
-  
+
   // Store analysis data for conversation tracking
-  Future<void> _storeAnalysisForConversation(Map<String, dynamic> analysis) async {
+  Future<void> _storeAnalysisForConversation(
+      Map<String, dynamic> analysis) async {
     try {
       final messageData = {
         'text': analysis['original_message'] ?? analysis['original_text'] ?? '',
@@ -140,11 +142,11 @@ class KeyboardManager extends ChangeNotifier {
         'user_id': 'current_user', // Replace with actual user ID
         'source': 'keyboard',
       };
-      
+
       // Create or append to today's conversation
       final today = DateTime.now();
       final conversationId = 'daily_${today.year}_${today.month}_${today.day}';
-      
+
       await _conversationService.storeMessage(conversationId, messageData);
     } catch (e) {
       debugPrint('Error storing analysis for conversation: $e');
@@ -565,9 +567,8 @@ class KeyboardManager extends ChangeNotifier {
 
     // Calculate confidence (0.0 to 1.0)
     final totalScore = gentleScore + directScore + balancedScore;
-    final confidence = totalScore > 0
-        ? (maxScore.toDouble() / totalScore)
-        : 0.5;
+    final confidence =
+        totalScore > 0 ? (maxScore.toDouble() / totalScore) : 0.5;
 
     return {
       'dominant_tone': dominantTone,
@@ -691,7 +692,7 @@ class KeyboardManager extends ChangeNotifier {
       // 'Attachment Style: "${attachmentStyle ?? _keyboardSettings['attachmentStyle']}", '
       // 'Communication Style: "${communicationStyle ?? _keyboardSettings['communicationStyle']}". '
       // 'Message: "$text".';
-      
+
       // For now, return a placeholder
       await Future.delayed(const Duration(milliseconds: 500));
       return '[AI Suggestion Placeholder]: $text';
@@ -799,48 +800,18 @@ class KeyboardManager extends ChangeNotifier {
   final List<Map<String, dynamic>> _analysisHistory = [];
 
   // AI Services instances
-  final coparenting.CoParentingAIService _coParentingAI = coparenting.CoParentingAIService();
-  final eiq.EmotionalIntelligenceCoach _eqCoach = eiq.EmotionalIntelligenceCoach();
+  final coparenting.CoParentingAIService _coParentingAI =
+      coparenting.CoParentingAIService();
+  final eiq.EmotionalIntelligenceCoach _eqCoach =
+      eiq.EmotionalIntelligenceCoach();
   final predictive_ai.PredictiveCoParentingAI _predictiveAI =
       predictive_ai.PredictiveCoParentingAI();
   final AdvancedToneAnalysisService _toneAnalysisService =
       AdvancedToneAnalysisService();
-  final SecureStorageService _secureStorage = SecureStorageService();
 
-  // Cache for personality results
-  Map<String, dynamic>? _personalityResults;
-  
-  // Predictive analysis cache and timing
-  String _lastAnalyzedText = '';
-  Map<String, dynamic>? _lastAnalysis;
-  Timer? _analysisTimer;
-  
-  // Incoming message context
-  String? _lastIncomingMessage;
-  Map<String, dynamic>? _incomingMessageAnalysis;
-  
-  // Ultra-fast tone cache for instant color feedback
-  final Map<String, String> _toneCache = {};
-  
   // Get analysis history
   List<Map<String, dynamic>> get analysisHistory =>
       List.unmodifiable(_analysisHistory);
-
-  /// Load personality test results for AI context
-  Future<Map<String, dynamic>?> _loadPersonalityResults() async {
-    try {
-      if (_personalityResults != null) return _personalityResults;
-      
-      _personalityResults = await _secureStorage.getPersonalityTestResults();
-      if (_personalityResults != null) {
-        print('✅ Personality results loaded: ${_personalityResults!.keys}');
-      }
-      return _personalityResults;
-    } catch (e) {
-      print('❌ Error loading personality results: $e');
-      return null;
-    }
-  }
 
   /// Comprehensive message analysis using all AI services
   Future<Map<String, dynamic>> performComprehensiveAnalysis(
@@ -856,14 +827,12 @@ class KeyboardManager extends ChangeNotifier {
 
     try {
       // Prepare context
-      final relContext =
-          relationshipContext ??
+      final relContext = relationshipContext ??
           _keyboardSettings['relationshipContext'] ??
           'Dating';
       final attachStyle =
           attachmentStyle ?? _keyboardSettings['attachmentStyle'] ?? 'Secure';
-      final commStyle =
-          communicationStyle ??
+      final commStyle = communicationStyle ??
           _keyboardSettings['communicationStyle'] ??
           'Secure Attachment';
       final childAgeValue = childAge ?? _keyboardSettings['childAge'] ?? 8;
@@ -972,8 +941,8 @@ class KeyboardManager extends ChangeNotifier {
           analysis['message'],
           {
             'child_age': analysis['context']['child_age'],
-            'developmental_considerations':
-                analysis['coparenting_analysis']['child_impact_analysis'],
+            'developmental_considerations': analysis['coparenting_analysis']
+                ['child_impact_analysis'],
           },
         );
       }
@@ -995,6 +964,7 @@ class KeyboardManager extends ChangeNotifier {
     String communicationStyle,
   ) {
     return coparenting.UserProfile(
+      userId: 'current_user',
       communicationStyle: _mapToCommunicationStyleEnum(communicationStyle),
       attachmentStyle: _mapToAttachmentStyleEnum(attachmentStyle),
       stressLevel: 0.5,
@@ -1003,7 +973,8 @@ class KeyboardManager extends ChangeNotifier {
   }
 
   /// Map string attachment style to coparenting.AttachmentStyle enum
-  coparenting.AttachmentStyle _mapToAttachmentStyleEnum(String attachmentStyle) {
+  coparenting.AttachmentStyle _mapToAttachmentStyleEnum(
+      String attachmentStyle) {
     switch (attachmentStyle.toLowerCase()) {
       case 'secure':
       case 'secure attachment':
@@ -1023,7 +994,8 @@ class KeyboardManager extends ChangeNotifier {
   }
 
   /// Map string communication style to coparenting.CommunicationStyle enum
-  coparenting.CommunicationStyle _mapToCommunicationStyleEnum(String communicationStyle) {
+  coparenting.CommunicationStyle _mapToCommunicationStyleEnum(
+      String communicationStyle) {
     switch (communicationStyle.toLowerCase()) {
       case 'direct':
         return coparenting.CommunicationStyle.direct;
@@ -1061,7 +1033,8 @@ class KeyboardManager extends ChangeNotifier {
   }
 
   /// Map string communication style to predictive_ai.CommunicationStyle enum
-  predictive_ai.CommunicationStyle _mapToCommunicationStyle(String communicationStyle) {
+  predictive_ai.CommunicationStyle _mapToCommunicationStyle(
+      String communicationStyle) {
     switch (communicationStyle.toLowerCase()) {
       case 'assertive':
         return predictive_ai.CommunicationStyle.assertive;
@@ -1082,6 +1055,7 @@ class KeyboardManager extends ChangeNotifier {
     return coparenting.PartnerProfile(
       communicationStyle: coparenting.CommunicationStyle.direct,
       attachmentStyle: coparenting.AttachmentStyle.secure,
+      triggers: ['last minute changes', 'criticism'],
       knownTriggers: ['last minute changes', 'criticism'],
     );
   }
@@ -1092,6 +1066,7 @@ class KeyboardManager extends ChangeNotifier {
   ) {
     return coparenting.CoParentingContext(
       topic: coparenting.CoParentingTopic.communication,
+      timeOfDay: DateTime.now(),
       childAge: childAge,
       relationshipStage: coparenting.RelationshipStage.divorced,
       emotionalStressLevel: 0.5,
@@ -1108,7 +1083,8 @@ class KeyboardManager extends ChangeNotifier {
     );
   }
 
-  Map<String, dynamic> _formatCoParentingAnalysis(coparenting.CoParentingAnalysis analysis) {
+  Map<String, dynamic> _formatCoParentingAnalysis(
+      coparenting.CoParentingAnalysis analysis) {
     return {
       'impact_assessment': 'moderate',
       'suggestions': ['Be more specific', 'Stay child-focused'],
@@ -1116,16 +1092,19 @@ class KeyboardManager extends ChangeNotifier {
     };
   }
 
-  Map<String, dynamic> _formatToneAnalysis(AdvancedToneAnalysisResult analysis) {
+  Map<String, dynamic> _formatToneAnalysis(
+      AdvancedToneAnalysisResult analysis) {
     return {
       'dominant_tone': analysis.dominantTone,
       'confidence': analysis.confidence,
       'overall_tone': analysis.overallTone,
-      'suggestions': analysis.strategicRecommendations.map((r) => r.description).toList(),
+      'suggestions':
+          analysis.strategicRecommendations.map((r) => r.description).toList(),
     };
   }
 
-  Map<String, dynamic> _formatEmotionalAnalysis(eiq.EmotionalStateAnalysis analysis) {
+  Map<String, dynamic> _formatEmotionalAnalysis(
+      eiq.EmotionalStateAnalysis analysis) {
     return {
       'primary_emotion': 'neutral',
       'intensity': 0.5,
@@ -1133,7 +1112,8 @@ class KeyboardManager extends ChangeNotifier {
     };
   }
 
-  Map<String, dynamic> _formatPredictiveAnalysis(predictive_ai.ConversationOutcomePrediction analysis) {
+  Map<String, dynamic> _formatPredictiveAnalysis(
+      predictive_ai.ConversationOutcomePrediction analysis) {
     return {
       'predicted_outcome': 'neutral',
       'confidence': 0.7,
@@ -1159,7 +1139,8 @@ class KeyboardManager extends ChangeNotifier {
   Future<Map<String, dynamic>> getComprehensiveRealData() async {
     try {
       final analytics = await _channel.invokeMethod('getKeyboardAnalytics');
-      final interactions = await _channel.invokeMethod('getKeyboardInteractions');
+      final interactions =
+          await _channel.invokeMethod('getKeyboardInteractions');
       return {
         'real_data': true,
         'analytics': analytics,
@@ -1177,13 +1158,13 @@ class KeyboardManager extends ChangeNotifier {
       // Save to local storage for keyboard extension access
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList('children_names', names);
-      
+
       // Send to iOS keyboard extension via platform channel
       await _channel.invokeMethod('syncChildrenNames', {
         'names': names,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       });
-      
+
       print('✅ Children names synced to keyboard extension: $names');
     } catch (e) {
       print('❌ Error syncing children names to keyboard: $e');

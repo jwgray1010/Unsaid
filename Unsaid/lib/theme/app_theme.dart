@@ -7,8 +7,6 @@ class AppTheme {
   static const _primaryDark = Color(0xFF4A2FE7);
   static const _secondary = Color(0xFF00D2FF);
   static const _accent = Color(0xFFFF6B6B);
-  static const _success = Color(0xFF4CAF50);
-  static const _warning = Color(0xFFFF9800);
   static const _error = Color(0xFFF44336);
 
   // Premium gradient colors
@@ -19,7 +17,6 @@ class AppTheme {
   static const _background = Color(0xFFF8F9FA);
   static const _surface = Color(0xFFFFFFFF);
   static const _onSurface = Color(0xFF1A1A1A);
-  static const _onBackground = Color(0xFF2D3748);
   static const _outline = Color(0xFFE2E8F0);
 
   // Text colors
@@ -43,7 +40,6 @@ class AppTheme {
       onSurface: _onSurface,
       outline: _outline,
     ),
-
     textTheme: GoogleFonts.interTextTheme().copyWith(
       displayLarge: GoogleFonts.inter(
         fontSize: 57,
@@ -130,7 +126,6 @@ class AppTheme {
         color: _textTertiary,
       ),
     ),
-
     appBarTheme: AppBarTheme(
       elevation: 0,
       scrolledUnderElevation: 1,
@@ -147,7 +142,6 @@ class AppTheme {
         statusBarBrightness: Brightness.light,
       ),
     ),
-
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: _primary,
@@ -163,7 +157,6 @@ class AppTheme {
         ),
       ),
     ),
-
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: _primary,
@@ -176,7 +169,6 @@ class AppTheme {
         ),
       ),
     ),
-
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: _primary,
@@ -190,7 +182,6 @@ class AppTheme {
         ),
       ),
     ),
-
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: _surface,
@@ -226,8 +217,7 @@ class AppTheme {
         fontWeight: FontWeight.w500,
       ),
     ),
-
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       elevation: 0,
       color: _surface,
       shadowColor: Colors.black12,
@@ -237,12 +227,12 @@ class AppTheme {
       ),
       margin: EdgeInsets.symmetric(vertical: 8),
     ),
-
-    dialogTheme: const DialogTheme(
+    dialogTheme: const DialogThemeData(
       backgroundColor: _surface,
       elevation: 8,
       shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20))),
       titleTextStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
@@ -254,7 +244,6 @@ class AppTheme {
         color: _textSecondary,
       ),
     ),
-
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: _onSurface,
       contentTextStyle: TextStyle(
@@ -262,51 +251,47 @@ class AppTheme {
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12))),
       behavior: SnackBarBehavior.floating,
       elevation: 8,
     ),
-
-    sliderTheme: SliderThemeData(
+    sliderTheme: const SliderThemeData(
       trackHeight: 4,
-      trackShape: const RoundedRectSliderTrackShape(),
-      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-      overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
-      valueIndicatorShape: const PaddleSliderValueIndicatorShape(),
-      valueIndicatorTextStyle: const TextStyle(
+      trackShape: RoundedRectSliderTrackShape(),
+      thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10),
+      overlayShape: RoundSliderOverlayShape(overlayRadius: 18),
+      valueIndicatorShape: PaddleSliderValueIndicatorShape(),
+      valueIndicatorTextStyle: TextStyle(
         color: Colors.white,
         fontSize: 12,
         fontWeight: FontWeight.w600,
       ),
       // Colors are now handled by colorScheme
     ),
-
     switchTheme: SwitchThemeData(
-      thumbColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) return _primary;
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return _primary;
         return Colors.grey;
       }),
-      trackColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return const Color(0x4D6C47FF); // _primary.withOpacity(0.3)
         }
         return const Color(0x4D9E9E9E); // Colors.grey.withOpacity(0.3)
       }),
     ),
-
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: _primary,
       linearTrackColor: _outline,
       circularTrackColor: _outline,
     ),
-
     dividerTheme: const DividerThemeData(
       color: _outline,
       thickness: 1,
       space: 1,
     ),
-
-    chipTheme: ChipThemeData(
+    chipTheme: const ChipThemeData(
       backgroundColor: _background,
       selectedColor: Color(0x1A6C47FF),
       secondarySelectedColor: Color(0x1A00D2FF),
@@ -326,7 +311,6 @@ class AppTheme {
         side: BorderSide(color: _outline),
       ),
     ),
-
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: _surface,
       selectedItemColor: _primary,
@@ -440,20 +424,20 @@ class AppTheme {
 
   // Shadow definitions
   static List<BoxShadow> get shadows => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 10,
-      offset: const Offset(0, 4),
-    ),
-  ];
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ];
 
   static List<BoxShadow> get shadowsMedium => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.15),
-      blurRadius: 20,
-      offset: const Offset(0, 8),
-    ),
-  ];
+        BoxShadow(
+          color: Colors.black.withOpacity(0.15),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
+        ),
+      ];
 
   // Error color getter
   static Color get errorColor => _error;
@@ -502,8 +486,7 @@ class AppThemeWrapper {
 
   // Text colors
   Color get textPrimary => _theme.colorScheme.onSurface;
-  Color get textSecondary =>
-      _theme.colorScheme.onSurface.withOpacity(0.7);
+  Color get textSecondary => _theme.colorScheme.onSurface.withOpacity(0.7);
 
   // Border color
   Color get borderColor => _theme.colorScheme.outline;
@@ -576,28 +559,28 @@ class _Spacing {
 
 class _Shadows {
   List<BoxShadow> get small => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.05),
-      blurRadius: 6,
-      offset: const Offset(0, 2),
-    ),
-  ];
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ];
 
   List<BoxShadow> get medium => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 12,
-      offset: const Offset(0, 6),
-    ),
-  ];
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 12,
+          offset: const Offset(0, 6),
+        ),
+      ];
 
   List<BoxShadow> get large => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.15),
-      blurRadius: 20,
-      offset: const Offset(0, 10),
-    ),
-  ];
+        BoxShadow(
+          color: Colors.black.withOpacity(0.15),
+          blurRadius: 20,
+          offset: const Offset(0, 10),
+        ),
+      ];
 }
 
 // Colors helper class
@@ -619,8 +602,7 @@ class _Colors {
   // Additional colors needed by professional screens
   Color get background => _theme.colorScheme.surface;
   Color get accent => _theme.colorScheme.secondary;
-  Color get textSecondary =>
-      _theme.colorScheme.onSurface.withOpacity(0.7);
+  Color get textSecondary => _theme.colorScheme.onSurface.withOpacity(0.7);
   Color get textPrimary => _theme.colorScheme.onSurface;
   Color get border => _theme.colorScheme.outline;
 }
@@ -660,22 +642,22 @@ class _Typography {
 // Gradients helper class
 class _Gradients {
   LinearGradient get primary => const LinearGradient(
-    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+        colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
   LinearGradient get secondary => const LinearGradient(
-    colors: [Color(0xFFF093FB), Color(0xFFF5576C)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+        colors: [Color(0xFFF093FB), Color(0xFFF5576C)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
   LinearGradient get success => const LinearGradient(
-    colors: [Color(0xFF11998E), Color(0xFF38EF7D)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+        colors: [Color(0xFF11998E), Color(0xFF38EF7D)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
   LinearGradient get light => AppTheme.lightGradient;
   LinearGradient get dark => AppTheme.darkGradient;

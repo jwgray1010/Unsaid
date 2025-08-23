@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'tone_indicator.dart';
-import 'standard_keyboard_widgets.dart';
 
 class MessageComposer extends StatefulWidget {
   final Function(String)? onMessageSent;
@@ -85,8 +84,8 @@ class _MessageComposerState extends State<MessageComposer> {
                 Text(
                   'Tone Analysis',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -119,6 +118,8 @@ class _MessageComposerState extends State<MessageComposer> {
         return 'Your message might be perceived as harsh or aggressive.';
       case ToneStatus.neutral:
         return 'Your message has a neutral tone.';
+      case ToneStatus.analyzing:
+        return 'Analyzing your message tone...';
     }
   }
 

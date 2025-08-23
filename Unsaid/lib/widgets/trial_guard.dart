@@ -72,13 +72,13 @@ class TrialGuard extends StatelessWidget {
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
                 blurRadius: 8,
-                offset: Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.timer,
                 color: Colors.white,
                 size: 20,
@@ -127,7 +127,7 @@ class TrialGuard extends StatelessWidget {
                     vertical: AppTheme.spacing.xs,
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   'Subscribe',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -149,7 +149,7 @@ class TrialGuard extends StatelessWidget {
       right: 16,
       child: SafeArea(
         child: Container(
-          padding: EdgeInsets.all(8),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: trialService.isAdminMode ? Colors.red : Colors.grey,
             borderRadius: BorderRadius.circular(8),
@@ -157,14 +157,14 @@ class TrialGuard extends StatelessWidget {
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
                 blurRadius: 4,
-                offset: Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            const Text(
               'DEBUG',
               style: TextStyle(
                 color: Colors.white,
@@ -172,18 +172,18 @@ class TrialGuard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             GestureDetector(
               onTap: () => trialService.toggleAdminMode(),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   trialService.isAdminMode ? 'ADMIN' : 'USER',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -191,16 +191,16 @@ class TrialGuard extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             GestureDetector(
               onTap: () => trialService.resetTrial(),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(
+                child: const Text(
                   'RESET',
                   style: TextStyle(
                     color: Colors.white,
