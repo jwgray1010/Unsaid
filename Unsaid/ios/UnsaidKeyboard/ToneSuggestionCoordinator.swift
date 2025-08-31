@@ -202,6 +202,24 @@ final class ToneSuggestionCoordinator {
         suggestionQueue.async(execute: work)
     }
 
+    /// Request the single best therapy suggestion for a specific tone + user's personality
+    func requestBestSuggestion(forTone tone: String) {
+        pendingSuggestionWorkItem?.cancel()
+        let snapshot = currentText
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            guard !snapshot.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.delegate?.didUpdateSuggestions([])
+                }
+                return
+            }
+            self.generateBestSuggestionForTone(tone, from: snapshot)
+        }
+        pendingSuggestionWorkItem = work
+        suggestionQueue.async(execute: work)
+    }
+
     func resetState() {
         pendingAnalysisWorkItem?.cancel()
         pendingSuggestionWorkItem?.cancel()
@@ -275,23 +293,84 @@ final class ToneSuggestionCoordinator {
             currentText = String(text.suffix(1000))
         }
         
-        // Use suggestions API for tone analysis since tone-analysis endpoint is removed
+        // Call tone analysis endpoint for real-time tone detection
         var context: [String: Any] = [
             "text": currentText,
-            "userId": getUserId(),
-            "userEmail": getUserEmail() ?? NSNull(),
-            "toneAnalysisResult": [:] // Empty since we're doing full analysis
+            "context": "general",
+            "meta": [
+                "source": "keyboard",
+                "analysis_type": "realtime",
+                "timestamp": Date().timeIntervalSince1970
+            ]
         ]
         context.merge(personalityPayload()) { _, new in new }
         
-        callSuggestionsAPI(context: context, usingSnapshot: currentText) { [weak self] suggestion in
+        callToneAnalysisAPI(context: context) { [weak self] toneResult in
             guard let self else { return }
             self.lastAnalysisTime = Date()
             self.lastAnalyzedText = self.currentText
             self.consecutiveFailures = 0
             
-            // Note: Tone status updates are now handled within callSuggestionsAPI
-            // This provides more accurate ML-driven tone analysis
+            // Update tone status from tone analysis result
+            if let tone = toneResult {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    if self.shouldUpdateToneStatus(from: self.currentToneStatus, to: tone, improvementDetected: nil, improvementScore: nil) {
+                        self.currentToneStatus = tone
+                        self.delegate?.didUpdateToneStatus(tone)
+                    }
+                }
+            }
+            
+            // Send text to communicator for learning (async, non-blocking)
+            self.updateCommunicatorProfile(with: self.currentText)
+        }
+    }
+    
+    // MARK: - Communicator Profile Learning
+    private func updateCommunicatorProfile(with text: String) {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty, trimmedText.count >= 10 else { return } // Only meaningful text
+        
+        var payload: [String: Any] = [
+            "text": trimmedText,
+            "meta": [
+                "source": "keyboard",
+                "timestamp": Date().timeIntervalSince1970,
+                "context": "realtime_typing"
+            ]
+        ]
+        
+        // Add user identification
+        payload["userId"] = getUserId()
+        if let email = getUserEmail() {
+            payload["userEmail"] = email
+        }
+        
+        callEndpoint(path: "communicator/observe", payload: payload) { [weak self] response in
+            guard let self = self else { return }
+            if let data = response, !data.isEmpty {
+                throttledLog("communicator profile updated", category: "learning")
+                
+                // Store the updated profile estimate for future requests
+                if let estimate = data["estimate"] as? [String: Any] {
+                    let profile = personalityBridge.getPersonalityProfile()
+                    var updatedProfile = profile
+                    
+                    // Update attachment style if provided
+                    if let primary = estimate["primary"] as? String {
+                        updatedProfile["attachment_style"] = primary
+                    }
+                    
+                    // Update window completion status
+                    if let windowComplete = estimate["windowComplete"] as? Bool {
+                        updatedProfile["learning_window_complete"] = windowComplete
+                    }
+                    
+                    // This would ideally update the personality bridge with new data
+                    // personalityBridge.updateProfile(updatedProfile)
+                }
+            }
         }
     }
 
@@ -309,7 +388,12 @@ final class ToneSuggestionCoordinator {
             "text": textToAnalyze,
             "userId": getUserId(),
             "userEmail": getUserEmail() ?? NSNull(),
-            "toneAnalysisResult": [:] // Empty - suggestions API will do full analysis
+            "features": ["rewrite", "advice", "evidence"],
+            "meta": [
+                "source": "keyboard_manual",
+                "request_type": "suggestion",
+                "timestamp": Date().timeIntervalSince1970
+            ]
         ]
         context.merge(personalityPayload()) { _, new in new }
         
@@ -334,6 +418,94 @@ final class ToneSuggestionCoordinator {
                     }
                 }
             }
+        }
+    }
+
+    /// Generate the single best therapy suggestion for a specific tone + personality
+    private func generateBestSuggestionForTone(_ tone: String, from snapshot: String = "") {
+        var textToAnalyze = snapshot.isEmpty ? currentText : snapshot
+        
+        // CAP: Limit text length for consistency
+        if textToAnalyze.count > 1000 { 
+            textToAnalyze = String(textToAnalyze.suffix(1000)) 
+        }
+        
+        // Create mock tone analysis result for this specific tone
+        let toneAnalysisResult: [String: Any] = [
+            "primaryTone": tone,
+            "confidence": 0.9, // High confidence since we know the tone
+            "emotionalIndicators": getEmotionalIndicatorsForTone(tone),
+            "communicationStyle": getCommunicationStyleForTone(tone)
+        ]
+        
+        // Call suggestions API with the specific tone
+        var context: [String: Any] = [
+            "text": textToAnalyze,
+            "userId": getUserId(),
+            "userEmail": getUserEmail() ?? NSNull(),
+            "toneOverride": tone, // Override the detected tone
+            "features": ["rewrite", "advice"],
+            "meta": [
+                "source": "keyboard_tone_specific",
+                "requested_tone": tone,
+                "timestamp": Date().timeIntervalSince1970,
+                "emotionalIndicators": getEmotionalIndicatorsForTone(tone),
+                "communicationStyle": getCommunicationStyleForTone(tone)
+            ]
+        ]
+        context.merge(personalityPayload()) { _, new in new }
+        
+        callSuggestionsAPI(context: context, usingSnapshot: textToAnalyze) { [weak self] suggestion in
+            guard let self else { return }
+            DispatchQueue.main.async {
+                if let s = suggestion, !s.isEmpty {
+                    // Show only ONE suggestion for this tone
+                    self.suggestions = [s]
+                    self.delegate?.didUpdateSuggestions([s])
+                    self.storeSuggestionGenerated(suggestion: s)
+                } else {
+                    // FALLBACK: Try tone-specific fallback suggestion
+                    if let fallback = self.fallbackSuggestionForTone(tone, text: textToAnalyze), !fallback.isEmpty {
+                        self.suggestions = [fallback]
+                        self.delegate?.didUpdateSuggestions([fallback])
+                    } else {
+                        self.suggestions = []
+                        self.delegate?.didUpdateSuggestions([])
+                    }
+                }
+            }
+        }
+    }
+    
+    // Helper methods for tone-specific context
+    private func getEmotionalIndicatorsForTone(_ tone: String) -> [String] {
+        switch tone {
+        case "alert": return ["anger", "frustration", "urgency"]
+        case "caution": return ["concern", "worry", "uncertainty"]
+        case "clear": return ["confidence", "clarity", "positivity"]
+        default: return []
+        }
+    }
+    
+    private func getCommunicationStyleForTone(_ tone: String) -> String {
+        switch tone {
+        case "alert": return "direct"
+        case "caution": return "tentative"
+        case "clear": return "confident"
+        default: return "neutral"
+        }
+    }
+    
+    private func fallbackSuggestionForTone(_ tone: String, text: String) -> String? {
+        switch tone {
+        case "alert":
+            return "I'd like to discuss this situation calmly when you have a moment."
+        case "caution":
+            return "I want to make sure we're understanding each other correctly."
+        case "clear":
+            return "I appreciate us being able to communicate openly about this."
+        default:
+            return fallbackSuggestion(for: text)
         }
     }
 
@@ -401,6 +573,9 @@ final class ToneSuggestionCoordinator {
             accepted: true, 
             context: "ml_suggestion_accepted"
         )
+        
+        // Send accepted suggestion to communicator for learning
+        updateCommunicatorProfileWithSuggestion(suggestion, accepted: true)
     }
     
     func recordSuggestionRejected(_ suggestion: String) {
@@ -409,6 +584,41 @@ final class ToneSuggestionCoordinator {
             accepted: false, 
             context: "ml_suggestion_rejected"
         )
+        
+        // Note: We don't send rejected suggestions to communicator
+        // as they don't represent the user's actual communication style
+    }
+    
+    // MARK: - Communicator Learning from Suggestions
+    private func updateCommunicatorProfileWithSuggestion(_ suggestion: String, accepted: Bool) {
+        guard accepted else { return } // Only learn from accepted suggestions
+        
+        let trimmedSuggestion = suggestion.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedSuggestion.isEmpty else { return }
+        
+        var payload: [String: Any] = [
+            "text": trimmedSuggestion,
+            "meta": [
+                "source": "keyboard_suggestion",
+                "timestamp": Date().timeIntervalSince1970,
+                "context": "accepted_suggestion",
+                "suggestion_accepted": true,
+                "original_text": currentText // Include original for context
+            ]
+        ]
+        
+        // Add user identification
+        payload["userId"] = getUserId()
+        if let email = getUserEmail() {
+            payload["userEmail"] = email
+        }
+        
+        callEndpoint(path: "communicator/observe", payload: payload) { [weak self] response in
+            guard let self = self else { return }
+            if response != nil {
+                throttledLog("communicator learned from accepted suggestion", category: "learning")
+            }
+        }
     }
 
     // MARK: - Decisioning
@@ -468,12 +678,25 @@ final class ToneSuggestionCoordinator {
     private func personalityPayload() -> [String: Any] {
         let profile = personalityBridge.getPersonalityProfile()
         return [
+            // For suggestions endpoint
+            "attachmentStyle": profile["attachment_style"] ?? "secure",
+            "toneOverride": currentToneStatus != "neutral" ? currentToneStatus : nil,
+            "features": ["rewrite", "advice", "evidence"],
+            "meta": [
+                "emotional_state": profile["emotional_state"] ?? "neutral",
+                "communication_style": profile["communication_style"] ?? "direct",
+                "emotional_bucket": profile["emotional_bucket"] ?? "moderate",
+                "personality_type": profile["personality_type"] ?? "unknown"
+            ],
+            // For tone endpoint  
+            "context": "general",
+            // Legacy fields for backward compatibility
             "emotional_state": profile["emotional_state"] ?? "neutral",
-            "attachment_style": profile["attachment_style"] ?? "secure",
+            "attachment_style": profile["attachment_style"] ?? "secure", 
             "user_profile": profile,
             "communication_style": profile["communication_style"] ?? "direct",
             "emotional_bucket": profile["emotional_bucket"] ?? "moderate"
-        ]
+        ].compactMapValues { $0 }
     }
 
     // MARK: - SPAcy bridge
@@ -509,29 +732,20 @@ final class ToneSuggestionCoordinator {
     private func applyEnhancedSpacyAnalysis() {
         guard let analysis = enhancedAnalysisResults else { return }
         let emotions = analysis["emotions"] as? [String] ?? []
-        let spacySuggestions = analysis["suggestions"] as? [String] ?? []
-        if !spacySuggestions.isEmpty {
-            var merged = suggestions
-            for s in spacySuggestions.reversed() where !merged.contains(s) {
-                merged.insert(s, at: 0)
-            }
-            suggestions = Array(merged.prefix(5))
+        
+        // Extract tone information for tone indicator updates only
+        if let toneStr = (analysis["tone_status"] as? String) ?? (analysis["tone"] as? String) {
             DispatchQueue.main.async { [weak self] in
-                self?.delegate?.didUpdateSuggestions(self?.suggestions ?? [])
+                guard let self else { return }
+                if self.shouldUpdateToneStatus(from: self.currentToneStatus, to: toneStr, improvementDetected: nil, improvementScore: nil) {
+                    self.currentToneStatus = toneStr
+                    self.delegate?.didUpdateToneStatus(toneStr)
+                }
             }
         }
-        if !emotions.isEmpty {
-            if !currentText.isEmpty {
-                // Use suggestions API for enhanced analysis
-                var context: [String: Any] = [
-                    "text": currentText,
-                    "emotions": emotions,
-                    "enhanced_analysis": true
-                ]
-                context.merge(personalityPayload()) { _, new in new }
-                callSuggestionsAPI(context: context) { _ in }
-            }
-        }
+        
+        // Note: We don't automatically generate suggestions here
+        // Suggestions are only generated when the tone button is pressed
     }
 
     func updateToneFromAnalysis(_ analysis: [String: Any]) {
@@ -570,24 +784,43 @@ final class ToneSuggestionCoordinator {
             // Store comprehensive ML analysis results for later use
             if !d.isEmpty {
                 self.enhancedAnalysisResults = d
+                
+                // Store API response in shared storage for Flutter app access
+                self.storeAPIResponseInSharedStorage(endpoint: "suggestions", request: payload, response: d)
             }
             
-            // Process tone analysis results from ML system
-            if let toneStatus = d["toneStatus"] as? String ?? d["primaryTone"] as? String {
+            // Process tone analysis results from ML system - Handle both new and legacy formats
+            var toneStatus: String?
+            var confidence: Double?
+            
+            // NEW BACKEND FORMAT: Check extras first, then top-level
+            if let extras = d["extras"] as? [String: Any] {
+                toneStatus = extras["toneStatus"] as? String ?? extras["primaryTone"] as? String
+                confidence = extras["confidence"] as? Double
+            }
+            // Fallback to top-level fields (new backend also puts some here)
+            if toneStatus == nil {
+                toneStatus = d["tone"] as? String ?? d["toneStatus"] as? String ?? d["primaryTone"] as? String
+            }
+            if confidence == nil {
+                confidence = d["confidence"] as? Double
+            }
+            
+            if let toneStatus = toneStatus {
                 DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
                     let shouldUpdate = self.shouldUpdateToneStatus(
                         from: self.currentToneStatus, 
                         to: toneStatus,
                         improvementDetected: d["improvementDetected"] as? Bool,
-                        improvementScore: d["confidence"] as? Double
+                        improvementScore: confidence
                     )
                     if shouldUpdate {
                         self.currentToneStatus = toneStatus
                         self.delegate?.didUpdateToneStatus(toneStatus)
                         
                         // Store the tone analysis for analytics
-                        if let confidence = d["confidence"] as? Double {
+                        if let confidence = confidence {
                             let status = ToneStatus(rawValue: toneStatus) ?? .neutral
                             self.storeToneAnalysisResult(data: d, status: status, confidence: confidence)
                         }
@@ -595,9 +828,23 @@ final class ToneSuggestionCoordinator {
                 }
             }
             
-            // Extract suggestion text
+            // Extract suggestion text - Handle both new and legacy API formats
             var suggestion: String?
-            if let arr = d["suggestions"] as? [[String: Any]], 
+            
+            // NEW BACKEND FORMAT: Check for rewrite first, then extras.suggestions
+            if let rewrite = d["rewrite"] as? String, !rewrite.isEmpty {
+                suggestion = rewrite
+            } else if let extras = d["extras"] as? [String: Any],
+                      let suggestions = extras["suggestions"] as? [[String: Any]],
+                      let first = suggestions.first,
+                      let text = first["text"] as? String {
+                suggestion = text
+            } else if let quickFixes = d["quickFixes"] as? [String],
+                      let first = quickFixes.first, !first.isEmpty {
+                suggestion = first
+            }
+            // LEGACY FORMAT: Backward compatibility
+            else if let arr = d["suggestions"] as? [[String: Any]], 
                let first = arr.first,
                let text = first["text"] as? String {
                 suggestion = text
@@ -609,6 +856,46 @@ final class ToneSuggestionCoordinator {
                 suggestion = dataField
             }
             completion(suggestion)
+        }
+    }
+
+    private func callToneAnalysisAPI(context: [String: Any], completion: @escaping (String?) -> Void) {
+        guard isNetworkAvailable, isAPIConfigured else { completion(nil); return }
+        
+        // Generate request ID to prevent stale responses
+        let requestID = UUID()
+        latestRequestID = requestID
+        
+        var payload = context
+        payload["requestId"] = requestID.uuidString
+        payload["userId"] = getUserId()
+        payload["userEmail"] = getUserEmail()
+        
+        callEndpoint(path: "tone", payload: payload) { [weak self] data in
+            guard let self else { return }
+            
+            // Guard: Ignore stale results
+            guard requestID == self.latestRequestID else { completion(nil); return }
+            
+            let d = data ?? [:]
+            
+            // Extract tone from tone analysis response
+            var detectedTone: String?
+            
+            // Check various possible response formats
+            if let tone = d["tone"] as? String {
+                detectedTone = tone
+            } else if let primaryTone = d["primaryTone"] as? String {
+                detectedTone = primaryTone
+            } else if let analysis = d["analysis"] as? [String: Any],
+                      let tone = analysis["tone"] as? String {
+                detectedTone = tone
+            } else if let extras = d["extras"] as? [String: Any],
+                      let tone = extras["tone"] as? String {
+                detectedTone = tone
+            }
+            
+            completion(detectedTone)
         }
     }
 
@@ -747,6 +1034,68 @@ final class ToneSuggestionCoordinator {
         logThrottle[key] = now
         logger.debug("[\(category)] \(message)")
         #endif
+    }
+    
+    // MARK: - Shared Storage for API Responses
+    
+    /// Store API response data in shared storage for Flutter app access
+    private func storeAPIResponseInSharedStorage(endpoint: String, request: [String: Any], response: [String: Any]) {
+        guard let sharedDefaults = sharedUserDefaults else {
+            throttledLog("Unable to access shared storage for API response", category: "storage")
+            return
+        }
+        
+        let timestamp = Date().timeIntervalSince1970
+        let apiData: [String: Any] = [
+            "endpoint": endpoint,
+            "request": request,
+            "response": response,
+            "timestamp": timestamp,
+            "user_id": getUserId(),
+            "user_email": getUserEmail() ?? NSNull()
+        ]
+        
+        // Store latest response for immediate access
+        sharedDefaults.set(apiData, forKey: "latest_api_\(endpoint)")
+        
+        // Add to queue for batch processing
+        var queue = sharedDefaults.array(forKey: "api_\(endpoint)_queue") as? [[String: Any]] ?? []
+        queue.append(apiData)
+        
+        // Keep only last 10 items to prevent storage bloat
+        if queue.count > 10 {
+            queue.removeFirst(queue.count - 10)
+        }
+        
+        sharedDefaults.set(queue, forKey: "api_\(endpoint)_queue")
+        sharedDefaults.synchronize()
+        
+        throttledLog("Stored API response for \(endpoint) in shared storage", category: "storage")
+    }
+    
+    /// Store trial status API response
+    private func storeTrialStatusResponse(_ response: [String: Any]) {
+        guard let sharedDefaults = sharedUserDefaults else { return }
+        
+        let timestamp = Date().timeIntervalSince1970
+        let trialData: [String: Any] = [
+            "endpoint": "trial-status",
+            "response": response,
+            "timestamp": timestamp,
+            "user_id": getUserId()
+        ]
+        
+        sharedDefaults.set(trialData, forKey: "latest_trial_status")
+        
+        var queue = sharedDefaults.array(forKey: "api_trial_status_queue") as? [[String: Any]] ?? []
+        queue.append(trialData)
+        
+        if queue.count > 5 {
+            queue.removeFirst(queue.count - 5)
+        }
+        
+        sharedDefaults.set(queue, forKey: "api_trial_status_queue")
+        sharedDefaults.synchronize()
     }
 }
 

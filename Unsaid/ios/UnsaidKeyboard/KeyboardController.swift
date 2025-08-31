@@ -775,6 +775,85 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
         return (fromExt?.trimmingCharacters(in: .whitespacesAndNewlines) ?? fromMain?.trimmingCharacters(in: .whitespacesAndNewlines)) ?? ""
     }
     
+    // MARK: - Daily Usage Tracking
+    private let maxDailySecureFixUses = 10
+    private let secureFixUsageKey = "SecureFixDailyUsage"
+    private let secureFixDateKey = "SecureFixUsageDate"
+    
+    private var sharedDefaults: UserDefaults? {
+        return UserDefaults(suiteName: "group.com.example.unsaid")
+    }
+    
+    private func canUseSecureFix() -> Bool {
+        guard let defaults = sharedDefaults else { return false }
+        
+        let today = Calendar.current.startOfDay(for: Date())
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayString = formatter.string(from: today)
+        
+        let storedDateString = defaults.string(forKey: secureFixDateKey) ?? ""
+        let currentUsageCount = defaults.integer(forKey: secureFixUsageKey)
+        
+        // If it's a new day, reset the counter
+        if storedDateString != todayString {
+            defaults.set(0, forKey: secureFixUsageKey)
+            defaults.set(todayString, forKey: secureFixDateKey)
+            return true
+        }
+        
+        // Check if under daily limit
+        return currentUsageCount < maxDailySecureFixUses
+    }
+    
+    private func getRemainingSecureFixUses() -> Int {
+        guard let defaults = sharedDefaults else { return 0 }
+        
+        let today = Calendar.current.startOfDay(for: Date())
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayString = formatter.string(from: today)
+        
+        let storedDateString = defaults.string(forKey: secureFixDateKey) ?? ""
+        let currentUsageCount = defaults.integer(forKey: secureFixUsageKey)
+        
+        // If it's a new day, reset and return max
+        if storedDateString != todayString {
+            defaults.set(0, forKey: secureFixUsageKey)
+            defaults.set(todayString, forKey: secureFixDateKey)
+            return maxDailySecureFixUses
+        }
+        
+        return max(0, maxDailySecureFixUses - currentUsageCount)
+    }
+    
+    private func incrementSecureFixUsage() {
+        guard let defaults = sharedDefaults else { return }
+        
+        let today = Calendar.current.startOfDay(for: Date())
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayString = formatter.string(from: today)
+        
+        let storedDateString = defaults.string(forKey: secureFixDateKey) ?? ""
+        var currentUsageCount = defaults.integer(forKey: secureFixUsageKey)
+        
+        // If it's a new day, reset the counter
+        if storedDateString != todayString {
+            currentUsageCount = 0
+            defaults.set(todayString, forKey: secureFixDateKey)
+        }
+        
+        // Increment usage count
+        currentUsageCount += 1
+        defaults.set(currentUsageCount, forKey: secureFixUsageKey)
+        
+        logger.info("Secure Fix used: \(currentUsageCount)/\(maxDailySecureFixUses) for today")
+        
+        // Update button state after usage
+        updateSecureFixButtonState()
+    }
+    
     // MARK: - OpenAI Integration
     private func callOpenAI(text: String, completion: @escaping (String?) -> Void) {
         let apiKey = openAIAPIKey
@@ -894,6 +973,11 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
     private var isCapsLocked = false
     private var lastShiftTapAt: TimeInterval = 0
     private var lastShiftUpdateTime: Date = .distantPast
+    
+    // Host trait sync (Apple-like behavior)
+    private var smartQuotesEnabled = true
+    private var smartDashesEnabled = true
+    private var smartInsertDeleteEnabled = true
 
     // Delete repeat
     private var deleteTimer: Timer?
@@ -992,8 +1076,8 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
 
     // MARK: - Analysis gating config
     private let analyzeOnSentenceBoundaryOnly = false  // Allow analysis without punctuation
-    private let minCharsForAnalysis: Int = 8  // Reduced from 12
-    private let minWordsForAnalysis: Int = 2  // Reduced from 3
+    private let minCharsForAnalysis: Int = 1  // Update after every character
+    private let minWordsForAnalysis: Int = 1  // Update after every word
     private let boundaryDebounce: TimeInterval = 0.22
     private let idleDebounceNoPunct: TimeInterval = 1.4  // Reduced from 1.6
 
@@ -1046,6 +1130,8 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
         commonInit()
     }
 
+// MARK: - Legacy Text Analysis (DISABLED - only manual tone button analysis now)
+/*
 // Call this on every text change
     func handleTextChanged(_ text: String) {
     lastInputAt = CACurrentMediaTime()
@@ -1083,6 +1169,7 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
     }
     RunLoop.current.add(analysisTimer!, forMode: .common)
     }
+*/
 
     func cancelAnalysis() {
         analysisTimer?.invalidate()
@@ -1124,10 +1211,223 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
     // Trackpad gesture
     private var spacePan: UIPanGestureRecognizer?
     private var cursorAccumulator: CGFloat = 0
+    
+    // Long-press alternates
+    private let alternateMap: [String: [String]] = [
+        "a": ["á","à","ä","â","ã","å","ā"],
+        "e": ["é","è","ë","ê","ē"],
+        "i": ["í","ì","ï","î","ī"],
+        "o": ["ó","ò","ö","ô","õ","ō","ø"],
+        "u": ["ú","ù","ü","û","ū"],
+        "c": ["ç"],
+        "n": ["ñ"],
+        "?": ["¿"],
+        "!": ["¡"],
+        "\"": ["\u{201C}", "\u{201D}"],  // Left and right double quotes
+        "'": ["\u{2018}", "\u{2019}"],   // Left and right single quotes
+        "-": ["–", "—"]
+    ]
+    private var longPressMenu: UIView?
+    
+    // Safe area constraint management
+    private var safeAreaBottomConstraint: NSLayoutConstraint?
 
     // MARK: - Convenience
     private var textDocumentProxy: UITextDocumentProxy? {
         return parentInputVC?.textDocumentProxy
+    }
+    
+    // MARK: - Host Traits Sync (Apple-like)
+    private func syncHostTraits() {
+        guard let proxy = textDocumentProxy else { return }
+        
+        // Autocapitalization
+        switch proxy.autocapitalizationType ?? .none {
+        case .sentences:
+            // Enable shift at sentence starts
+            if shouldCapNext(proxy.documentContextBeforeInput ?? "") {
+                isShifted = true; isCapsLocked = false
+                updateShiftButtonAppearance(); updateKeyTitlesForShiftState()
+            }
+        case .words:
+            // Capitalize each word start
+            if (proxy.documentContextBeforeInput ?? "").last?.isWhitespace ?? true {
+                isShifted = true; isCapsLocked = false
+                updateShiftButtonAppearance(); updateKeyTitlesForShiftState()
+            }
+        case .allCharacters:
+            isCapsLocked = true; isShifted = true
+            updateShiftButtonAppearance(); updateKeyTitlesForShiftState()
+        default:
+            // none
+            break
+        }
+
+        // Autocorrection / spell strip
+        let wantsAutocorrect = (proxy.autocorrectionType ?? .default) != .no
+        spellStrip.isHidden = !wantsAutocorrect && (suggestionChip == nil)
+
+        // Smart quotes / dashes / insert-delete
+        smartQuotesEnabled = (proxy.smartQuotesType ?? .default) != .no
+        smartDashesEnabled = (proxy.smartDashesType ?? .default) != .no
+        smartInsertDeleteEnabled = (proxy.smartInsertDeleteType ?? .default) != .no
+
+        // Return key label and behavior
+        updateReturnKeyAppearance(for: proxy.returnKeyType ?? .default)
+
+        // Keyboard appearance (dark/light)
+        updateAppearance(proxy.keyboardAppearance ?? .default)
+    }
+    
+    private func shouldCapNext(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return true }
+        
+        // Check if last character is a sentence ender
+        if let last = trimmed.last {
+            return [".", "!", "?", "…"].contains(last)
+        }
+        return false
+    }
+    
+    private func updateReturnKeyAppearance(for type: UIReturnKeyType) {
+        guard let returnButton = returnButton else { return }
+        let label: String
+        switch type {
+        case .go: label = "Go"
+        case .google: label = "Google"
+        case .join: label = "Join"
+        case .next: label = "Next"
+        case .route: label = "Route"
+        case .search: label = "Search"
+        case .send: label = "Send"
+        case .yahoo: label = "Yahoo"
+        case .done: label = "Done"
+        case .continue: label = "Continue"
+        default: label = "return"
+        }
+        returnButton.setTitle(label, for: .normal)
+    }
+    
+    // Adapt colors to keyboardAppearance (like Apple keyboard)
+    private func updateAppearance(_ appearance: UIKeyboardAppearance) {
+        let isDark = (appearance == .dark || (appearance == .default && traitCollection.userInterfaceStyle == .dark))
+        let bg: UIColor = isDark ? UIColor.black : UIColor.keyboardBackground
+        backgroundColor = bg
+        suggestionBar?.backgroundColor = isDark ? .systemGray5.withAlphaComponent(0.25) : .systemGray5
+
+        // Re-style all keys quickly
+        func restyleButton(_ b: UIButton) {
+            if b === quickFixButton {
+                b.backgroundColor = .systemPink
+                b.setTitleColor(.white, for: .normal)
+                return
+            }
+            b.backgroundColor = isDark ? .systemGray3 : .systemGray6
+            b.setTitleColor(isDark ? .white : .label, for: .normal)
+            b.layer.borderColor = (isDark ? UIColor.systemGray : UIColor.keyBorder).cgColor
+        }
+        for case let b as UIButton in allButtons(in: self) { restyleButton(b) }
+        spellStrip.backgroundColor = isDark ? UIColor.systemGray5.withAlphaComponent(0.2) : UIColor.systemGray6.withAlphaComponent(0.8)
+    }
+    
+    private func allButtons(in view: UIView) -> [UIView] {
+        var result: [UIView] = []
+        for subview in view.subviews {
+            if subview is UIButton {
+                result.append(subview)
+            }
+            result.append(contentsOf: allButtons(in: subview))
+        }
+        return result
+    }
+    
+    // MARK: - Long-press alternates
+    private func installLongPressGestures(on buttons: [UIButton]) {
+        for b in buttons {
+            let lp = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPressOnKey(_:)))
+            lp.minimumPressDuration = 0.35
+            b.addGestureRecognizer(lp)
+        }
+    }
+
+    @objc private func handleLongPressOnKey(_ gr: UILongPressGestureRecognizer) {
+        guard gr.state == .began, let b = gr.view as? UIButton,
+              let original = (b.accessibilityValue ?? b.title(for: .normal))?.lowercased(),
+              let alts = alternateMap[original], !alts.isEmpty else { return }
+
+        showAlternates(alts, from: b)
+    }
+
+    private func showAlternates(_ alts: [String], from anchor: UIButton) {
+        longPressMenu?.removeFromSuperview()
+
+        let menu = UIStackView()
+        menu.axis = .horizontal
+        menu.spacing = 6
+        menu.alignment = .fill
+        menu.distribution = .fillEqually
+        menu.backgroundColor = .secondarySystemBackground
+        menu.layer.cornerRadius = 10
+        menu.layer.shadowColor = UIColor.black.cgColor
+        menu.layer.shadowOpacity = 0.25
+        menu.layer.shadowRadius = 8
+        menu.layer.shadowOffset = .init(width: 0, height: 2)
+
+        for ch in alts {
+            let btn = UIButton(type: .system)
+            btn.setTitle(ch, for: .normal)
+            btn.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
+            btn.backgroundColor = .systemBackground
+            btn.layer.cornerRadius = 8
+            btn.addAction(UIAction { [weak self] _ in
+                self?.insertAlternate(ch)
+                self?.dismissAlternates()
+            }, for: .touchUpInside)
+            menu.addArrangedSubview(btn)
+        }
+        addSubview(menu)
+        menu.translatesAutoresizingMaskIntoConstraints = false
+
+        let frame = convert(anchor.bounds, from: anchor)
+        NSLayoutConstraint.activate([
+            menu.bottomAnchor.constraint(equalTo: topAnchor, constant: frame.minY - 8),
+            menu.centerXAnchor.constraint(equalTo: leftAnchor, constant: frame.midX),
+            menu.heightAnchor.constraint(equalToConstant: 44)
+        ])
+
+        longPressMenu = menu
+
+        // Dismiss on tap outside
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissAlternatesTap(_:)))
+        tap.cancelsTouchesInView = false
+        addGestureRecognizer(tap)
+    }
+
+    @objc private func dismissAlternatesTap(_ gr: UITapGestureRecognizer) { dismissAlternates() }
+    
+    private func dismissAlternates() {
+        longPressMenu?.removeFromSuperview()
+        longPressMenu = nil
+    }
+
+    private func insertAlternate(_ ch: String) {
+        guard let proxy = textDocumentProxy else { return }
+        // Replace last typed base letter if it matches; else just insert
+        let before = proxy.documentContextBeforeInput ?? ""
+        if let last = before.last, String(last).lowercased() == ch.folding(options: .diacriticInsensitive, locale: .current).lowercased() {
+            proxy.deleteBackward()
+        }
+        proxy.insertText(ch)
+    }
+    
+    // MARK: - Traits and Language Sync
+    private func pushTraitsAndLanguage() {
+        guard let proxy = textDocumentProxy else { return }
+        spellChecker.syncFromTextTraits(proxy)
+        if let lang = proxy.primaryLanguage {
+            spellChecker.setDocumentPrimaryLanguage(lang)
+        }
     }
 
     func configure(with inputVC: UIInputViewController) {
@@ -1140,6 +1440,24 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
         
         // Debug: Log coordinator initialization
         logger.debug("ToneSuggestionCoordinator initialized: \(self.coordinator != nil)")
+        
+        // Sync host traits after configuration
+        syncHostTraits()
+        
+        // Sync traits and language to spell checker and prime Apple lexicon
+        if let proxy = parentInputVC?.textDocumentProxy {
+            spellChecker.syncFromTextTraits(proxy)
+            if let lang = proxy.primaryLanguage {
+                spellChecker.setDocumentPrimaryLanguage(lang)
+            }
+            // Seed our allow-list to match Apple's lexicon
+            spellChecker.primeAppleLikeAllowList(using: inputVC)
+        }
+    }
+    
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        syncHostTraits()
     }
 
     private func commonInit() {
@@ -1177,7 +1495,24 @@ final class KeyboardController: UIInputView, ToneSuggestionDelegate, UIInputView
         super.layoutSubviews()
         dismissAllKeyPreviews()
         refreshKeyHitRects()
-
+        
+        // Respect safe area bottom and sync host traits
+        if let stack = keyboardStackView {
+            let inset = safeAreaInsets.bottom
+            let newConstant = -(max(16, inset))
+            
+            if let existingConstraint = safeAreaBottomConstraint {
+                // Update existing constraint
+                existingConstraint.constant = newConstant
+            } else {
+                // Create new constraint
+                let constraint = stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: newConstant)
+                constraint.isActive = true
+                safeAreaBottomConstraint = constraint
+            }
+        }
+        syncHostTraits()
+        pushTraitsAndLanguage()  // Optional but harmless
     }
 // MARK: - FAT FINGER: atlas
 private func refreshKeyHitRects() {
@@ -1551,11 +1886,10 @@ private func commit(button: UIButton) {
         tone.translatesAutoresizingMaskIntoConstraints = false
         tone.backgroundColor = UIColor.systemGray6
         tone.layer.cornerRadius = keyCornerRadius
-        tone.addTarget(self, action: #selector(toggleChipOrStrip), for: .touchUpInside)
-        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(forceAnalysisTap))
-        doubleTap.numberOfTapsRequired = 2
-        tone.addGestureRecognizer(doubleTap)
+        tone.addTarget(self, action: #selector(showBestSuggestionForCurrentTone), for: .touchUpInside)
+        // Remove double-tap analysis - we now do automatic analysis
         let hold = UILongPressGestureRecognizer(target: self, action: #selector(toggleSuggestionsDisplayLongPress(_:)))
+        tone.addGestureRecognizer(hold)
         tone.addGestureRecognizer(hold)
         bar.addSubview(tone)
         toneIndicator = tone
@@ -1709,6 +2043,7 @@ private func commit(button: UIButton) {
             $0.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
             $0.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchCancel, .touchDragExit, .touchUpOutside])
         }
+        installLongPressGestures(on: buttons) // Add long-press alternates for letters
         let stack = UIStackView(arrangedSubviews: buttons)
         stack.axis = .horizontal
         stack.spacing = horizontalSpacing
@@ -1984,11 +2319,13 @@ private func commit(button: UIButton) {
     private func handleSpaceTap() {
         guard let proxy = textDocumentProxy else { return }
 
-        // Sync traits with spell checker for Apple-like behavior
-        spellChecker.syncFromTextTraits(proxy)
+        // Sync traits and language with spell checker for Apple-like behavior
+        pushTraitsAndLanguage()
 
         // (A) Apple-like double-space period handling
-        if spellChecker.handleDoubleSpace(proxy) {
+        if (textDocumentProxy?.autocorrectionType ?? .default) != .no,
+           smartInsertDeleteEnabled,
+           spellChecker.handleDoubleSpace(proxy) {
             // Spell checker handled it, update our current text
             let before = proxy.documentContextBeforeInput ?? ""
             if before.hasSuffix(". ") {
@@ -2141,12 +2478,14 @@ private func commit(button: UIButton) {
         triggerHapticFeedback()
         currentMode = ([.letters, .compact, .expanded].contains(currentMode)) ? .numbers : .letters
         updateKeyboardForCurrentMode()
+        syncHostTraits()
     }
 
     @objc private func handleSymbolsSwitch() {
         triggerHapticFeedback()
         currentMode = (currentMode == .symbols) ? .numbers : .symbols
         updateKeyboardForCurrentMode()
+        syncHostTraits()
     }
 
     // MARK: - Delete repeat
@@ -2236,6 +2575,21 @@ private func commit(button: UIButton) {
     @objc private func handleQuickFix() {
         updateCurrentText()
         guard let proxy = textDocumentProxy else { return }
+        
+        // Check daily usage limit
+        guard canUseSecureFix() else {
+            let remaining = getRemainingSecureFixUses()
+            let message = remaining == 0 ? 
+                "Daily limit reached! You've used all 10 Secure Fix requests for today. Try again tomorrow." :
+                "You have \(remaining) Secure Fix requests remaining today."
+            
+            // Show alert to user about usage limit
+            DispatchQueue.main.async {
+                self.showUsageLimitAlert(message: message)
+            }
+            return
+        }
+        
         let before = proxy.documentContextBeforeInput ?? ""
         let after = proxy.documentContextAfterInput ?? ""
         let fullText = (before + after).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2248,17 +2602,84 @@ private func commit(button: UIButton) {
             guard let self = self, let proxy = self.textDocumentProxy, let fixedText = result else { return }
             
             DispatchQueue.main.async {
+                // Increment usage count on successful completion
+                self.incrementSecureFixUsage()
+                
                 self.replaceAllText(with: fixedText, on: proxy)
                 self.refreshSpellCandidates()
                 self.handleTextChange()
             }
         }
     }
+    
+    private func showUsageLimitAlert(message: String) {
+        // Create a simple toast-like notification in the keyboard
+        let alertView = UIView()
+        alertView.backgroundColor = UIColor.systemRed.withAlphaComponent(0.9)
+        alertView.layer.cornerRadius = 8
+        alertView.translatesAutoresizingMaskIntoConstraints = false
+        
+        let label = UILabel()
+        label.text = message
+        label.textColor = .white
+        label.font = UIFont.systemFont(ofSize: 12, weight: .medium)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        alertView.addSubview(label)
+        self.addSubview(alertView)
+        
+        NSLayoutConstraint.activate([
+            alertView.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+            alertView.topAnchor.constraint(equalTo: self.topAnchor, constant: 10),
+            alertView.leadingAnchor.constraint(greaterThanOrEqualTo: self.leadingAnchor, constant: 20),
+            alertView.trailingAnchor.constraint(lessThanOrEqualTo: self.trailingAnchor, constant: -20),
+            
+            label.topAnchor.constraint(equalTo: alertView.topAnchor, constant: 12),
+            label.bottomAnchor.constraint(equalTo: alertView.bottomAnchor, constant: -12),
+            label.leadingAnchor.constraint(equalTo: alertView.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(equalTo: alertView.trailingAnchor, constant: -16)
+        ])
+        
+        // Animate in
+        alertView.alpha = 0
+        alertView.transform = CGAffineTransform(scaleX: 0.8, scaleY: 0.8)
+        
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.5, options: [], animations: {
+            alertView.alpha = 1
+            alertView.transform = .identity
+        }, completion: nil)
+        
+        // Auto-hide after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            UIView.animate(withDuration: 0.3, animations: {
+                alertView.alpha = 0
+                alertView.transform = CGAffineTransform(scaleX: 0.8, scaleY: 0.8)
+            }) { _ in
+                alertView.removeFromSuperview()
+            }
+        }
+    }
 
     private func updateSecureFixButtonState() {
-        let available = !openAIAPIKey.isEmpty
-        quickFixButton?.isEnabled = available
-        quickFixButton?.alpha = available ? 1.0 : 0.5
+        let hasAPIKey = !openAIAPIKey.isEmpty
+        let canUse = hasAPIKey && canUseSecureFix()
+        let remaining = getRemainingSecureFixUses()
+        
+        quickFixButton?.isEnabled = canUse
+        quickFixButton?.alpha = canUse ? 1.0 : 0.5
+        
+        // Update button title to show remaining uses
+        if hasAPIKey {
+            if remaining > 0 {
+                quickFixButton?.setTitle("Secure (\(remaining))", for: .normal)
+            } else {
+                quickFixButton?.setTitle("Secure (0)", for: .normal)
+            }
+        } else {
+            quickFixButton?.setTitle("Secure", for: .normal)
+        }
     }
 
     // MARK: - ToneSuggestionDelegate
@@ -2431,12 +2852,14 @@ private func commit(button: UIButton) {
         return words.count >= minWordsForAnalysis
     }
 
+    // MARK: - Analysis Scheduling (for automatic tone detection)
     private func scheduleAnalysis(for sentence: String, delay: TimeInterval) {
         guard sentence != lastAnalyzedSentence else { return }
         analysisTimer?.invalidate()
         analysisTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
             guard let self = self else { return }
             self.lastAnalyzedSentence = sentence
+            // Only analyze for tone detection - don't automatically show suggestions
             self.coordinator?.analyzeFinalSentence(sentence)
         }
     }
@@ -2670,35 +3093,45 @@ private func commit(button: UIButton) {
         handleTextChange()
     }
 
-    // MARK: - Toggle suggestions vs. spell candidates
-    @objc private func toggleChipOrStrip() {
+    // MARK: - Tone Button: Show Best Suggestion for Current Tone
+    @objc private func showBestSuggestionForCurrentTone() {
         #if DEBUG
-        logger.debug("🔘 Tone indicator button tapped")
+        logger.debug("🔘 Tone indicator button tapped - requesting best suggestion for current tone")
         #endif
         
-        // Keep the bar visible; just swap chip <-> strip
-        if suggestionChip != nil {
+        guard let currentTone = logoImageView?.accessibilityValue else {
             #if DEBUG
-            logger.debug("📱 Hiding suggestion chip, showing spell strip")
+            logger.debug("❌ No current tone available")
             #endif
-            hideSuggestionChip(animated: false)
-            spellStrip.isHidden = false
-            coordinator?.requestSuggestions() // refresh strip content
+            return
+        }
+        
+        #if DEBUG
+        logger.debug("🎯 Current tone: '\(currentTone)'")
+        #endif
+        
+        // Only show suggestion if we have a meaningful tone (not neutral)
+        if ["alert", "caution", "clear"].contains(currentTone) {
+            #if DEBUG
+            logger.debug("✅ Valid tone detected, requesting best suggestion")
+            #endif
+            
+            // Request the best suggestion for this tone + personality
+            coordinator?.requestBestSuggestion(forTone: currentTone)
         } else {
-            if let s = suggestions.first {
-                #if DEBUG
-                logger.debug("💬 Showing suggestion chip with existing text: '\(s)'")
-                #endif
-                showSuggestionChip(text: s, toneString: coordinator?.getCurrentToneStatus())
+            #if DEBUG
+            logger.debug("ℹ️ Neutral tone - no specific suggestion needed")
+            #endif
+            
+            // For neutral tone, just toggle the suggestion bar visibility
+            if suggestionChip != nil {
+                hideSuggestionChip(animated: true)
+                spellStrip.isHidden = false
             } else {
-                #if DEBUG
-                logger.debug("🔍 No suggestions available, forcing analysis")
-                #endif
-                forceAnalysis()
+                spellStrip.isHidden = true
             }
-            spellStrip.isHidden = true
         }
-        }
+    }
     
 
     // Optional: still allow fully hiding the bar with a long-press
@@ -2710,7 +3143,7 @@ private func commit(button: UIButton) {
                 showSuggestionChip(text: s, toneString: coordinator?.getCurrentToneStatus())
             } else {
                 spellStrip.isHidden = false
-                coordinator?.requestSuggestions()
+                // Don't automatically request suggestions - wait for user to press tone button
             }
         } else {
             hideSuggestionChip(animated: false)
@@ -2726,7 +3159,7 @@ private func commit(button: UIButton) {
             } else {
                 spellStrip.isHidden = true
                 hideSuggestionChip(animated: false)
-                coordinator?.requestSuggestions()
+                // Don't automatically request suggestions - wait for user to press tone button
             }
         } else {
             hideSuggestionChip()
@@ -2735,7 +3168,15 @@ private func commit(button: UIButton) {
         }
     }
 
-    @objc private func forceAnalysisTap() { forceAnalysis() }
+    // MARK: - Legacy Force Analysis (REMOVED - now using automatic analysis + tone-specific suggestions)
+    /*
+    @objc private func forceAnalysisTap() { 
+        #if DEBUG
+        logger.debug("🔍 User double-tapped tone button - forcing analysis")
+        #endif
+        forceAnalysis() 
+    }
+    
     private func forceAnalysis() {
         #if DEBUG
         logger.debug("🔍 forceAnalysis() called")
@@ -2779,12 +3220,14 @@ private func commit(button: UIButton) {
             coordinator?.requestSuggestions()
         }
     }
+    */
 
     // MARK: - Tone/analysis hook
     func textDidChange() { handleTextChange() }
     private func handleTextChange() {
         updateCurrentText()
         refreshSpellCandidates()
+        syncHostTraits()  // Sync host traits when text changes
 
         // If the entire document is effectively empty, snap tone back to neutral.
         let beforeCtx = textDocumentProxy?.documentContextBeforeInput ?? ""
@@ -2805,20 +3248,26 @@ private func commit(button: UIButton) {
 
         lastInputAt = Date().timeIntervalSince1970
         let before = beforeCtx
+        
+        // Auto-analyze text for tone detection after every word AND on completed sentences
+        // Priority 1: Check for completed sentences (immediate analysis)
         if let sentence = lastCompletedSentence(in: before), meetsThresholds(sentence) {
-            logger.debug("Found completed sentence: '\(sentence)'")
+            logger.debug("Found completed sentence: '\(sentence)' - auto-analyzing for tone detection")
             scheduleAnalysis(for: sentence, delay: boundaryDebounce)
             return
         }
         
-        // Also try analyzing without punctuation if we have enough content
-        let candidate = lastNaturalClause(in: before) ?? before.trimmingCharacters(in: .whitespacesAndNewlines)
-        if meetsThresholds(candidate) {
-            logger.debug("Found natural clause: '\(candidate)'")
-            scheduleAnalysis(for: candidate, delay: idleDebounceNoPunct)
+        // Priority 2: Analyze after every word (with slight delay for typing flow)
+        let currentCandidate = lastNaturalClause(in: before) ?? before.trimmingCharacters(in: .whitespacesAndNewlines)
+        if meetsThresholds(currentCandidate) {
+            logger.debug("Text changed - analyzing current content: '\(currentCandidate)' for tone detection")
+            scheduleAnalysis(for: currentCandidate, delay: 0.3) // Short delay for every-word analysis
         } else {
-            logger.debug("Text doesn't meet analysis thresholds. Length: \(candidate.count), words: \(candidate.split { $0.isWhitespace }.count)")
+            logger.debug("Text doesn't meet analysis thresholds. Length: \(currentCandidate.count), words: \(currentCandidate.split { $0.isWhitespace }.count)")
         }
+        
+        // Keep spell checker in sync with field traits and language
+        pushTraitsAndLanguage()
     }
 
     private func updateCurrentText() {
@@ -2954,6 +3403,10 @@ private func commit(button: UIButton) {
     // MARK: - Enhanced Punctuation and Mode Helpers
     private func handlePunctuationInsertion(_ punctuation: String) {
         guard let proxy = textDocumentProxy else { return }
+        
+        // Sync traits and language before processing
+        pushTraitsAndLanguage()
+        
         proxy.insertText(punctuation)
         currentText += punctuation
         
@@ -2965,15 +3418,11 @@ private func commit(button: UIButton) {
             if let b = punctuation.first { autocorrectLastWordIfNeeded(afterTyping: b) }
             proxy.insertText(" ")
             currentText += " "
-            // Apple-like: reevaluate previous word after punctuation
-            _ = spellChecker.reevaluatePreviousWord(before: proxy)
             switchToAlphabeticKeyboard()
         } else if [",", ";", ":"].contains(punctuation) {
             if let b = punctuation.first { autocorrectLastWordIfNeeded(afterTyping: b) }
             proxy.insertText(" ")
             currentText += " "
-            // Apple-like: reevaluate previous word after punctuation
-            _ = spellChecker.reevaluatePreviousWord(before: proxy)
             
             // Check if spell checker recommends switching to ABC mode
             if let lastChar = punctuation.first,
@@ -2981,6 +3430,9 @@ private func commit(button: UIButton) {
                 switchToAlphabeticKeyboard()
             }
         }
+        
+        // Always re-check previous word after punctuation insertion
+        _ = spellChecker.reevaluatePreviousWord(before: proxy)
         
          // Don't run autocorrect on every punctuation keystroke - save for commit/send
         refreshSpellCandidates()
@@ -2992,6 +3444,7 @@ private func commit(button: UIButton) {
             triggerHapticFeedback()
             currentMode = .letters
             updateKeyboardForCurrentMode()
+            syncHostTraits()
         }
         // Enable shift for next character using spell checker logic
         enableShiftForNextCharacter()
@@ -3031,11 +3484,18 @@ private func commit(button: UIButton) {
     
     func typographicNormalize(_ s: String) -> String {
         var t = s
-        t = t.replacingOccurrences(of: "...", with: "…")
-        t = t.replacingOccurrences(of: "--",  with: "—")
-        t = t.replacingOccurrences(of: " \"", with: " \"")
-        t = t.replacingOccurrences(of: "\" ", with: "\" ")
-        t = t.replacingOccurrences(of: " 1/2", with: " ½")
+        if smartDashesEnabled {
+            t = t.replacingOccurrences(of: "...", with: "…")
+            t = t.replacingOccurrences(of: "--",  with: "—")
+        }
+        if smartQuotesEnabled {
+            // Simple straight->curly quotes replacement using unicode
+            t = t.replacingOccurrences(of: "\"", with: "\u{201C}")  // Left double quote
+            t = t.replacingOccurrences(of: "'", with: "\u{2018}")   // Left single quote
+        }
+        if smartInsertDeleteEnabled {
+            t = t.replacingOccurrences(of: "  ", with: " ")
+        }
         return t
     }
     
@@ -3090,4 +3550,9 @@ private extension CGPoint {
         let dy = y - other.y
         return sqrt(dx*dx + dy*dy)
     }
+}
+
+// MARK: - String Helper Extension
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

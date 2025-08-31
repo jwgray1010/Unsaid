@@ -5,14 +5,10 @@ class OnboardingAccountScreenProfessional extends StatefulWidget {
     super.key,
     required this.onContinueAsGuest,
     required this.onSignInWithApple,
-    required this.onSignInWithGoogle,
-    this.googleButtonEnabled = true,
   });
 
   final Future<void> Function() onContinueAsGuest;
   final Future<void> Function() onSignInWithApple;
-  final Future<void> Function() onSignInWithGoogle;
-  final bool googleButtonEnabled;
 
   @override
   State<OnboardingAccountScreenProfessional> createState() =>
@@ -28,7 +24,7 @@ class _OnboardingAccountScreenProfessionalState
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _logoAnimation;
-  
+
   bool _isLoading = false;
 
   @override
@@ -49,8 +45,8 @@ class _OnboardingAccountScreenProfessionalState
 
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
-        );
+      CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+    );
 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
@@ -82,11 +78,11 @@ class _OnboardingAccountScreenProfessionalState
 
   void _animateButton(Future<void> Function() onPressed) async {
     if (_isLoading) return; // Prevent multiple simultaneous taps
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Small haptic feedback
       await Future.delayed(const Duration(milliseconds: 50));
@@ -179,7 +175,7 @@ class _OnboardingAccountScreenProfessionalState
 
                           // Subtitle
                           Text(
-                            'Choose how you want to begin your journey',
+                            'Choose how you want to get started with Unsaid',
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: theme.colorScheme.onSurface.withOpacity(
                                 0.7,
@@ -218,9 +214,11 @@ class _OnboardingAccountScreenProfessionalState
                                     ],
                                   ),
                                   child: ElevatedButton.icon(
-                                    onPressed: _isLoading ? null : () => _animateButton(
-                                      widget.onContinueAsGuest,
-                                    ),
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () => _animateButton(
+                                              widget.onContinueAsGuest,
+                                            ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       foregroundColor: Colors.white,
@@ -233,13 +231,15 @@ class _OnboardingAccountScreenProfessionalState
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                     ),
-                                    icon: _isLoading 
+                                    icon: _isLoading
                                         ? const SizedBox(
                                             width: 20,
                                             height: 20,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      Colors.white),
                                             ),
                                           )
                                         : const Icon(
@@ -247,25 +247,29 @@ class _OnboardingAccountScreenProfessionalState
                                             size: 20,
                                           ),
                                     label: Text(
-                                      _isLoading ? 'Signing in...' : 'Continue as Guest',
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
+                                      _isLoading
+                                          ? 'Signing in...'
+                                          : 'Continue as Guest',
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
 
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 24),
 
                               // Sign in with Apple Button
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton.icon(
-                                  onPressed: _isLoading ? null : () =>
-                                      _animateButton(widget.onSignInWithApple),
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _animateButton(
+                                          widget.onSignInWithApple),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
                                     foregroundColor: Colors.black,
@@ -281,13 +285,15 @@ class _OnboardingAccountScreenProfessionalState
                                     ),
                                     elevation: 2,
                                   ),
-                                  icon: _isLoading 
+                                  icon: _isLoading
                                       ? const SizedBox(
                                           width: 20,
                                           height: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.black54),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    Colors.black54),
                                           ),
                                         )
                                       : Image.asset(
@@ -297,69 +303,14 @@ class _OnboardingAccountScreenProfessionalState
                                           fit: BoxFit.contain,
                                         ),
                                   label: Text(
-                                    _isLoading ? 'Signing in...' : 'Sign in with Apple',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black,
-                                        ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // Sign in with Google Button
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: widget.googleButtonEnabled && !_isLoading
-                                      ? () => _animateButton(
-                                          widget.onSignInWithGoogle,
-                                        )
-                                      : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(
-                                      0xFF4285F4,
-                                    ), // Google Blue
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                      horizontal: 24,
+                                    _isLoading
+                                        ? 'Signing in...'
+                                        : 'Sign in with Apple',
+                                    style:
+                                        theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
                                     ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  icon: _isLoading 
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                          ),
-                                        )
-                                      : widget.googleButtonEnabled
-                                          ? Image.asset(
-                                              'assets/google.png',
-                                              width: 20,
-                                              height: 20,
-                                              fit: BoxFit.contain,
-                                            )
-                                          : const Icon(
-                                              Icons.g_mobiledata,
-                                              size: 20,
-                                              color: Colors.white70,
-                                            ),
-                                  label: Text(
-                                    _isLoading ? 'Signing in...' : 'Sign in with Google',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
                                   ),
                                 ),
                               ),

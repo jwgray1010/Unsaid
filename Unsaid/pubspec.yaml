@@ -45,7 +45,7 @@ dependencies:
 
   # Optional: Google sign-in and Apple sign-in
   # google_sign_in: ^6.1.5  # Temporarily disabled due to version conflicts
-  sign_in_with_apple: ^5.0.0  # Using older version for compatibility with older macOS
+  sign_in_with_apple: ^6.1.1  # Updated to latest compatible version
 
   # Optional: For picking images for profile photos
   image_picker: ^1.1.1
@@ -78,6 +78,9 @@ dependencies:
   url_launcher: ^6.2.5
   fl_chart: ^0.69.0
   package_info_plus: ^8.0.0
+  
+  # In-app purchases
+  in_app_purchase: ^3.1.13
 
   # HTTP package
   http: ^1.2.1
@@ -85,11 +88,11 @@ dependencies:
   # Google Fonts - using older version for compatibility
   google_fonts: ^4.0.0
   
-  # Shared preferences for keyboard settings - using older compatible version
-  shared_preferences: ^2.0.18
+  # Shared preferences for keyboard settings - updated for compatibility
+  shared_preferences: ^2.3.1
   
-  # Path provider - explicit older version for compatibility
-  path_provider: ^2.0.15
+  # Path provider - updated for compatibility
+  path_provider: ^2.1.1
 
 dev_dependencies:
   flutter_test:

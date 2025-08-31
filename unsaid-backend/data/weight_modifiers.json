@@ -1,0 +1,315 @@
+{
+    "version": "1.2.0",
+    "notes": "Unified multiplier profiles for tone scoring. Works with context_classifier, intensity_modifiers, and triggerwords.",
+    "mergeStrategy": "mul_then_sum",
+    "bounds": { "min": 0.5, "max": 1.5 },
+    "defaults": { "pattern": 1.0, "trigger": 1.0, "context": 1.0 },
+    "profiles": {
+        "high_sensitivity": {
+            "label": "High Sensitivity",
+            "description": "User/system reacts strongly to subtle sarcasm or negation.",
+            "intensityBoost": 1.1,
+            "sarcasmPenalty": 1.3,
+            "negationPenalty": 1.2,
+            "tone_weight": { "alert": 0.05, "caution": 0.03, "clear": -0.02 },
+            "style_weight": { "anxious": 0.05, "avoidant": -0.02, "disorganized": 0.04, "secure": 0.00 },
+            "contextBoost": {
+                "CTX_CONFLICT": {
+                    "context": 1.15,
+                    "tone_weight": { "alert": 0.06, "caution": 0.03, "clear": -0.03 }
+                },
+                "CTX_REPAIR": {
+                    "context": 0.95,
+                    "tone_weight": { "alert": -0.03, "caution": 0.00, "clear": 0.03 }
+                },
+                "CTX_PLANNING": {
+                    "context": 0.92,
+                    "tone_weight": { "alert": -0.04, "caution": 0.00, "clear": 0.04 }
+                }
+            }
+        },
+        "low_reactivity": {
+            "label": "Low Reactivity",
+            "description": "Dampens amplification from intensity and sarcasm cues.",
+            "intensityBoost": 0.9,
+            "sarcasmPenalty": 0.8,
+            "negationPenalty": 0.9,
+            "tone_weight": { "alert": -0.03, "caution": -0.01, "clear": 0.04 },
+            "style_weight": { "anxious": -0.02, "avoidant": 0.05, "disorganized": -0.01, "secure": 0.03 },
+            "contextBoost": {
+                "CTX_CONFLICT": {
+                    "context": 0.92,
+                    "tone_weight": { "alert": -0.04, "caution": -0.01, "clear": 0.03 }
+                },
+                "CTX_REPAIR": {
+                    "context": 1.06,
+                    "tone_weight": { "alert": -0.02, "caution": 0.02, "clear": 0.04 }
+                },
+                "CTX_PLANNING": {
+                    "context": 1.08,
+                    "tone_weight": { "alert": -0.03, "caution": 0.01, "clear": 0.04 }
+                }
+            }
+        },
+        "balanced": {
+            "label": "Balanced Default",
+            "description": "Neutral weighting; baseline calibration.",
+            "intensityBoost": 1.0,
+            "sarcasmPenalty": 1.0,
+            "negationPenalty": 1.0,
+            "tone_weight": { "alert": 0.00, "caution": 0.00, "clear": 0.00 },
+            "style_weight": { "anxious": 0.00, "avoidant": 0.00, "disorganized": 0.00, "secure": 0.00 },
+            "contextBoost": {
+                "CTX_CONFLICT": {
+                    "context": 1.00,
+                    "tone_weight": { "alert": 0.00, "caution": 0.00, "clear": 0.00 }
+                },
+                "CTX_REPAIR": {
+                    "context": 1.00,
+                    "tone_weight": { "alert": 0.00, "caution": 0.00, "clear": 0.00 }
+                },
+                "CTX_PLANNING": {
+                    "context": 1.00,
+                    "tone_weight": { "alert": 0.00, "caution": 0.00, "clear": 0.00 }
+                }
+            }
+        },
+        "empathetic_mirror": {
+            "label": "Empathetic Mirror",
+            "description": "Leans toward validation and reflection; favors repair and clear tone.",
+            "intensityBoost": 0.98,
+            "sarcasmPenalty": 1.1,
+            "negationPenalty": 1.05,
+            "tone_weight": { "alert": -0.03, "caution": 0.02, "clear": 0.05 },
+            "style_weight": { "anxious": 0.02, "avoidant": -0.01, "disorganized": 0.01, "secure": 0.03 },
+            "contextBoost": {
+                "CTX_REPAIR": {
+                    "context": 1.10,
+                    "tone_weight": { "alert": -0.02, "caution": 0.02, "clear": 0.05 }
+                },
+                "CTX_MICRO_APOLOGY": {
+                    "context": 1.08,
+                    "tone_weight": { "alert": -0.01, "caution": 0.02, "clear": 0.04 }
+                },
+                "CTX_CONFLICT": {
+                    "context": 0.96,
+                    "tone_weight": { "alert": -0.04, "caution": 0.01, "clear": 0.03 }
+                }
+            }
+        },
+        "deescalator": {
+            "label": "De-Escalator",
+            "description": "Aggressively dampens escalation; privileges calm correction.",
+            "intensityBoost": 0.92,
+            "sarcasmPenalty": 1.25,
+            "negationPenalty": 1.15,
+            "tone_weight": { "alert": -0.05, "caution": 0.02, "clear": 0.03 },
+            "style_weight": { "anxious": -0.01, "avoidant": 0.03, "disorganized": -0.02, "secure": 0.04 },
+            "contextBoost": {
+                "CTX_ESCALATION": {
+                    "context": 0.88,
+                    "tone_weight": { "alert": -0.06, "caution": 0.01, "clear": 0.03 }
+                },
+                "CTX_CONFLICT": {
+                    "context": 0.92,
+                    "tone_weight": { "alert": -0.05, "caution": 0.02, "clear": 0.03 }
+                },
+                "CTX_REPAIR": {
+                    "context": 1.08,
+                    "tone_weight": { "alert": -0.02, "caution": 0.02, "clear": 0.04 }
+                }
+            }
+        },
+        "boundary_forward": {
+            "label": "Boundary-Forward",
+            "description": "Supports clear, firm limits without harsh escalation.",
+            "intensityBoost": 1.02,
+            "sarcasmPenalty": 1.05,
+            "negationPenalty": 1.00,
+            "tone_weight": { "alert": 0.00, "caution": 0.02, "clear": 0.05 },
+            "style_weight": { "anxious": -0.01, "avoidant": 0.04, "disorganized": 0.00, "secure": 0.03 },
+            "contextBoost": {
+                "CTX_BOUNDARY": {
+                    "context": 1.12,
+                    "tone_weight": { "alert": 0.01, "caution": 0.03, "clear": 0.05 }
+                },
+                "CTX_RUPTURE": {
+                    "context": 0.97,
+                    "tone_weight": { "alert": -0.02, "caution": 0.01, "clear": 0.03 }
+                }
+            }
+        },
+        "direct_blunt": {
+            "label": "Direct & Blunt",
+            "description": "Prefers concise, unsoftened messaging; tolerates higher intensity.",
+            "intensityBoost": 1.08,
+            "sarcasmPenalty": 0.9,
+            "negationPenalty": 0.95,
+            "tone_weight": { "alert": 0.04, "caution": -0.01, "clear": 0.01 },
+            "style_weight": { "anxious": -0.02, "avoidant": 0.05, "disorganized": 0.00, "secure": 0.01 },
+            "contextBoost": {
+                "CTX_PLANNING": {
+                    "context": 1.06,
+                    "tone_weight": { "alert": 0.02, "caution": -0.01, "clear": 0.02 }
+                },
+                "CTX_BOUNDARY": {
+                    "context": 1.05,
+                    "tone_weight": { "alert": 0.03, "caution": -0.01, "clear": 0.01 }
+                }
+            }
+        },
+        "sarcasm_detector": {
+            "label": "Sarcasm Detector",
+            "description": "Heightened sensitivity to ironic/hostile sarcasm.",
+            "intensityBoost": 1.00,
+            "sarcasmPenalty": 1.35,
+            "negationPenalty": 1.10,
+            "tone_weight": { "alert": 0.03, "caution": 0.02, "clear": -0.02 },
+            "style_weight": { "anxious": 0.03, "avoidant": -0.01, "disorganized": 0.03, "secure": 0.00 },
+            "contextBoost": {
+                "CTX_CONFLICT": {
+                    "context": 1.12,
+                    "tone_weight": { "alert": 0.05, "caution": 0.02, "clear": -0.03 }
+                },
+                "CTX_ESCALATION": {
+                    "context": 1.10,
+                    "tone_weight": { "alert": 0.05, "caution": 0.02, "clear": -0.03 }
+                }
+            }
+        },
+        "precision_mode": {
+            "label": "Precision Mode",
+            "description": "Emphasizes exact language; biases toward clear tone and plans.",
+            "intensityBoost": 0.97,
+            "sarcasmPenalty": 1.05,
+            "negationPenalty": 1.05,
+            "tone_weight": { "alert": -0.02, "caution": 0.01, "clear": 0.05 },
+            "style_weight": { "anxious": 0.00, "avoidant": 0.03, "disorganized": -0.01, "secure": 0.03 },
+            "contextBoost": {
+                "CTX_PLANNING": {
+                    "context": 1.12,
+                    "tone_weight": { "alert": -0.02, "caution": 0.02, "clear": 0.05 }
+                },
+                "CTX_REPAIR": {
+                    "context": 1.03,
+                    "tone_weight": { "alert": -0.01, "caution": 0.01, "clear": 0.03 }
+                }
+            }
+        },
+        "coparenting_support": {
+            "label": "Co-Parenting Support",
+            "description": "Prioritizes child-centric calm, schedules, and solution framing.",
+            "intensityBoost": 0.96,
+            "sarcasmPenalty": 1.2,
+            "negationPenalty": 1.1,
+            "tone_weight": { "alert": -0.04, "caution": 0.02, "clear": 0.04 },
+            "style_weight": { "anxious": -0.01, "avoidant": 0.03, "disorganized": -0.01, "secure": 0.04 },
+            "contextBoost": {
+                "CTX_COPARENTING": {
+                    "context": 1.12,
+                    "tone_weight": { "alert": -0.03, "caution": 0.02, "clear": 0.05 }
+                },
+                "CTX_PLANNING": {
+                    "context": 1.08,
+                    "tone_weight": { "alert": -0.03, "caution": 0.02, "clear": 0.04 }
+                },
+                "CTX_REPAIR": {
+                    "context": 1.05,
+                    "tone_weight": { "alert": -0.02, "caution": 0.02, "clear": 0.04 }
+                }
+            }
+        },
+        "dating_sensitive": {
+            "label": "Dating Sensitive",
+            "description": "Gentle, reassurance-oriented style for early-stage relationships.",
+            "intensityBoost": 0.95,
+            "sarcasmPenalty": 1.15,
+            "negationPenalty": 1.1,
+            "tone_weight": { "alert": -0.04, "caution": 0.03, "clear": 0.04 },
+            "style_weight": { "anxious": 0.04, "avoidant": -0.01, "disorganized": 0.02, "secure": 0.02 },
+            "contextBoost": {
+                "CTX_DATING": {
+                    "context": 1.10,
+                    "tone_weight": { "alert": -0.03, "caution": 0.03, "clear": 0.05 }
+                },
+                "CTX_REPAIR": {
+                    "context": 1.06,
+                    "tone_weight": { "alert": -0.02, "caution": 0.02, "clear": 0.04 }
+                },
+                "CTX_RUPTURE": {
+                    "context": 0.96,
+                    "tone_weight": { "alert": -0.03, "caution": 0.01, "clear": 0.02 }
+                }
+            }
+        },
+        "workplace_formal": {
+            "label": "Workplace Formal",
+            "description": "Professional tone; favors clarity and planning over heat.",
+            "intensityBoost": 0.98,
+            "sarcasmPenalty": 1.2,
+            "negationPenalty": 1.05,
+            "tone_weight": { "alert": -0.03, "caution": 0.01, "clear": 0.05 },
+            "style_weight": { "anxious": -0.01, "avoidant": 0.03, "disorganized": -0.01, "secure": 0.03 },
+            "contextBoost": {
+                "CTX_PLANNING": {
+                    "context": 1.12,
+                    "tone_weight": { "alert": -0.02, "caution": 0.02, "clear": 0.05 }
+                },
+                "CTX_BOUNDARY": {
+                    "context": 1.04,
+                    "tone_weight": { "alert": -0.01, "caution": 0.01, "clear": 0.03 }
+                },
+                "CTX_REPAIR": {
+                    "context": 1.02,
+                    "tone_weight": { "alert": -0.01, "caution": 0.01, "clear": 0.03 }
+                }
+            }
+        },
+        "late_night_soften": {
+            "label": "Late-Night Soften",
+            "description": "Assumes fatigue risk; de-amplifies heat, nudges toward clear tone.",
+            "intensityBoost": 0.93,
+            "sarcasmPenalty": 1.15,
+            "negationPenalty": 1.1,
+            "tone_weight": { "alert": -0.05, "caution": 0.02, "clear": 0.04 },
+            "style_weight": { "anxious": 0.01, "avoidant": 0.02, "disorganized": -0.01, "secure": 0.03 },
+            "contextBoost": {
+                "CTX_CONFLICT": {
+                    "context": 0.90,
+                    "tone_weight": { "alert": -0.06, "caution": 0.01, "clear": 0.03 }
+                },
+                "CTX_RUPTURE": {
+                    "context": 0.94,
+                    "tone_weight": { "alert": -0.04, "caution": 0.01, "clear": 0.03 }
+                },
+                "CTX_REPAIR": {
+                    "context": 1.05,
+                    "tone_weight": { "alert": -0.02, "caution": 0.02, "clear": 0.04 }
+                }
+            }
+        },
+        "secure_training": {
+            "label": "Secure Training Wheels",
+            "description": "Gently shapes messages toward secure, steady tone.",
+            "intensityBoost": 0.97,
+            "sarcasmPenalty": 1.10,
+            "negationPenalty": 1.05,
+            "tone_weight": { "alert": -0.02, "caution": 0.01, "clear": 0.05 },
+            "style_weight": { "anxious": -0.01, "avoidant": 0.02, "disorganized": -0.01, "secure": 0.04 },
+            "contextBoost": {
+                "CTX_REPAIR": {
+                    "context": 1.08,
+                    "tone_weight": { "alert": -0.01, "caution": 0.02, "clear": 0.05 }
+                },
+                "CTX_MICRO_APOLOGY": {
+                    "context": 1.07,
+                    "tone_weight": { "alert": -0.01, "caution": 0.02, "clear": 0.04 }
+                },
+                "CTX_PLANNING": {
+                    "context": 1.04,
+                    "tone_weight": { "alert": -0.01, "caution": 0.01, "clear": 0.03 }
+                }
+            }
+        }
+    }
+}

@@ -243,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.psychology,
         onPressed: () {
           _usageTracker.trackCTAClicked('personality_test');
-          Navigator.pushNamed(context, '/personality_test_modern');
+          Navigator.pushNamed(context, '/personality_test');
         },
       );
     }
@@ -371,11 +371,11 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushNamed(context, '/personality_results',
                   arguments: results['answers'] ?? []);
             } else {
-              Navigator.pushNamed(context, '/personality_test_modern');
+              Navigator.pushNamed(context, '/personality_test');
             }
           } catch (_) {
             if (!mounted) return;
-            Navigator.pushNamed(context, '/personality_test_modern');
+            Navigator.pushNamed(context, '/personality_test');
           }
         },
       },
@@ -1526,12 +1526,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     } else {
                       // Navigate to test if no results exist
-                      Navigator.pushNamed(context, '/personality_test_modern');
+                      Navigator.pushNamed(context, '/personality_test');
                     }
                   } catch (e) {
                     print('Error accessing personality results: $e');
                     // Fallback to test screen
-                    Navigator.pushNamed(context, '/personality_test_modern');
+                    Navigator.pushNamed(context, '/personality_test');
                   }
                 },
                 child: const Text(
@@ -1635,13 +1635,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           } else {
                             // Navigate to test if no results exist
                             Navigator.pushNamed(
-                                context, '/personality_test_modern');
+                                context, '/personality_test');
                           }
                         } catch (e) {
                           print('Error accessing personality results: $e');
                           // Fallback to test screen
                           Navigator.pushNamed(
-                              context, '/personality_test_modern');
+                              context, '/personality_test');
                         }
                       },
                       child: Container(

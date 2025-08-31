@@ -1,0 +1,247 @@
+{
+  "version": "1.3.0",
+  "notes": "Feature-spotting for Unsaid web. Regex kept conservative for perf & XSS safety. Prefer precompiled, case-insensitive patterns. Designed to play nicely with intensity/negation/sarcasm layers.",
+  "globals": {
+    "flags": "i", 
+    "maxInputChars": 2000,
+    "timeoutMs": 12,
+    "dedupeWindowMs": 500,
+    "matchLimitPerFeature": 8
+  },
+  "scoringDefaults": {
+    "baseWeight": 0.01,
+    "positionBoost": { "start": 0.02, "end": 0.01, "caps": 0.03, "repeat": 0.03 },
+    "cooccurrenceBoost": { "withNegation": -0.03, "withSarcasm": 0.02, "withEmoji": 0.01 }
+  },
+  "features": [
+    {
+      "id": "FS_ABSOLUTES",
+      "description": "Detect always/never and similar absolutes",
+      "patterns": ["\\balways\\b","\\bnever\\b","\\bevery time\\b","\\bnothing\\b","\\bno one\\b","\\ball the time\\b"],
+      "buckets": ["escalation_language"],
+      "weights": { "tone.alert": 0.05, "tone.caution": 0.02 },
+      "attachmentHints": { "anxious": 0.02, "disorganized": 0.01 }
+    },
+    {
+      "id": "FS_REASSURANCE_Q",
+      "description": "Reassurance-seeking question forms",
+      "patterns": ["\\bdo you still\\b","\\bare you sure\\b","\\bplease just tell me\\b","\\byou promise\\b","\\bbe honest\\b.*\\b(me|with me)\\b"],
+      "buckets": ["reassurance"],
+      "weights": { "tone.caution": 0.035 },
+      "attachmentHints": { "anxious": 0.05 }
+    },
+    {
+      "id": "FS_BOUNDARY_ATTEMPT",
+      "description": "Secure boundary phrasing",
+      "patterns": ["\\bi need\\b.*\\b(space|minute|time|break)\\b","\\bi'll get back to you\\b","\\bnot available\\b","\\bthat doesn't work for me\\b"],
+      "buckets": ["secure_boundary"],
+      "weights": { "tone.clear": 0.05 },
+      "attachmentHints": { "secure": 0.03 }
+    },
+    {
+      "id": "FS_MIND_READING",
+      "description": "Assuming thoughts/intent",
+      "patterns": ["\\byou (don't|do not) care\\b","\\byou (never|always) wanted\\b","\\byou just want(ed)?\\b","\\bi know you think\\b"],
+      "buckets": ["cognitive_distortions"],
+      "weights": { "tone.caution": 0.03, "tone.alert": 0.02 },
+      "attachmentHints": { "anxious": 0.03 }
+    },
+    {
+      "id": "FS_ULTIMATUM",
+      "description": "Threats/ultimatums",
+      "patterns": ["\\b(if|unless) you\\b.*\\b(then|i'm|i am) (done|leaving|out)\\b","\\bit's (me|this) or\\b"],
+      "buckets": ["threats_ultimatums"],
+      "weights": { "tone.alert": 0.08 }
+    },
+    {
+      "id": "FS_BLAME_SHIFT",
+      "description": "Direct blame phrases",
+      "patterns": ["\\bit's your fault\\b","\\bbecause of you\\b","\\byou made me\\b","\\byou caused\\b"],
+      "buckets": ["blame_language"],
+      "weights": { "tone.alert": 0.06 },
+      "attachmentHints": { "disorganized": 0.02 }
+    },
+    {
+      "id": "FS_INVALIDATION",
+      "description": "Invalidating experience",
+      "patterns": ["\\byou're overreacting\\b","\\bcalm down\\b","\\bit's not a big deal\\b","\\b(get over it|move on)\\b"],
+      "buckets": ["invalidation"],
+      "weights": { "tone.alert": 0.05, "tone.caution": 0.02 }
+    },
+    {
+      "id": "FS_SARCASM_MARKERS",
+      "description": "Common sarcasm markers",
+      "patterns": ["\\byeah right\\b","\\bsure\\b.*\\bwhatever\\b","\\bnice\\b.*\\b(job|one)\\b(?!.?\\bthanks\\b)"],
+      "buckets": ["sarcasm"],
+      "weights": { "tone.caution": 0.025 }
+    },
+    {
+      "id": "FS_NEG_Q",
+      "description": "Negative-framed questions",
+      "patterns": ["\\bwhy (would|should) i\\b","\\bdon't you think\\b.*\\bshould\\b","\\bisn't it\\b.*\\b(obvious|clear)\\b"],
+      "buckets": ["loaded_questions"],
+      "weights": { "tone.caution": 0.025 }
+    },
+    {
+      "id": "FS_HEDGING",
+      "description": "Hedging/softeners",
+      "patterns": ["\\bkind of\\b","\\bsort of\\b","\\bmaybe\\b","\\bperhaps\\b","\\bi guess\\b"],
+      "buckets": ["softening_language"],
+      "weights": { "tone.clear": 0.02 }
+    },
+    {
+      "id": "FS_PROTEST_BEHAVIOR",
+      "description": "Protest/withdrawal indicators",
+      "patterns": ["\\bforget it\\b","\\bnever mind\\b","\\bdoesn't matter\\b","\\bwhatever\\b$"],
+      "buckets": ["withdrawal_language"],
+      "weights": { "tone.caution": 0.03 },
+      "attachmentHints": { "avoidant": 0.03 }
+    },
+    {
+      "id": "FS_ESCALATION_PUNCT",
+      "description": "Escalating punctuation",
+      "patterns": ["!{2,}","\\?{2,}","!\\?{1,}|\\?!{1,}"],
+      "buckets": ["escalation_language"],
+      "weights": { "tone.alert": 0.03 }
+    },
+    {
+      "id": "FS_COMPARISONS",
+      "description": "Comparisons/triangulation",
+      "patterns": ["\\blike (you used to|she|he|they)\\b","\\b(other people|everyone else)\\b","\\bwhy can't you be more\\b"],
+      "buckets": ["comparison_jealousy"],
+      "weights": { "tone.caution": 0.03 }
+    },
+    {
+      "id": "FS_STONEWALL",
+      "description": "Stonewalling phrases",
+      "patterns": ["\\bi don't want to talk about it\\b","\\bi'm done talking\\b","\\b(end of|that's the) conversation\\b"],
+      "buckets": ["withdrawal_language"],
+      "weights": { "tone.alert": 0.04, "tone.caution": 0.02 },
+      "attachmentHints": { "avoidant": 0.04 }
+    },
+    {
+      "id": "FS_REPAIR_ATTEMPT",
+      "description": "Repair bids (positive)",
+      "patterns": ["\\bcan we start over\\b","\\bhow can we fix\\b","\\bthat wasn't fair of me\\b","\\bi hear you\\b"],
+      "buckets": ["repair_language"],
+      "weights": { "tone.clear": 0.06 },
+      "attachmentHints": { "secure": 0.04 }
+    },
+    {
+      "id": "FS_VALIDATION",
+      "description": "Validation phrases (positive)",
+      "patterns": ["\\bi see why you'd feel\\b","\\bit makes sense that\\b","\\bi can understand\\b"],
+      "buckets": ["validation_language"],
+      "weights": { "tone.clear": 0.05 }
+    },
+    {
+      "id": "FS_GRATITUDE",
+      "description": "Gratitude/appreciation (positive)",
+      "patterns": ["\\bthank you\\b","\\bi appreciate\\b","\\bthat helped\\b","\\bmeans a lot\\b"],
+      "buckets": ["gratitude_language"],
+      "weights": { "tone.clear": 0.04 }
+    },
+    {
+      "id": "FS_SPECIFIC_REQUEST",
+      "description": "Clear, specific requests (positive)",
+      "patterns": ["\\bcould we try\\b","\\bcan we schedule\\b","\\bplease (call|text) when\\b","\\bnext time\\b.*\\bcan we\\b"],
+      "buckets": ["clear_requests"],
+      "weights": { "tone.clear": 0.045 }
+    },
+    {
+      "id": "FS_I_STATEMENT",
+      "description": "I-statements (positive)",
+      "patterns": ["\\bi feel\\b\\s+(?:like\\s+)?\\b","\\bi felt\\b","\\bi'm feeling\\b"],
+      "buckets": ["secure_expression"],
+      "weights": { "tone.clear": 0.035 }
+    },
+    {
+      "id": "FS_TIME_PRESSURE",
+      "description": "Pressure/urgency cues",
+      "patterns": ["\\bi need an answer (now|today)\\b","\\bright now\\b","\\b(asap|a\\.?s\\.?a\\.?p\\.?)(?![a-z])"],
+      "buckets": ["pressure_urgency"],
+      "weights": { "tone.caution": 0.03, "tone.alert": 0.015 }
+    },
+    {
+      "id": "FS_MINIMIZING_SELF",
+      "description": "Self-minimizing/people-pleasing",
+      "patterns": ["\\bits ok if not\\b","\\bno worries if not\\b","\\b(i'm|i am) probably being\\b.*\\b(dramatic|too much)\\b"],
+      "buckets": ["people_pleasing"],
+      "weights": { "tone.caution": 0.025 },
+      "attachmentHints": { "anxious": 0.03, "secure": -0.01 }
+    },
+    {
+      "id": "FS_ACCUSATORY_QUESTION",
+      "description": "Accusation in question form",
+      "patterns": ["\\bwhy did you even\\b","\\bhow could you\\b","\\bso you decided to\\b"],
+      "buckets": ["blame_language"],
+      "weights": { "tone.alert": 0.045 }
+    },
+    {
+      "id": "FS_OVERGENERALIZING",
+      "description": "Broad negative generalizations",
+      "patterns": ["\\beverything is\\b.*\\b(ruined|terrible|pointless)\\b","\\bnothing ever works\\b"],
+      "buckets": ["cognitive_distortions"],
+      "weights": { "tone.caution": 0.03 }
+    },
+    {
+      "id": "FS_META_CRITIQUE",
+      "description": "Critiquing the convo process",
+      "patterns": ["\\bthis conversation is\\b.*\\b(useless|going nowhere)\\b","\\byou're not listening\\b"],
+      "buckets": ["process_breakdown"],
+      "weights": { "tone.caution": 0.03, "tone.alert": 0.02 }
+    }
+  ],
+  "noticingsMap": {
+    "escalation_language": "Noticing: absolute or intense language can heat things up. Try softeners like “sometimes/this time.”",
+    "reassurance": "Noticing: frequent reassurance-seeking. A quick validation first often calms the loop.",
+    "secure_boundary": "Noticing: healthy boundary phrasing—clear ask + calm tone is effective.",
+    "cognitive_distortions": "Noticing: mind-reading/overgeneralizing. Try describing *your* feeling and a concrete example.",
+    "threats_ultimatums": "Noticing: ultimatum detected. Consider a clear request + consequence later, not as a threat.",
+    "blame_language": "Noticing: blame tends to escalate. Try an I-statement about impact + a specific request.",
+    "invalidation": "Noticing: invalidation can shut things down. Try reflective language (“I can see why…”) first.",
+    "sarcasm": "Noticing: sarcasm can be read as contempt over text. Consider a direct, simple statement instead.",
+    "loaded_questions": "Noticing: questions framed with assumptions often trigger defensiveness. Try neutral wording.",
+    "softening_language": "Noticing: gentle hedging is okay—pair it with a clear ask to avoid vagueness.",
+    "withdrawal_language": "Noticing: withdrawal phrases. A brief pause + scheduled revisit can keep connection.",
+    "comparison_jealousy": "Noticing: comparisons add pressure. Name the need directly instead (attention, reassurance, etc.).",
+    "repair_language": "Noticing: repair bid—great move. Keep it specific and time-bound.",
+    "validation_language": "Noticing: validation detected. You’re building safety—nice.",
+    "gratitude_language": "Noticing: appreciation detected. Consider adding a concrete example for extra warmth.",
+    "clear_requests": "Noticing: specific request—this improves outcomes. Add a timeframe if possible.",
+    "secure_expression": "Noticing: I-statement—healthy self-expression.",
+    "pressure_urgency": "Noticing: urgency can compress safety. If it’s not truly urgent, offer a reasonable window.",
+    "people_pleasing": "Noticing: self-minimizing. Your needs matter; try a direct, kind ask.",
+    "process_breakdown": "Noticing: convo-process critique. Try naming one step that would help right now."
+  },
+  "aggregation": {
+    "decayDays": 7,
+    "capPerDay": 0.12,
+    "noiseFloor": 0.01,
+    "cooldownMsPerBucket": {
+      "escalation_language": 12000,
+      "blame_language": 12000,
+      "threats_ultimatums": 15000,
+      "withdrawal_language": 12000,
+      "reassurance": 10000,
+      "validation_language": 6000,
+      "gratitude_language": 6000,
+      "repair_language": 8000
+    }
+  },
+  "runtime": {
+    "safeOrder": [
+      "tokenize",
+      "negationPass",
+      "sarcasmPass",
+      "featureMatch",
+      "intensityPass",
+      "aggregate"
+    ],
+    "conflictResolution": {
+      "mergeSameBucket": true,
+      "preferPositiveWhenTied": true,
+      "maxNoticingsPerMessage": 3
+    }
+  }
+}

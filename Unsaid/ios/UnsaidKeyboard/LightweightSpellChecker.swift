@@ -258,6 +258,10 @@ final class LightweightSpellChecker {
     // CONTEXT-AWARE: Set document language from textDocumentProxy
     func setDocumentPrimaryLanguage(_ bcp47: String?) {
         setPreferredLanguage(bcp47)
+        // Also set it for UITextChecker multi-language parity
+        if let lang = bcp47, !lang.isEmpty {
+            textChecker.setLanguage(lang)
+        }
     }
     
     // MARK: - Allow-list for common colloquial words (CACHED)
@@ -586,6 +590,15 @@ final class LightweightSpellChecker {
     // PATCH #1: Allow short, ultra-common fixes like "Yoi" → "You"
     func shouldAutoCorrect(_ word: String) -> Bool {
         guard word.count >= 3 else { return false } // lowered from 4 → 3
+        
+        // Skip ALL-CAPS and Proper Nouns mid-sentence
+        let w = word
+        if w == w.uppercased() { return false }
+        if w.prefix(1) == w.prefix(1).uppercased(), w.dropFirst() == w.dropFirst().lowercased() {
+            // Proper noun looking token; only autocorrect if it's a fast typo we know and length > 3
+            if fastTypos[w.lowercased()] == nil { return false }
+        }
+        
         // Honor allow-list for common colloquial words
         if allowedWords().contains(word.lowercased()) { return false }
         // Only block if explicitly marked intentional (via undo/ignore), not after accept
@@ -1345,6 +1358,9 @@ final class LightweightSpellChecker {
         
         // Smart quotes/dashes: if user turned these off, skip fixes that change quotes/dashes
         smartQuotesEnabled = proxy.smartQuotesType != .no
+        
+        // NEW: mirror system "." on double-space preference via smartInsertDeleteType
+        autoInsertTerminalPeriod = (proxy.smartInsertDeleteType ?? .default) != .no
         
         // Keyboard type → domain detection, closer to Apple
         switch proxy.keyboardType {

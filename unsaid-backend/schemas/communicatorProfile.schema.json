@@ -1,0 +1,86 @@
+{
+  "name": "CommunicatorProfile",
+  "version": "1.0.0",
+  "lastUpdated": "2025-08-28",
+  "description": "Schema for a user’s communicator profile, which tracks attachment-style learning over the 7-day onboarding window and beyond.",
+  "fields": {
+    "userId": {
+      "type": "string",
+      "required": true,
+      "description": "Unique identifier for the user.",
+      "example": "user_12345",
+      "error": "Each profile must include a valid userId."
+    },
+    "createdAt": {
+      "type": "string",
+      "required": true,
+      "description": "ISO timestamp when the profile was created.",
+      "example": "2025-08-21T14:32:00Z"
+    },
+    "updatedAt": {
+      "type": "string",
+      "required": true,
+      "description": "ISO timestamp of the most recent update.",
+      "example": "2025-08-28T19:55:00Z"
+    },
+    "firstSeenDay": {
+      "type": "string",
+      "required": true,
+      "description": "The YYYY-MM-DD date of the user’s first interaction.",
+      "example": "2025-08-21"
+    },
+    "daysObserved": {
+      "type": "number",
+      "required": true,
+      "min": 0,
+      "description": "Number of distinct days messages have been observed for this user.",
+      "example": 5
+    },
+    "scores": {
+      "type": "object",
+      "required": true,
+      "description": "Cumulative weighted scores per attachment style.",
+      "fields": {
+        "anxious": { "type": "number", "min": 0, "example": 0.42 },
+        "avoidant": { "type": "number", "min": 0, "example": 0.21 },
+        "disorganized": { "type": "number", "min": 0, "example": 0.18 },
+        "secure": { "type": "number", "min": 0, "example": 0.64 }
+      }
+    },
+    "counters": {
+      "type": "object",
+      "required": true,
+      "description": "Daily counters for increments and activity.",
+      "fields": {
+        "dayKey": {
+          "type": "string",
+          "required": true,
+          "description": "Current learning day (YYYY-MM-DD).",
+          "example": "2025-08-28"
+        },
+        "incrementsToday": {
+          "type": "number",
+          "required": true,
+          "description": "How many signals were incremented today (bounded by daily limit).",
+          "example": 3
+        }
+      }
+    },
+    "history": {
+      "type": "array",
+      "required": false,
+      "description": "Rolling history of learning events. Useful for debugging and audits. Raw text should be redacted in exports.",
+      "items": {
+        "type": "object",
+        "fields": {
+          "type": { "type": "string", "example": "increment" },
+          "style": { "type": "string", "example": "anxious" },
+          "weight": { "type": "number", "example": 0.15 },
+          "signalId": { "type": "string", "example": "reassuranceSeeking" },
+          "dayKey": { "type": "string", "example": "2025-08-28" },
+          "at": { "type": "string", "example": "2025-08-28T19:56:00Z" }
+        }
+      }
+    }
+  }
+}

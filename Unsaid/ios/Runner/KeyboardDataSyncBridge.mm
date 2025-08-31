@@ -8,7 +8,7 @@
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
   FlutterMethodChannel* channel = [FlutterMethodChannel
-      methodChannelWithName:@"keyboard_data_sync"
+      methodChannelWithName:@"com.unsaid/keyboard_data_sync"
             binaryMessenger:[registrar messenger]];
   KeyboardDataSyncBridge* instance = [[KeyboardDataSyncBridge alloc] init];
   [registrar addMethodCallDelegate:instance channel:channel];

@@ -239,30 +239,127 @@ class KeyboardDataService {
     }
   }
 
+  /// Get the latest API responses from shared storage
+  Future<Map<String, dynamic>?> getAPIResponses() async {
+    try {
+      debugPrint('[$_logTag] 🔄 Getting API responses from shared storage...');
+
+      final Map<String, dynamic>? apiData =
+          await _channel.invokeMapMethod('getAPIData');
+
+      if (apiData != null && apiData.isNotEmpty) {
+        debugPrint(
+            '[$_logTag] 📥 Retrieved API data: ${apiData.keys.join(', ')}');
+        return apiData;
+      } else {
+        debugPrint('[$_logTag] ✅ No API data found in shared storage');
+        return null;
+      }
+    } on PlatformException catch (e) {
+      debugPrint('[$_logTag] ❌ Platform error getting API data: ${e.message}');
+      return null;
+    } catch (e) {
+      debugPrint('[$_logTag] ❌ Unexpected error getting API data: $e');
+      return null;
+    }
+  }
+
+  /// Get user data from shared storage
+  Future<Map<String, dynamic>?> getUserData() async {
+    try {
+      debugPrint('[$_logTag] 🔄 Getting user data from shared storage...');
+
+      final Map<String, dynamic>? userData =
+          await _channel.invokeMapMethod('getUserData');
+
+      if (userData != null) {
+        debugPrint(
+            '[$_logTag] 📥 Retrieved user data: ${userData.keys.join(', ')}');
+        return userData;
+      } else {
+        debugPrint('[$_logTag] ✅ No user data found in shared storage');
+        return null;
+      }
+    } on PlatformException catch (e) {
+      debugPrint('[$_logTag] ❌ Platform error getting user data: ${e.message}');
+      return null;
+    } catch (e) {
+      debugPrint('[$_logTag] ❌ Unexpected error getting user data: $e');
+      return null;
+    }
+  }
+
+  /// Test API connectivity and data flow
+  Future<bool> testAPIConnection() async {
+    debugPrint('[$_logTag] 🧪 Testing API connection and data flow...');
+
+    try {
+      // 1. Check for user data
+      final userData = await getUserData();
+      if (userData != null) {
+        debugPrint('[$_logTag] ✅ User data available: ${userData['user_id']}');
+      }
+
+      // 2. Check for API responses
+      final apiData = await getAPIResponses();
+      if (apiData != null) {
+        debugPrint('[$_logTag] ✅ API data available');
+
+        // Process latest suggestion
+        if (apiData['latest_suggestion'] != null) {
+          final suggestion =
+              apiData['latest_suggestion'] as Map<String, dynamic>;
+          debugPrint(
+              '[$_logTag] 📥 Latest suggestion from API: ${suggestion['response']}');
+        }
+
+        // Process latest trial status
+        if (apiData['latest_trial_status'] != null) {
+          final trialStatus =
+              apiData['latest_trial_status'] as Map<String, dynamic>;
+          debugPrint(
+              '[$_logTag] 📥 Latest trial status from API: ${trialStatus['response']}');
+        }
+
+        return true;
+      } else {
+        debugPrint(
+            '[$_logTag] ⚠️ No API data found - keyboard extension may not have called APIs yet');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('[$_logTag] ❌ API connection test failed: $e');
+      return false;
+    }
+  }
+
   /// Complete data sync workflow
   /// Call this when the app starts or becomes active
   Future<bool> performDataSync() async {
     try {
       debugPrint('[$_logTag] 🔄 Starting keyboard data sync...');
 
-      // 1. Check if there's data to sync
+      // 1. Test API connection first
+      await testAPIConnection();
+
+      // 2. Check if there's data to sync
       final metadata = await getKeyboardStorageMetadata();
       if (metadata?['has_pending_data'] != true) {
         debugPrint('[$_logTag] ✅ No pending keyboard data to sync');
         return true;
       }
 
-      // 2. Retrieve pending data
+      // 3. Retrieve pending data
       final keyboardData = await retrievePendingKeyboardData();
       if (keyboardData == null || !keyboardData.hasData) {
         debugPrint('[$_logTag] ✅ No keyboard data retrieved');
         return true;
       }
 
-      // 3. Process the data
+      // 4. Process the data
       await processKeyboardData(keyboardData);
 
-      // 4. Clear the data after successful processing
+      // 5. Clear the data after successful processing
       final cleared = await clearPendingKeyboardData();
       if (!cleared) {
         debugPrint(

@@ -1,0 +1,35 @@
+{
+  "name": "ToneRequest",
+  "version": "1.0.0",
+  "lastUpdated": "2025-08-28",
+  "description": "Schema for tone analysis requests. Ensures input text and optional metadata are valid before passing to tone-analysis service.",
+  "fields": {
+    "text": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 5000,
+      "description": "The user’s message text to analyze for tone.",
+      "example": "Are you upset with me?",
+      "error": "A valid message text (1–5000 characters) is required."
+    },
+    "context": {
+      "type": "enum",
+      "values": ["conflict", "repair", "jealousy", "boundary", "general"],
+      "required": false,
+      "description": "Optional hint about conversation context to improve classification.",
+      "example": "conflict",
+      "error": "Context must be one of: conflict, repair, jealousy, boundary, general."
+    },
+    "meta": {
+      "type": "object",
+      "required": false,
+      "description": "Optional metadata about the request (platform, timestamp, user info).",
+      "example": {
+        "platform": "ios_keyboard",
+        "timestamp": "2025-08-28T19:45:00Z",
+        "user": "user123"
+      }
+    }
+  }
+}

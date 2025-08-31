@@ -1,0 +1,353 @@
+{
+    "version": "1.3.0",
+    "notes": "Attachment-style weighting applied after base trigger/context scores and before final normalization. Offsets are additive to tone logits; multipliers scale post-offset. Category and context multipliers apply to feature-level contributions. Values are tuned to bias detection toward each style's common patterns while preserving Secure-first guidance.",
+    "applyOrder": [
+        "tone_offsets",
+        "tone_multipliers",
+        "category_multipliers",
+        "context_boosts",
+        "intensity_blend",
+        "negation_sarcasm_adjust",
+        "position_scaling",
+        "threshold_shift",
+        "cap_limits"
+    ],
+    "blending": {
+        "toneOffsetMode": "additive",
+        "toneMultiplierMode": "multiplicative",
+        "categoryMode": "multiplicative",
+        "contextMode": "additive",
+        "intensityMode": "weighted_average",
+        "positionMode": "additive",
+        "negSarMode": "multiplicative"
+    },
+    "defaults": {
+        "tone_offsets": {
+            "alert": 0.00,
+            "caution": 0.00,
+            "clear": 0.00
+        },
+        "tone_multipliers": {
+            "alert": 1.00,
+            "caution": 1.00,
+            "clear": 1.00
+        },
+        "category_multipliers": {
+            "profanity": 1.00,
+            "insult": 1.00,
+            "bullying": 1.00,
+            "threat": 1.00,
+            "ultimatum": 1.00,
+            "contempt": 1.00,
+            "escalation": 1.00,
+            "command": 1.00,
+            "gaslighting": 1.00,
+            "jealousy": 1.00,
+            "control": 1.00,
+            "uncertainty": 1.00,
+            "hedge": 1.00,
+            "discomfort": 1.00,
+            "concern": 1.00,
+            "avoidance": 1.00,
+            "safety": 1.00,
+            "structure": 1.00,
+            "plan": 1.00,
+            "agreement": 1.00,
+            "confirmation": 1.00,
+            "boundary": 1.00,
+            "solution": 1.00,
+            "repair": 1.00,
+            "micro_apology": 1.00,
+            "reconnection": 1.00
+        },
+        "context_boosts": {
+            "CTX_CONFLICT": {
+                "alert": 0.00,
+                "caution": 0.00,
+                "clear": 0.00
+            },
+            "CTX_PLANNING": {
+                "alert": 0.00,
+                "caution": 0.00,
+                "clear": 0.00
+            },
+            "CTX_BOUNDARY": {
+                "alert": 0.00,
+                "caution": 0.00,
+                "clear": 0.00
+            },
+            "CTX_REPAIR": {
+                "alert": 0.00,
+                "caution": 0.00,
+                "clear": 0.00
+            }
+        },
+        "intensity_blend": {
+            "weight": 0.20
+        },
+        "negationPenalty": 1.00,
+        "sarcasmPenalty": 1.00,
+        "position_scaling": {
+            "start": 0.00,
+            "end": 0.00,
+            "caps": 0.00,
+            "repeat": 0.00
+        },
+        "threshold_shift": {
+            "alert": 0.00,
+            "caution": 0.00,
+            "clear": 0.00
+        },
+        "cap_limits": {
+            "per_tone_offset_max": 0.35,
+            "per_tone_multiplier_max": 1.40
+        }
+    },
+    "overrides": {
+        "anxious": {
+            "tone_offsets": {
+                "alert": -0.05,
+                "caution": 0.10,
+                "clear": 0.00
+            },
+            "tone_multipliers": {
+                "alert": 0.98,
+                "caution": 1.08,
+                "clear": 1.00
+            },
+            "category_multipliers": {
+                "jealousy": 1.05,
+                "control": 1.04,
+                "escalation": 1.03,
+                "uncertainty": 1.10,
+                "hedge": 1.08,
+                "concern": 1.06,
+                "discomfort": 1.05,
+                "repair": 1.04,
+                "reconnection": 1.04,
+                "boundary": 0.98,
+                "command": 0.98
+            },
+            "context_boosts": {
+                "CTX_CONFLICT": {
+                    "alert": -0.02,
+                    "caution": 0.04,
+                    "clear": 0.00
+                },
+                "CTX_PLANNING": {
+                    "alert": 0.00,
+                    "caution": 0.03,
+                    "clear": 0.00
+                },
+                "CTX_REPAIR": {
+                    "alert": -0.01,
+                    "caution": 0.05,
+                    "clear": 0.02
+                }
+            },
+            "intensity_blend": {
+                "weight": 0.25
+            },
+            "negationPenalty": 1.05,
+            "sarcasmPenalty": 1.08,
+            "position_scaling": {
+                "start": 0.02,
+                "end": 0.01,
+                "caps": 0.03,
+                "repeat": 0.03
+            },
+            "threshold_shift": {
+                "alert": 0.02,
+                "caution": -0.02,
+                "clear": 0.00
+            },
+            "secureFixRouting": {
+                "rewriteBias": 0.10,
+                "adviceBias": 0.05
+            }
+        },
+        "avoidant": {
+            "tone_offsets": {
+                "alert": 0.00,
+                "caution": 0.05,
+                "clear": 0.10
+            },
+            "tone_multipliers": {
+                "alert": 0.99,
+                "caution": 1.03,
+                "clear": 1.08
+            },
+            "category_multipliers": {
+                "avoidance": 1.10,
+                "discomfort": 1.06,
+                "boundary": 1.05,
+                "structure": 1.04,
+                "plan": 1.04,
+                "confirmation": 1.03,
+                "escalation": 0.97,
+                "profanity": 0.96,
+                "contempt": 0.96
+            },
+            "context_boosts": {
+                "CTX_PLANNING": {
+                    "alert": 0.00,
+                    "caution": 0.02,
+                    "clear": 0.04
+                },
+                "CTX_BOUNDARY": {
+                    "alert": 0.00,
+                    "caution": 0.03,
+                    "clear": 0.04
+                }
+            },
+            "intensity_blend": {
+                "weight": 0.18
+            },
+            "negationPenalty": 1.02,
+            "sarcasmPenalty": 1.03,
+            "position_scaling": {
+                "start": 0.00,
+                "end": 0.01,
+                "caps": 0.02,
+                "repeat": 0.02
+            },
+            "threshold_shift": {
+                "alert": 0.01,
+                "caution": 0.00,
+                "clear": -0.02
+            },
+            "secureFixRouting": {
+                "rewriteBias": 0.08,
+                "adviceBias": 0.03
+            }
+        },
+        "disorganized": {
+            "tone_offsets": {
+                "alert": 0.10,
+                "caution": 0.10,
+                "clear": 0.00
+            },
+            "tone_multipliers": {
+                "alert": 1.08,
+                "caution": 1.06,
+                "clear": 1.00
+            },
+            "category_multipliers": {
+                "escalation": 1.06,
+                "threat": 1.05,
+                "ultimatum": 1.05,
+                "control": 1.04,
+                "uncertainty": 1.05,
+                "hedge": 1.04,
+                "repair": 1.03,
+                "micro_apology": 1.03
+            },
+            "context_boosts": {
+                "CTX_CONFLICT": {
+                    "alert": 0.05,
+                    "caution": 0.03,
+                    "clear": 0.00
+                },
+                "CTX_REPAIR": {
+                    "alert": 0.00,
+                    "caution": 0.03,
+                    "clear": 0.02
+                }
+            },
+            "intensity_blend": {
+                "weight": 0.30
+            },
+            "negationPenalty": 1.07,
+            "sarcasmPenalty": 1.09,
+            "position_scaling": {
+                "start": 0.03,
+                "end": 0.02,
+                "caps": 0.04,
+                "repeat": 0.04
+            },
+            "threshold_shift": {
+                "alert": -0.01,
+                "caution": -0.01,
+                "clear": 0.00
+            },
+            "secureFixRouting": {
+                "rewriteBias": 0.12,
+                "adviceBias": 0.07
+            }
+        },
+        "secure": {
+            "tone_offsets": {
+                "alert": 0.00,
+                "caution": 0.00,
+                "clear": 0.15
+            },
+            "tone_multipliers": {
+                "alert": 1.00,
+                "caution": 1.00,
+                "clear": 1.10
+            },
+            "category_multipliers": {
+                "repair": 1.10,
+                "reconnection": 1.08,
+                "solution": 1.06,
+                "agreement": 1.05,
+                "confirmation": 1.04,
+                "boundary": 1.05,
+                "safety": 1.04,
+                "profanity": 0.95,
+                "contempt": 0.94,
+                "escalation": 0.95
+            },
+            "context_boosts": {
+                "CTX_REPAIR": {
+                    "alert": -0.02,
+                    "caution": 0.03,
+                    "clear": 0.06
+                },
+                "CTX_PLANNING": {
+                    "alert": 0.00,
+                    "caution": 0.00,
+                    "clear": 0.03
+                },
+                "CTX_BOUNDARY": {
+                    "alert": 0.00,
+                    "caution": 0.02,
+                    "clear": 0.03
+                }
+            },
+            "intensity_blend": {
+                "weight": 0.15
+            },
+            "negationPenalty": 0.98,
+            "sarcasmPenalty": 1.00,
+            "position_scaling": {
+                "start": 0.01,
+                "end": 0.01,
+                "caps": 0.02,
+                "repeat": 0.01
+            },
+            "threshold_shift": {
+                "alert": 0.02,
+                "caution": 0.00,
+                "clear": -0.02
+            },
+            "secureFixRouting": {
+                "rewriteBias": 0.00,
+                "adviceBias": 0.00
+            }
+        }
+    },
+    "integration": {
+        "scoreFormula": "final_tone = clamp( ( (base_tone + tone_offsets) * tone_multipliers ) * negationSarcasm * categoryMultipliers + contextBoosts + positionScaling + intensityBlend - thresholdShift , range )",
+        "range": {
+            "min": -3.0,
+            "max": 3.0
+        },
+        "priority": [
+            "alert",
+            "caution",
+            "clear"
+        ],
+        "normalize": true
+    }
+}

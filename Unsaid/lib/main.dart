@@ -8,6 +8,7 @@ import 'services/personality_test_service.dart';
 import 'services/new_user_experience_service.dart';
 import 'services/partner_data_service.dart';
 import 'services/trial_service.dart';
+import 'services/subscription_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/compatibility_service.dart';
 import 'widgets/keyboard_data_sync_widget.dart';
@@ -18,9 +19,9 @@ import 'screens/splash_screen_professional.dart';
 import 'screens/onboarding_account_screen_professional.dart';
 import 'screens/personality_test_disclaimer_screen_professional.dart';
 import 'screens/personality_test_screen_professional_fixed_v2.dart';
-import 'screens/modern_personality_test_screen.dart';
-import 'screens/personality_results_screen_professional.dart';
-import 'screens/modern_personality_results_screen.dart';
+import 'screens/personality_test_screen.dart';
+import 'screens/legacy_personality_results_screen.dart';
+import 'screens/personality_results_screen.dart';
 import 'screens/premium_screen_professional.dart';
 import 'screens/keyboard_intro_screen_professional.dart';
 import 'screens/emotional_state_screen.dart';
@@ -124,6 +125,9 @@ class UnsaidApp extends StatelessWidget {
         ChangeNotifierProvider<TrialService>(
           create: (_) => TrialService(),
         ),
+        ChangeNotifierProvider<SubscriptionService>(
+          create: (_) => SubscriptionService(),
+        ),
       ],
       child: Consumer<AuthService>(
         builder: (context, authService, child) {
@@ -209,33 +213,6 @@ class UnsaidApp extends StatelessWidget {
                               }
                             }
                           },
-                          onSignInWithGoogle: () async {
-                            try {
-                              final result =
-                                  await authService.signInWithGoogle();
-                              if (result != null && context.mounted) {
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/personality_test_disclaimer',
-                                );
-                              } else if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Google sign-in was cancelled or failed.'),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Google sign-in error: $e'),
-                                  ),
-                                );
-                              }
-                            }
-                          },
                         ),
                       );
                     case '/personality_test_disclaimer':
@@ -281,18 +258,18 @@ class UnsaidApp extends StatelessWidget {
                             return PersonalityTestDisclaimerScreenProfessional(
                               onAgree: () => Navigator.pushReplacementNamed(
                                 context,
-                                '/personality_test',
+                                '/personality_test_legacy',
                               ),
                               onAgreeModern: () =>
                                   Navigator.pushReplacementNamed(
                                 context,
-                                '/personality_test_modern',
+                                '/personality_test',
                               ),
                             );
                           },
                         ),
                       );
-                    case '/personality_test':
+                    case '/personality_test_legacy':
                       return MaterialPageRoute(
                         builder: (context) => FutureBuilder<bool>(
                           future: PersonalityTestService.isTestCompleted(),
@@ -364,22 +341,22 @@ class UnsaidApp extends StatelessWidget {
                           },
                         ),
                       );
-                    case '/personality_results':
+                    case '/personality_results_legacy':
                       final args = settings.arguments as List<String>? ?? [];
                       return MaterialPageRoute(
                         builder: (context) =>
-                            PersonalityResultsScreenProfessional(answers: args),
+                            LegacyPersonalityResultsScreen(answers: args),
                       );
-                    case '/personality_test_modern':
+                    case '/personality_test':
                       return MaterialPageRoute(
-                        builder: (context) => ModernPersonalityTestScreen(
+                        builder: (context) => PersonalityTestScreen(
                           currentIndex: 0,
                           responses: const {},
                           onComplete: (config, scores, routing) async {
-                            // Navigate to modern results with complete assessment data
+                            // Navigate to results with complete assessment data
                             Navigator.pushReplacementNamed(
                               context,
-                              '/personality_results_modern',
+                              '/personality_results',
                               arguments: {
                                 'config': config,
                                 'scores': scores,
@@ -390,11 +367,11 @@ class UnsaidApp extends StatelessWidget {
                           },
                         ),
                       );
-                    case '/personality_results_modern':
+                    case '/personality_results':
                       final args =
                           settings.arguments as Map<String, dynamic>? ?? {};
                       return MaterialPageRoute(
-                        builder: (context) => ModernPersonalityResultsScreen(
+                        builder: (context) => PersonalityResultsScreen(
                           config: args['config'] as MergedConfig? ??
                               const MergedConfig(
                                 weightModifiers: {},
