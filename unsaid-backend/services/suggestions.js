@@ -19,7 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const { MLAdvancedToneAnalyzer } = require('./tone-analysis.js');
-const { SpacyService } = require('./spacy-service.js');
+const { SpacyService } = require('./spacyservice.js');
 
 function readJsonSafe(filePath, fallback = null) {
   try {
@@ -321,7 +321,8 @@ const spacyService = new SpacyService();
 const orchestrator = new AnalysisOrchestrator(spacyService, mlToneAnalyzer, dataLoader);
 const adviceEngine = new AdviceEngine(dataLoader);
 
-module.exports = async function handler(req, res) {
+module.exports = {
+  handler: async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
@@ -426,4 +427,80 @@ module.exports = async function handler(req, res) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+  },
+  
+  // Export service classes for use by other modules
+  DataLoader,
+  TrialManager,
+  AnalysisOrchestrator,
+  AdviceEngine,
+  SuggestionsService: class SuggestionsService {
+    constructor() {
+      this.dataLoader = dataLoader;
+      this.trialManager = trialManager;
+      this.orchestrator = orchestrator;
+      this.adviceEngine = adviceEngine;
+    }
+    
+    async generate(params) {
+      const {
+        text,
+        toneHint,
+        styleHint,
+        features = [],
+        meta = {},
+        analysis = null
+      } = params;
+      
+      // Generate suggestions using the same logic as the handler
+      const trialStatus = await this.trialManager.getTrialStatus(meta.userId || 'anonymous');
+      const tier = this.trialManager.resolveTier(trialStatus);
+      
+      const analysisResult = analysis || await this.orchestrator.analyze(
+        text, 
+        null, 
+        styleHint || 'secure', 
+        'general'
+      );
+      
+      const candidates = this.adviceEngine.retrieveCandidates(
+        tier,
+        analysisResult.tone.classification,
+        analysisResult.context?.label || 'general',
+        styleHint || 'secure',
+        analysisResult.flags.intensityScore
+      );
+      
+      const ranked = this.adviceEngine.rank(candidates, {
+        baseConfidence: analysisResult.tone.confidence,
+        toneKey: analysisResult.tone.classification,
+        contextLabel: analysisResult.context?.label || 'general',
+        attachmentStyle: styleHint || 'secure',
+        hasNegation: analysisResult.flags.hasNegation,
+        hasSarcasm: analysisResult.flags.hasSarcasm,
+        intensityScore: analysisResult.flags.intensityScore,
+        phraseEdgeHits: analysisResult.flags.phraseEdgeHits,
+        userPref: this.dataLoader.get('userPreference'),
+        tier
+      });
+      
+      return {
+        quickFixes: ranked.slice(0, 3).map(item => ({
+          text: item.rewriteCue || item.advice,
+          confidence: item.ltrScore || 0.5
+        })),
+        advice: ranked.slice(0, 5).map(item => ({
+          advice: item.advice,
+          reasoning: item.explanation || 'Therapeutic suggestion',
+          confidence: item.ltrScore || 0.5
+        })),
+        evidence: analysisResult.flags.phraseEdgeHits || [],
+        extras: {
+          tone: analysisResult.tone,
+          context: analysisResult.context,
+          tier
+        }
+      };
+    }
+  }
 };

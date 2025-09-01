@@ -7,7 +7,8 @@
  * - Namespaced config blocks (jwt, db, redis, metrics, service)
  */
 
-require('dotenv').config();
+const dotenv = require('dotenv');
+dotenv.config();
 
 console.log('[DEBUG] env.js starting...');
 

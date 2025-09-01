@@ -15,7 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { SpacyService } = require('./spacy-service.js');
+const { SpacyService } = require('./spacyservice.js');
 
 // -----------------------------
 // Utilities

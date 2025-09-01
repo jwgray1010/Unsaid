@@ -14,17 +14,18 @@
 const client = require('prom-client');
 const zlib = require('zlib');
 
-// ---- Load env (adapt to your env loader) ----
-const env = require('./env');
+// ---- Load env directly (avoid circular deps) ----
+require('dotenv').config();
+
 const {
-  metricsEnabled = env.metrics?.enabled ?? true,
+  metricsEnabled = process.env.METRICS_ENABLED !== 'false',
   metricsPrefix = 'unsaid_',
-  metricsToken = env.metrics?.token ?? '',                 // if set, protects /metrics
-  serviceName = env.service?.name ?? 'unsaid-api',
-  nodeEnv = env.nodeEnv ?? process.env.NODE_ENV ?? 'development',
-  serviceVersion = env.service?.version ?? process.env.SERVICE_VERSION ?? '0.0.0',
-  pushgatewayUrl = env.metrics?.pushGateway ?? process.env.PUSHGATEWAY_URL ?? '', // e.g. http://pushgateway:9091
-  metricsBuckets = '',               // comma list like "0.005,0.01,0.05,0.1,0.5,1,2,5"
+  metricsToken = process.env.METRICS_TOKEN || '',
+  serviceName = process.env.SERVICE_NAME || 'unsaid-api',
+  nodeEnv = process.env.NODE_ENV || 'development',
+  serviceVersion = process.env.SERVICE_VERSION || '0.0.0',
+  pushgatewayUrl = process.env.PUSHGATEWAY_URL || '',
+  metricsBuckets = process.env.METRICS_BUCKETS || '',
 } = {};
 
 // ---- Registry & defaults ----

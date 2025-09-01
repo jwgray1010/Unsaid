@@ -12,7 +12,7 @@ const cors = require('cors');
 const logger = require('./logger');
 
 const {
-  CORS_ORIGINS = 'https://myunsaidapp.com,https://api.myunsaidapp.com,http://localhost:3000',
+  CORS_ORIGINS = 'https://myunsaidapp.com,https://www.api.myunsaidapp.com,http://localhost:3000',
   CORS_METHODS = 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
   CORS_HEADERS = 'Content-Type,Authorization,X-Requested-With',
   CORS_CREDENTIALS = 'true',

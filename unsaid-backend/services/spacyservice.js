@@ -12,7 +12,7 @@ const path = require('path');
  */
 class SpacyService {
   constructor(opts = {}) {
-    this.dataPath = opts.dataPath || path.join(__dirname, 'data');
+    this.dataPath = opts.dataPath || path.join(__dirname, '..', 'data');
     this.thresholds = Object.assign({
       toneDetection: 0.15,
       rewriteScore: 0.45,
@@ -288,16 +288,6 @@ class SpacyService {
 }
 
 module.exports = { SpacyService };
-    return {
-      status: 'operational',
-      dataFilesLoaded: {
-        context_classifiers: !!this.contextClassifiers,
-        negation_indicators: !!this.negationIndicators,
-        sarcasm_indicators: !!this.sarcasmIndicators,
-        intensity_modifiers: !!this.intensityModifiers
-      },
-      summary: this.getProcessingSummary()
-    };
 
 // ========================================
 // VERCEL SERVERLESS FUNCTION HANDLER
@@ -306,7 +296,7 @@ module.exports = { SpacyService };
 // Initialize the SpacyService instance
 const spacyService = new SpacyService();
 
-module.exports = async function handler(req, res) {
+module.exports.handler = async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

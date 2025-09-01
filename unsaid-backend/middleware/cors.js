@@ -15,7 +15,7 @@ const logger = require('../config/logger');
 console.log('[DEBUG] cors package loaded, logger loaded...');
 
 const {
-  CORS_ORIGINS = 'https://myunsaidapp.com,https://api.myunsaidapp.com,http://localhost:3000',
+  CORS_ORIGINS = 'https://myunsaidapp.com,https://www.api.myunsaidapp.com,http://localhost:3000',
   CORS_METHODS = 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
   CORS_HEADERS = 'Content-Type,Authorization,X-Requested-With',
   CORS_CREDENTIALS = 'true',

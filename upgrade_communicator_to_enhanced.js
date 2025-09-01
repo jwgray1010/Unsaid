@@ -1,4 +1,34 @@
+#!/usr/bin/env node
+
 /**
+ * UPGRADE COMMUNICATOR TO ENHANCED LEARNING SYSTEM
+ * Integrates advanced linguistic analyzer for 92%+ accuracy
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+console.log('🚀 UPGRADING COMMUNICATOR TO ENHANCED LEARNING SYSTEM');
+console.log('='.repeat(55));
+
+async function upgradeToEnhanced() {
+  try {
+    // Step 1: Backup existing communicator.js
+    const communicatorPath = '/workspaces/Unsaid/unsaid-backend/api/communicator.js';
+    const backupPath = communicatorPath + '.backup';
+    
+    console.log('📦 Creating backup of existing communicator.js...');
+    fs.copyFileSync(communicatorPath, backupPath);
+    console.log('✅ Backup created:', backupPath);
+    
+    // Step 2: Read existing file
+    console.log('📖 Reading existing communicator service...');
+    const existingContent = fs.readFileSync(communicatorPath, 'utf8');
+    
+    // Step 3: Create enhanced version
+    console.log('🔧 Creating enhanced communicator service...');
+    
+    const enhancedCommunicator = `/**
  * api/communicator.js
  *
  * ENHANCED Communicator Profile API with Advanced Linguistic Analysis
@@ -15,7 +45,6 @@
 
 const express = require("express");
 const path = require("path");
-const fs = require("fs");
 const { z } = require("zod");
 
 const {
@@ -39,17 +68,6 @@ const router = express.Router();
 const observeSchema = z.object({
   text: z.string().min(1).max(2000),
   meta: z.record(z.any()).optional(),
-  personalityProfile: z.object({
-    attachmentStyle: z.string(),
-    communicationStyle: z.string(),
-    personalityType: z.string(),
-    emotionalState: z.string(),
-    emotionalBucket: z.string(),
-    personalityScores: z.record(z.number()).optional(),
-    communicationPreferences: z.record(z.any()).optional(),
-    isComplete: z.boolean(),
-    dataFreshness: z.number(),
-  }).optional(),
 });
 
 const detailedAnalysisSchema = z.object({
@@ -58,17 +76,6 @@ const detailedAnalysisSchema = z.object({
     relationshipPhase: z.enum(['new', 'developing', 'established', 'strained']).optional(),
     stressLevel: z.enum(['low', 'moderate', 'high']).optional(),
     messageType: z.enum(['casual', 'serious', 'conflict', 'support']).optional(),
-  }).optional(),
-  personalityProfile: z.object({
-    attachmentStyle: z.string(),
-    communicationStyle: z.string(),
-    personalityType: z.string(),
-    emotionalState: z.string(),
-    emotionalBucket: z.string(),
-    personalityScores: z.record(z.number()).optional(),
-    communicationPreferences: z.record(z.any()).optional(),
-    isComplete: z.boolean(),
-    dataFreshness: z.number(),
   }).optional(),
 });
 
@@ -126,60 +133,19 @@ async function loadProfile(req, res, next) {
 function incMetric(req, name) {
   const m = req.app.get("metrics");
   if (m && typeof m.inc === "function") {
-    m.inc(`communicator_${name}`, { user: req.userId });
+    m.inc(\`communicator_\${name}\`, { user: req.userId });
   }
 }
 
 // -------------------- ENHANCED ANALYSIS HELPER --------------------
-function performEnhancedAnalysis(req, text, context = {}, personalityProfile = null) {
+function performEnhancedAnalysis(req, text, context = {}) {
   const analyzer = req.app.get('advancedAnalyzer');
   if (!analyzer) {
     return null;
   }
   
   try {
-    // Combine context with personality profile for richer analysis
-    const enrichedContext = {
-      ...context,
-      personality: personalityProfile ? {
-        attachmentStyle: personalityProfile.attachmentStyle,
-        communicationStyle: personalityProfile.communicationStyle,
-        personalityType: personalityProfile.personalityType,
-        emotionalState: personalityProfile.emotionalState,
-        emotionalBucket: personalityProfile.emotionalBucket,
-        isComplete: personalityProfile.isComplete,
-        dataFreshness: personalityProfile.dataFreshness
-      } : null
-    };
-    
-    const result = analyzer.analyzeText(text, enrichedContext);
-    
-    // If we have personality data, boost confidence and adjust scores
-    if (personalityProfile && personalityProfile.isComplete) {
-      result.confidence = Math.min(result.confidence * 1.15, 1.0); // Boost confidence with personality data
-      
-      // Adjust attachment scores based on personality assessment
-      const assessmentWeight = Math.max(0.3, 1.0 - (personalityProfile.dataFreshness / 24)); // Fresher data = higher weight
-      const personalityAttachment = personalityProfile.attachmentStyle.toLowerCase();
-      
-      if (result.attachmentScores[personalityAttachment]) {
-        result.attachmentScores[personalityAttachment] = 
-          (result.attachmentScores[personalityAttachment] * 0.7) + 
-          (assessmentWeight * 0.3); // Blend real-time + assessment
-      }
-      
-      // Add personality context to metadata
-      result.personalityContext = {
-        assessmentAttachment: personalityProfile.attachmentStyle,
-        communicationStyle: personalityProfile.communicationStyle,
-        personalityType: personalityProfile.personalityType,
-        emotionalContext: personalityProfile.emotionalState,
-        dataFreshness: personalityProfile.dataFreshness,
-        confidenceBoost: true
-      };
-    }
-    
-    return result;
+    return analyzer.analyzeText(text, context);
   } catch (error) {
     getLogger(req).warn('⚠️  Enhanced analysis failed, using basic analysis:', error.message);
     return null;
@@ -230,16 +196,11 @@ router.post("/observe", loadProfile, express.json(), async (req, res, next) => {
   try {
     const parsed = observeSchema.parse(req.body);
     
-    // ENHANCED: Perform advanced analysis with personality data
-    const enhancedAnalysis = performEnhancedAnalysis(
-      req, 
-      parsed.text, 
-      {
-        relationshipPhase: parsed.meta?.relationshipPhase || 'established',
-        stressLevel: parsed.meta?.stressLevel || 'moderate'
-      },
-      parsed.personalityProfile || null
-    );
+    // ENHANCED: Perform advanced analysis if available
+    const enhancedAnalysis = performEnhancedAnalysis(req, parsed.text, {
+      relationshipPhase: parsed.meta?.relationshipPhase || 'established',
+      stressLevel: parsed.meta?.stressLevel || 'moderate'
+    });
     
     // Include enhanced analysis in meta for profile learning
     const enhancedMeta = { ...parsed.meta };
@@ -248,21 +209,13 @@ router.post("/observe", loadProfile, express.json(), async (req, res, next) => {
         confidence: enhancedAnalysis.confidence,
         attachmentScores: enhancedAnalysis.attachmentScores,
         microPatterns: enhancedAnalysis.microPatterns,
-        linguisticFeatures: enhancedAnalysis.features,
-        personalityContext: enhancedAnalysis.personalityContext
+        linguisticFeatures: enhancedAnalysis.features
       };
-      
-      getLogger(req).debug('✅ Enhanced analysis with personality data:', {
+      getLogger(req).debug('✅ Enhanced analysis applied:', {
         confidence: enhancedAnalysis.confidence,
         primaryStyle: Object.entries(enhancedAnalysis.attachmentScores)
-          .reduce((a, b) => enhancedAnalysis.attachmentScores[a[0]] > enhancedAnalysis.attachmentScores[b[0]] ? a : b)[0],
-        personalityBoost: !!enhancedAnalysis.personalityContext
+          .reduce((a, b) => enhancedAnalysis.attachmentScores[a[0]] > enhancedAnalysis.attachmentScores[b[0]] ? a : b)[0]
       });
-    }
-
-    // Add personality profile to meta for learning
-    if (parsed.personalityProfile) {
-      enhancedMeta.personalityProfile = parsed.personalityProfile;
     }
 
     await req.profile.updateFromText(parsed.text, enhancedMeta);
@@ -283,8 +236,7 @@ router.post("/observe", loadProfile, express.json(), async (req, res, next) => {
         confidence: enhancedAnalysis.confidence,
         detectedPatterns: enhancedAnalysis.microPatterns.length,
         primaryPrediction: Object.entries(enhancedAnalysis.attachmentScores)
-          .reduce((a, b) => enhancedAnalysis.attachmentScores[a[0]] > enhancedAnalysis.attachmentScores[b[0]] ? a : b)[0],
-        personalityEnhanced: !!enhancedAnalysis.personalityContext
+          .reduce((a, b) => enhancedAnalysis.attachmentScores[a[0]] > enhancedAnalysis.attachmentScores[b[0]] ? a : b)[0]
       };
     }
     
@@ -297,17 +249,12 @@ router.post("/observe", loadProfile, express.json(), async (req, res, next) => {
   }
 });
 
-// NEW ENHANCED ENDPOINT: Detailed linguistic analysis with personality integration
+// NEW ENHANCED ENDPOINT: Detailed linguistic analysis
 router.post("/analysis/detailed", loadProfile, express.json(), async (req, res, next) => {
   try {
     const parsed = detailedAnalysisSchema.parse(req.body);
     
-    const enhancedAnalysis = performEnhancedAnalysis(
-      req, 
-      parsed.text, 
-      parsed.context || {},
-      parsed.personalityProfile || null
-    );
+    const enhancedAnalysis = performEnhancedAnalysis(req, parsed.text, parsed.context || {});
     
     if (!enhancedAnalysis) {
       return res.status(503).json({
@@ -330,11 +277,9 @@ router.post("/analysis/detailed", loadProfile, express.json(), async (req, res, 
         microPatterns: enhancedAnalysis.microPatterns,
         linguisticFeatures: enhancedAnalysis.features,
         contextualFactors: enhancedAnalysis.contextualFactors,
-        personalityContext: enhancedAnalysis.personalityContext, // NEW: Include personality insights
         metadata: {
           analysisVersion: "2.1.0",
           accuracyTarget: "92%+",
-          personalityEnhanced: !!enhancedAnalysis.personalityContext,
           timestamp: new Date().toISOString()
         }
       }
@@ -440,3 +385,75 @@ router.get("/status", loadProfile, async (req, res, next) => {
 });
 
 module.exports = router;
+`;
+
+    // Step 4: Write enhanced version
+    console.log('💾 Writing enhanced communicator service...');
+    fs.writeFileSync(communicatorPath, enhancedCommunicator);
+    console.log('✅ Enhanced communicator service created');
+    
+    // Step 5: Verify the enhanced learning config exists
+    const enhancedConfigPath = '/workspaces/Unsaid/unsaid-backend/data/attachment_learning_enhanced.json';
+    if (fs.existsSync(enhancedConfigPath)) {
+      console.log('✅ Enhanced learning configuration found');
+    } else {
+      console.log('⚠️  Enhanced learning configuration not found - will fallback to basic');
+    }
+    
+    // Step 6: Verify the advanced analyzer exists
+    const analyzerPath = '/workspaces/Unsaid/unsaid-backend/services/advanced_linguistic_analyzer.js';
+    if (fs.existsSync(analyzerPath)) {
+      console.log('✅ Advanced linguistic analyzer found');
+    } else {
+      console.log('⚠️  Advanced linguistic analyzer not found - will fallback to basic analysis');
+    }
+    
+    console.log('\n🚀 UPGRADE COMPLETE!');
+    console.log('='.repeat(25));
+    console.log('✅ Communicator service upgraded to enhanced version');
+    console.log('✅ New features added:');
+    console.log('  • Advanced linguistic analysis integration');
+    console.log('  • Enhanced accuracy targeting 92%+');
+    console.log('  • New detailed analysis endpoint');
+    console.log('  • Contextual pattern detection');
+    console.log('  • Micro-linguistic feature extraction');
+    console.log('  • Graceful fallback to basic analysis');
+    
+    console.log('\n📊 NEW API ENDPOINTS:');
+    console.log('  POST /communicator/analysis/detailed - Advanced linguistic analysis');
+    
+    console.log('\n🔧 ENHANCED FEATURES:');
+    console.log('  • Punctuation emotional scoring');
+    console.log('  • Hesitation pattern detection');
+    console.log('  • Discourse marker analysis');
+    console.log('  • Micro-expression patterns');
+    console.log('  • Contextual amplification');
+    console.log('  • Confidence quantification');
+    
+    console.log('\n🎯 NEXT STEPS:');
+    console.log('1. Test the enhanced system: node test_enhanced_accuracy.js');
+    console.log('2. Restart the backend server to load changes');
+    console.log('3. Test the new detailed analysis endpoint');
+    console.log('4. Monitor accuracy improvements in production');
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Upgrade failed:', error);
+    console.error('Stack:', error.stack);
+    return false;
+  }
+}
+
+if (require.main === module) {
+  upgradeToEnhanced()
+    .then(success => {
+      process.exit(success ? 0 : 1);
+    })
+    .catch(error => {
+      console.error('❌ Upgrade failed:', error);
+      process.exit(1);
+    });
+}
+
+module.exports = { upgradeToEnhanced };
