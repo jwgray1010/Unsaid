@@ -1,8 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-// TODO: Re-enable when google_sign_in is added back to pubspec.yaml
-// import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Authentication service for managing user authentication
@@ -13,12 +12,9 @@ class AuthService extends ChangeNotifier {
   AuthService._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  // TODO: Re-enable when google_sign_in is added back to pubspec.yaml
-  /*
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb ? '831572355430-213f5564649c8b135240a7.apps.googleusercontent.com' : null,
   );
-  */
   User? _user;
 
   /// Current authenticated user
@@ -68,15 +64,7 @@ class AuthService extends ChangeNotifier {
   }
 
   /// Sign in with Google
-  /// TODO: Re-enable when google_sign_in is added back to pubspec.yaml
   Future<UserCredential?> signInWithGoogle() async {
-    if (kDebugMode) {
-      print(
-          '⚠️ Google Sign-In temporarily disabled - google_sign_in package not available');
-    }
-    return null;
-
-    /* TODO: Re-enable when google_sign_in is added back
     try {
       if (kIsWeb) {
         // Web-specific Google Sign-In implementation
@@ -87,7 +75,7 @@ class AuthService extends ChangeNotifier {
         _user = result.user;
 
         if (kDebugMode) {
-          print(' Google sign-in successful (web): ${_user?.uid}');
+          print('✅ Google sign-in successful (web): ${_user?.uid}');
           print('   User: ${_user?.displayName} (${_user?.email})');
         }
 
@@ -99,7 +87,7 @@ class AuthService extends ChangeNotifier {
         if (googleUser == null) {
           // User canceled the sign-in
           if (kDebugMode) {
-            print(' Google sign-in canceled by user');
+            print('⚠️ Google sign-in canceled by user');
           }
           return null;
         }
@@ -118,7 +106,7 @@ class AuthService extends ChangeNotifier {
         _user = result.user;
 
         if (kDebugMode) {
-          print(' Google sign-in successful (mobile): ${_user?.uid}');
+          print('✅ Google sign-in successful (mobile): ${_user?.uid}');
           print('   User: ${_user?.displayName} (${_user?.email})');
         }
 
@@ -126,11 +114,10 @@ class AuthService extends ChangeNotifier {
       }
     } catch (e) {
       if (kDebugMode) {
-        print(' Google sign-in failed: $e');
+        print('❌ Google sign-in failed: $e');
       }
       return null;
     }
-    */
   }
 
   /// Sign in with Apple

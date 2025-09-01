@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 class OnboardingAccountScreenProfessional extends StatefulWidget {
   const OnboardingAccountScreenProfessional({
     super.key,
-    required this.onContinueAsGuest,
     required this.onSignInWithApple,
+    required this.onSignInWithGoogle,
   });
 
-  final Future<void> Function() onContinueAsGuest;
   final Future<void> Function() onSignInWithApple;
+  final Future<void> Function() onSignInWithGoogle;
 
   @override
   State<OnboardingAccountScreenProfessional> createState() =>
@@ -189,79 +189,6 @@ class _OnboardingAccountScreenProfessionalState
                           // Buttons Column
                           Column(
                             children: [
-                              // Continue as Guest Button
-                              SizedBox(
-                                width: double.infinity,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFF4CAF50), // Green
-                                        Color(0xFF66BB6A), // Light Green
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF4CAF50,
-                                        ).withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton.icon(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : () => _animateButton(
-                                              widget.onContinueAsGuest,
-                                            ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      foregroundColor: Colors.white,
-                                      shadowColor: Colors.transparent,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                        horizontal: 24,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    icon: _isLoading
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                      Colors.white),
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.explore_outlined,
-                                            size: 20,
-                                          ),
-                                    label: Text(
-                                      _isLoading
-                                          ? 'Signing in...'
-                                          : 'Continue as Guest',
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 24),
-
                               // Sign in with Apple Button
                               SizedBox(
                                 width: double.infinity,
@@ -306,6 +233,61 @@ class _OnboardingAccountScreenProfessionalState
                                     _isLoading
                                         ? 'Signing in...'
                                         : 'Sign in with Apple',
+                                    style:
+                                        theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Sign in with Google Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _animateButton(
+                                          widget.onSignInWithGoogle),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                      horizontal: 24,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      side: BorderSide(
+                                        color: Colors.grey.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  icon: _isLoading
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    Colors.black54),
+                                          ),
+                                        )
+                                      : Image.asset(
+                                          'assets/google.png',
+                                          width: 20,
+                                          height: 20,
+                                          fit: BoxFit.contain,
+                                        ),
+                                  label: Text(
+                                    _isLoading
+                                        ? 'Signing in...'
+                                        : 'Sign in with Google',
                                     style:
                                         theme.textTheme.titleMedium?.copyWith(
                                       fontWeight: FontWeight.w600,

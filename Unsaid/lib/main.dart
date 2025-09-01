@@ -159,33 +159,6 @@ class UnsaidApp extends StatelessWidget {
                       return MaterialPageRoute(
                         builder: (context) =>
                             OnboardingAccountScreenProfessional(
-                          onContinueAsGuest: () async {
-                            try {
-                              final result =
-                                  await authService.signInAnonymously();
-                              if (result != null && context.mounted) {
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/personality_test_disclaimer',
-                                );
-                              } else if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Failed to sign in as guest. Please try again.'),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error: $e'),
-                                  ),
-                                );
-                              }
-                            }
-                          },
                           onSignInWithApple: () async {
                             try {
                               final result =
@@ -208,6 +181,33 @@ class UnsaidApp extends StatelessWidget {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Apple sign-in error: $e'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          onSignInWithGoogle: () async {
+                            try {
+                              final result =
+                                  await authService.signInWithGoogle();
+                              if (result != null && context.mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/personality_test_disclaimer',
+                                );
+                              } else if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Google sign-in was cancelled or failed.'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Google sign-in error: $e'),
                                   ),
                                 );
                               }

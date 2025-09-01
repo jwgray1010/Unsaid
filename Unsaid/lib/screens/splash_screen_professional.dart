@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/onboarding_service.dart';
 import '../services/trial_service.dart';
+import '../services/personality_data_manager.dart';
 
 class SplashScreenProfessional extends StatefulWidget {
   const SplashScreenProfessional({super.key});
@@ -132,6 +133,43 @@ class _SplashScreenProfessionalState extends State<SplashScreenProfessional>
       print('Authenticated: $isAuthenticated');
       print('Onboarding Complete: $isOnboardingComplete');
       print('User: ${authService.user?.uid}');
+
+      // Collect keyboard analytics data if user is authenticated
+      if (isAuthenticated) {
+        try {
+          print('🔄 Collecting keyboard analytics on app startup...');
+          final personalityManager = PersonalityDataManager.shared;
+          
+          // Check if keyboard data is available
+          final hasData = await personalityManager.hasKeyboardDataAvailable();
+          if (hasData) {
+            final summary = await personalityManager.getKeyboardDataSummary();
+            print('📊 Keyboard data available: $summary');
+            
+            // Perform comprehensive analysis
+            final analysis = await personalityManager.performStartupKeyboardAnalysis();
+            if (analysis != null) {
+              print('✅ Keyboard analysis complete!');
+              final behaviorSummary = analysis['analysis_summary'] as Map<String, dynamic>? ?? {};
+              print('📈 User behavior insights:');
+              print('   - Engagement: ${behaviorSummary['engagement_level']}');
+              print('   - Tone Stability: ${behaviorSummary['tone_stability']}');
+              print('   - Suggestion Receptivity: ${behaviorSummary['suggestion_receptivity']}');
+              print('   - Communication Style: ${behaviorSummary['communication_style']}');
+              
+              // Optional: Store insights for use in the app
+              // You could store this in SharedPreferences, Firebase, or pass to other services
+            } else {
+              print('⚠️ No keyboard analysis data available');
+            }
+          } else {
+            print('📭 No keyboard data available for analysis');
+          }
+        } catch (e) {
+          print('❌ Error during keyboard analytics collection: $e');
+          // Continue with app flow even if analytics fails
+        }
+      }
 
       if (isAuthenticated && isOnboardingComplete) {
         // Returning user - enable admin mode to bypass trial restrictions, then go to emotional state

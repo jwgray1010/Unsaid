@@ -8,6 +8,7 @@ import '../services/secure_storage_service.dart';
 import '../services/unified_analytics_service.dart';
 import '../services/new_user_experience_service.dart';
 import '../services/partner_data_service.dart';
+import '../services/personality_data_manager.dart';
 import 'secure_couple_tips.dart';
 
 // MARK: - Shared Utilities
@@ -1668,9 +1669,11 @@ class _RelationshipInsightsDashboardState
   final KeyboardManager _keyboardManager = KeyboardManager();
   final SecureStorageService _storageService = SecureStorageService();
   final UnifiedAnalyticsService _analyticsService = UnifiedAnalyticsService();
+  final PersonalityDataManager _personalityManager = PersonalityDataManager.shared;
 
   // Data storage
   Map<String, dynamic> _insights = {};
+  Map<String, dynamic>? _keyboardAnalytics;
 
   // Loading states
   bool _isLoading = true;
@@ -1712,10 +1715,11 @@ class _RelationshipInsightsDashboardState
     if (!mounted) return;
 
     try {
-      // Load data in parallel
+      // Load data in parallel including keyboard analytics
       await Future.wait([
         _loadRelationshipType(),
         _loadInsightsData(),
+        _loadKeyboardAnalyticsData(),
       ]);
 
       // Start animations after data is loaded
@@ -1725,6 +1729,185 @@ class _RelationshipInsightsDashboardState
     } catch (e) {
       debugPrint('Error initializing relationship dashboard: $e');
     }
+  }
+
+  /// Load keyboard analytics data for relationship insights
+  Future<void> _loadKeyboardAnalyticsData() async {
+    try {
+      final analytics = await _personalityManager.performStartupKeyboardAnalysis();
+      if (mounted) {
+        setState(() {
+          _keyboardAnalytics = analytics;
+          // Enhance relationship insights with keyboard data
+          if (_keyboardAnalytics != null) {
+            _enhanceRelationshipInsightsWithKeyboardData();
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading keyboard analytics for relationship insights: $e');
+    }
+  }
+
+  /// Enhance relationship insights with keyboard analytics data
+  void _enhanceRelationshipInsightsWithKeyboardData() {
+    if (_keyboardAnalytics == null) return;
+
+    final analysisMetadata = _keyboardAnalytics!['analysis_summary'] as Map<String, dynamic>? ?? {};
+    final behaviorAnalysis = _keyboardAnalytics!['behavior_analysis'] as Map<String, dynamic>? ?? {};
+    
+    print('📊 Enhancing relationship insights with keyboard data:');
+    print('   - Communication Style: ${analysisMetadata['communication_style']}');
+    print('   - Engagement Level: ${analysisMetadata['engagement_level']}');
+    print('   - Suggestion Receptivity: ${analysisMetadata['suggestion_receptivity']}');
+
+    // Add keyboard insights to relationship insights
+    _insights['keyboard_enhanced'] = true;
+    _insights['keyboard_communication_style'] = analysisMetadata['communication_style'];
+    _insights['keyboard_engagement_level'] = analysisMetadata['engagement_level'];
+    _insights['keyboard_tone_stability'] = analysisMetadata['tone_stability'];
+    _insights['keyboard_suggestion_receptivity'] = analysisMetadata['suggestion_receptivity'];
+    _insights['keyboard_data_quality'] = analysisMetadata['data_quality_score'];
+
+    // Enhance relationship compatibility scoring with keyboard data
+    _enhanceCompatibilityWithKeyboardData(analysisMetadata, behaviorAnalysis);
+  }
+
+  /// Enhance compatibility analysis with keyboard behavioral data
+  void _enhanceCompatibilityWithKeyboardData(
+    Map<String, dynamic> analysisMetadata,
+    Map<String, dynamic> behaviorAnalysis,
+  ) {
+    final communicationStyle = analysisMetadata['communication_style'] as String? ?? 'balanced';
+    final engagementLevel = analysisMetadata['engagement_level'] as String? ?? 'moderate';
+    final toneStability = analysisMetadata['tone_stability'] as String? ?? 'stable';
+
+    // Calculate enhanced compatibility scores based on keyboard behavior
+    double communicationScore = _calculateCommunicationCompatibility(communicationStyle);
+    double engagementScore = _calculateEngagementCompatibility(engagementLevel);
+    double stabilityScore = _calculateStabilityCompatibility(toneStability);
+
+    // Update insights with enhanced scores
+    _insights['enhanced_compatibility'] = {
+      'communication_score': communicationScore,
+      'engagement_score': engagementScore,
+      'stability_score': stabilityScore,
+      'overall_score': (communicationScore + engagementScore + stabilityScore) / 3,
+      'keyboard_data_based': true,
+    };
+
+    // Generate personalized relationship insights
+    _insights['personalized_insights'] = _generatePersonalizedRelationshipInsights(
+      communicationStyle,
+      engagementLevel,
+      toneStability,
+    );
+  }
+
+  /// Calculate communication compatibility score from keyboard data
+  double _calculateCommunicationCompatibility(String style) {
+    switch (style.toLowerCase()) {
+      case 'deliberate':
+        return 0.9; // Thoughtful communication is excellent for relationships
+      case 'balanced':
+        return 0.85; // Balanced approach works well
+      case 'spontaneous':
+        return 0.8; // Can be great but may need awareness
+      default:
+        return 0.75;
+    }
+  }
+
+  /// Calculate engagement compatibility score
+  double _calculateEngagementCompatibility(String level) {
+    switch (level.toLowerCase()) {
+      case 'high':
+        return 0.9; // High engagement shows care and attention
+      case 'moderate':
+        return 0.85; // Good balance
+      case 'low':
+        return 0.7; // May need encouragement
+      case 'minimal':
+        return 0.6; // Needs attention
+      default:
+        return 0.75;
+    }
+  }
+
+  /// Calculate stability compatibility score
+  double _calculateStabilityCompatibility(String stability) {
+    switch (stability.toLowerCase()) {
+      case 'stable':
+        return 0.9; // Emotional stability is great for relationships
+      case 'moderate':
+        return 0.8; // Some variation is normal
+      case 'variable':
+        return 0.7; // May need support for consistency
+      default:
+        return 0.75;
+    }
+  }
+
+  /// Generate personalized relationship insights based on keyboard behavior
+  List<Map<String, dynamic>> _generatePersonalizedRelationshipInsights(
+    String communicationStyle,
+    String engagementLevel,
+    String toneStability,
+  ) {
+    List<Map<String, dynamic>> insights = [];
+
+    // Communication style insights
+    if (communicationStyle == 'deliberate') {
+      insights.add({
+        'type': 'strength',
+        'title': 'Thoughtful Communication',
+        'description': 'Your deliberate communication style shows care and consideration for your partner.',
+        'action': 'Continue being mindful in your conversations.',
+      });
+    } else if (communicationStyle == 'spontaneous') {
+      insights.add({
+        'type': 'tip',
+        'title': 'Balance Spontaneity',
+        'description': 'Your spontaneous style brings energy, but consider pausing for important conversations.',
+        'action': 'Try taking a moment to think before responding to sensitive topics.',
+      });
+    }
+
+    // Engagement insights
+    if (engagementLevel == 'high') {
+      insights.add({
+        'type': 'strength',
+        'title': 'High Engagement',
+        'description': 'Your active communication shows strong investment in your relationship.',
+        'action': 'Keep maintaining this level of connection.',
+      });
+    } else if (engagementLevel == 'low') {
+      insights.add({
+        'type': 'growth',
+        'title': 'Increase Engagement',
+        'description': 'More frequent communication could strengthen your connection.',
+        'action': 'Try initiating conversations more often, even about small things.',
+      });
+    }
+
+    // Tone stability insights
+    if (toneStability == 'stable') {
+      insights.add({
+        'type': 'strength',
+        'title': 'Emotional Consistency',
+        'description': 'Your stable emotional tone creates a safe communication environment.',
+        'action': 'Your consistency is a relationship strength—keep it up!',
+      });
+    } else if (toneStability == 'variable') {
+      insights.add({
+        'type': 'awareness',
+        'title': 'Emotional Awareness',
+        'description': 'Your varied emotional expression is natural, but awareness helps.',
+        'action': 'Consider your emotional state before important conversations.',
+      });
+    }
+
+    return insights;
   }
 
   /// Refresh all insights data

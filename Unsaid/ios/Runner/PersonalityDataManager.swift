@@ -258,7 +258,266 @@ class PersonalityDataManager {
         setSuggestionUsage(currentUsage)
     }
 
-    // MARK: - Data Synchronization
+    // MARK: - Keyboard Analytics Collection (NEW)
+    
+    /// Collect all keyboard analytics data when main app opens
+    /// - Returns: Dictionary containing all keyboard usage analytics
+    func collectKeyboardAnalytics() -> [String: Any] {
+        var analytics: [String: Any] = [:]
+        
+        // Try to get data from SafeKeyboardDataStorage
+        if let keyboardBridge = getKeyboardDataBridge() {
+            let pendingData = keyboardBridge.getAllPendingData()
+            
+            analytics["interactions"] = pendingData["interactions"] ?? []
+            analytics["analytics"] = pendingData["analytics"] ?? []
+            analytics["toneData"] = pendingData["toneData"] ?? []
+            analytics["suggestions"] = pendingData["suggestions"] ?? []
+            
+            // Get metadata
+            let metadata = keyboardBridge.getStorageMetadata()
+            analytics["metadata"] = metadata
+            
+            // Get current queue sizes
+            let queueSizes = keyboardBridge.getCurrentQueueSizes()
+            analytics["queueSizes"] = queueSizes
+            
+            print("✅ PersonalityDataManager: Collected keyboard analytics with \(analytics.keys.count) categories")
+            
+            // Clear the data after collection to prevent re-processing
+            keyboardBridge.clearAllPendingData()
+            
+            return analytics
+        } else {
+            print("⚠️ PersonalityDataManager: Keyboard data bridge not available")
+            return [:]
+        }
+    }
+    
+    /// Analyze keyboard behavior patterns for personality insights
+    /// - Returns: Dictionary containing behavior analysis and insights
+    func analyzeKeyboardBehavior() -> [String: Any] {
+        let analytics = collectKeyboardAnalytics()
+        var insights: [String: Any] = [:]
+        
+        // Analyze interaction patterns
+        if let interactions = analytics["interactions"] as? [[String: Any]] {
+            insights["interaction_analysis"] = analyzeInteractionPatterns(interactions)
+        }
+        
+        // Analyze tone usage patterns
+        if let toneData = analytics["toneData"] as? [[String: Any]] {
+            insights["tone_analysis"] = analyzeTonePatterns(toneData)
+        }
+        
+        // Analyze suggestion acceptance patterns
+        if let suggestions = analytics["suggestions"] as? [[String: Any]] {
+            insights["suggestion_analysis"] = analyzeSuggestionPatterns(suggestions)
+        }
+        
+        // Analyze general analytics
+        if let analyticsData = analytics["analytics"] as? [[String: Any]] {
+            insights["usage_analysis"] = analyzeUsagePatterns(analyticsData)
+        }
+        
+        // Add summary insights
+        insights["summary"] = generateBehaviorSummary(insights)
+        insights["collection_timestamp"] = Date().timeIntervalSince1970
+        insights["data_quality"] = assessDataQuality(analytics)
+        
+        print("✅ PersonalityDataManager: Generated keyboard behavior insights")
+        return insights
+    }
+    
+    // MARK: - Private Analysis Methods
+    
+    private func getKeyboardDataBridge() -> SafeKeyboardDataStorage? {
+        // This would need to be implemented to access the SafeKeyboardDataStorage
+        // from the main app context. For now, we'll simulate the interface.
+        return nil // TODO: Implement proper bridge to keyboard storage
+    }
+    
+    private func analyzeInteractionPatterns(_ interactions: [[String: Any]]) -> [String: Any] {
+        var analysis: [String: Any] = [:]
+        
+        // Count different types of interactions
+        var keystrokeCount = 0
+        var suggestionCount = 0
+        var deletionCount = 0
+        
+        for interaction in interactions {
+            if let type = interaction["type"] as? String {
+                switch type {
+                case "keystroke":
+                    keystrokeCount += 1
+                case "suggestion_applied":
+                    suggestionCount += 1
+                case "deletion", "backspace":
+                    deletionCount += 1
+                default:
+                    break
+                }
+            }
+        }
+        
+        analysis["total_interactions"] = interactions.count
+        analysis["keystroke_count"] = keystrokeCount
+        analysis["suggestion_count"] = suggestionCount
+        analysis["deletion_count"] = deletionCount
+        analysis["suggestion_usage_rate"] = interactions.count > 0 ? Double(suggestionCount) / Double(interactions.count) : 0.0
+        
+        return analysis
+    }
+    
+    private func analyzeTonePatterns(_ toneData: [[String: Any]]) -> [String: Any] {
+        var analysis: [String: Any] = [:]
+        var toneDistribution: [String: Int] = [:]
+        var totalConfidence = 0.0
+        
+        for tone in toneData {
+            if let toneType = tone["tone"] as? String {
+                toneDistribution[toneType] = (toneDistribution[toneType] ?? 0) + 1
+            }
+            
+            if let confidence = tone["confidence"] as? Double {
+                totalConfidence += confidence
+            }
+        }
+        
+        analysis["tone_distribution"] = toneDistribution
+        analysis["total_analyses"] = toneData.count
+        analysis["average_confidence"] = toneData.count > 0 ? totalConfidence / Double(toneData.count) : 0.0
+        analysis["most_common_tone"] = toneDistribution.max(by: { $0.value < $1.value })?.key ?? "neutral"
+        
+        return analysis
+    }
+    
+    private func analyzeSuggestionPatterns(_ suggestions: [[String: Any]]) -> [String: Any] {
+        var analysis: [String: Any] = [:]
+        var acceptedCount = 0
+        var rejectedCount = 0
+        
+        for suggestion in suggestions {
+            if let accepted = suggestion["accepted"] as? Bool {
+                if accepted {
+                    acceptedCount += 1
+                } else {
+                    rejectedCount += 1
+                }
+            }
+        }
+        
+        let totalSuggestions = acceptedCount + rejectedCount
+        analysis["total_suggestions"] = totalSuggestions
+        analysis["accepted_suggestions"] = acceptedCount
+        analysis["rejected_suggestions"] = rejectedCount
+        analysis["acceptance_rate"] = totalSuggestions > 0 ? Double(acceptedCount) / Double(totalSuggestions) : 0.0
+        
+        return analysis
+    }
+    
+    private func analyzeUsagePatterns(_ analyticsData: [[String: Any]]) -> [String: Any] {
+        var analysis: [String: Any] = [:]
+        var eventCounts: [String: Int] = [:]
+        
+        for event in analyticsData {
+            if let eventType = event["event"] as? String {
+                eventCounts[eventType] = (eventCounts[eventType] ?? 0) + 1
+            }
+        }
+        
+        analysis["event_distribution"] = eventCounts
+        analysis["total_events"] = analyticsData.count
+        analysis["unique_event_types"] = eventCounts.keys.count
+        
+        return analysis
+    }
+    
+    private func generateBehaviorSummary(_ insights: [String: Any]) -> [String: Any] {
+        var summary: [String: Any] = [:]
+        
+        // Extract key metrics
+        if let interactionAnalysis = insights["interaction_analysis"] as? [String: Any] {
+            summary["suggestion_usage_rate"] = interactionAnalysis["suggestion_usage_rate"]
+            summary["total_interactions"] = interactionAnalysis["total_interactions"]
+        }
+        
+        if let toneAnalysis = insights["tone_analysis"] as? [String: Any] {
+            summary["most_common_tone"] = toneAnalysis["most_common_tone"]
+            summary["average_confidence"] = toneAnalysis["average_confidence"]
+        }
+        
+        if let suggestionAnalysis = insights["suggestion_analysis"] as? [String: Any] {
+            summary["suggestion_acceptance_rate"] = suggestionAnalysis["acceptance_rate"]
+        }
+        
+        // Generate insights
+        summary["user_engagement_level"] = assessEngagementLevel(insights)
+        summary["tone_stability"] = assessToneStability(insights)
+        summary["suggestion_receptivity"] = assessSuggestionReceptivity(insights)
+        
+        return summary
+    }
+    
+    private func assessDataQuality(_ analytics: [String: Any]) -> [String: Any] {
+        var quality: [String: Any] = [:]
+        
+        let interactionCount = (analytics["interactions"] as? [Any])?.count ?? 0
+        let toneCount = (analytics["toneData"] as? [Any])?.count ?? 0
+        let suggestionCount = (analytics["suggestions"] as? [Any])?.count ?? 0
+        
+        quality["data_richness"] = interactionCount > 50 ? "high" : interactionCount > 10 ? "medium" : "low"
+        quality["has_tone_data"] = toneCount > 0
+        quality["has_suggestion_data"] = suggestionCount > 0
+        quality["sufficient_for_analysis"] = interactionCount > 10 && toneCount > 0
+        
+        return quality
+    }
+    
+    private func assessEngagementLevel(_ insights: [String: Any]) -> String {
+        guard let interactionAnalysis = insights["interaction_analysis"] as? [String: Any],
+              let totalInteractions = interactionAnalysis["total_interactions"] as? Int else {
+            return "unknown"
+        }
+        
+        if totalInteractions > 100 {
+            return "high"
+        } else if totalInteractions > 25 {
+            return "medium"
+        } else {
+            return "low"
+        }
+    }
+    
+    private func assessToneStability(_ insights: [String: Any]) -> String {
+        guard let toneAnalysis = insights["tone_analysis"] as? [String: Any],
+              let averageConfidence = toneAnalysis["average_confidence"] as? Double else {
+            return "unknown"
+        }
+        
+        if averageConfidence > 0.8 {
+            return "high"
+        } else if averageConfidence > 0.6 {
+            return "medium"
+        } else {
+            return "low"
+        }
+    }
+    
+    private func assessSuggestionReceptivity(_ insights: [String: Any]) -> String {
+        guard let suggestionAnalysis = insights["suggestion_analysis"] as? [String: Any],
+              let acceptanceRate = suggestionAnalysis["acceptance_rate"] as? Double else {
+            return "unknown"
+        }
+        
+        if acceptanceRate > 0.7 {
+            return "high"
+        } else if acceptanceRate > 0.3 {
+            return "medium"
+        } else {
+            return "low"
+        }
+    }
     
     /// Sync personality data from main app to keyboard extension
     /// This method reads data written by the main app and stores it in the extension format

@@ -379,7 +379,6 @@ enum ToneStatus: String, CaseIterable, Codable {
     case caution = "caution"
     case alert = "alert"
     case neutral = "neutral"
-    case analyzing = "analyzing"
     
     var displayName: String {
         switch self {
@@ -391,8 +390,6 @@ enum ToneStatus: String, CaseIterable, Codable {
             return "Alert"
         case .neutral:
             return "Neutral"
-        case .analyzing:
-            return "Analyzing"
         }
     }
     
@@ -406,9 +403,7 @@ enum ToneStatus: String, CaseIterable, Codable {
         case .alert:
             return UIColor.systemRed
         case .neutral:
-            return UIColor.white
-        case .analyzing:
-            return UIColor.systemBlue
+            return UIColor.systemPink
         }
     }
     #endif

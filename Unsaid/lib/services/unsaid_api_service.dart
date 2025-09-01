@@ -184,7 +184,7 @@ class UnsaidApiService {
   factory UnsaidApiService() => _instance;
   UnsaidApiService._internal();
 
-  static const String _baseUrl = 'https://api.myunsaidapp.com/api';
+  static const String _baseUrl = 'https://www.api.myunsaidapp.com/api';
   static const Duration _requestTimeout = Duration(seconds: 30);
 
   /// Get current user ID from auth service

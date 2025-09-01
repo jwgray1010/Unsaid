@@ -8,6 +8,7 @@ import '../services/unified_analytics_service.dart';
 import '../services/keyboard_manager.dart';
 import '../services/new_user_experience_service.dart';
 import '../services/usage_tracking_service.dart';
+import '../services/personality_data_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -32,10 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final KeyboardManager _keyboardManager = KeyboardManager();
   final NewUserExperienceService _newUserService = NewUserExperienceService();
   final UsageTrackingService _usageTracker = UsageTrackingService.instance;
+  final PersonalityDataManager _personalityManager = PersonalityDataManager.shared;
   Map<String, dynamic>? _progressData;
   Map<String, dynamic>? _personalityData;
   Map<String, dynamic>? _analyticsData;
   Map<String, dynamic>? _realKeyboardData;
+  Map<String, dynamic>? _keyboardAnalytics;
   final String _relationshipType = 'couples';
   bool hasPartner = false;
   Map<String, dynamic>? partnerProfile;
@@ -112,6 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Initialize new user experience service first
       await _newUserService.checkUserHasData();
 
+      // Collect real keyboard analytics alongside other data
       final results = await Future.wait([
         _storageService.getPersonalityTestResults(),
         _analyticsService.getIndividualAnalytics(),
@@ -122,12 +126,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         _keyboardManager.getComprehensiveRealData(),
         _storageService.getPartnerProfile(),
+        _personalityManager.performStartupKeyboardAnalysis(), // Real keyboard analytics
       ]);
 
       // Track home screen usage
       _usageTracker.trackScreenView('home', {
         'is_new_user': _newUserService.isNewUser,
         'total_interactions': _newUserService.totalInteractions,
+        'keyboard_analytics_available': results[5] != null,
       });
 
       if (!mounted) return;
@@ -137,6 +143,12 @@ class _HomeScreenState extends State<HomeScreen> {
         _progressData = results[2];
         _realKeyboardData = results[3];
         final partner = results[4];
+        _keyboardAnalytics = results[5]; // Real keyboard behavior data
+
+        // Combine keyboard analytics with existing data for enhanced insights
+        if (_keyboardAnalytics != null) {
+          _enhanceDataWithKeyboardInsights();
+        }
 
         // Handle partner data with proper fallbacks
         if (partner != null && partner.isNotEmpty) {
@@ -159,28 +171,13 @@ class _HomeScreenState extends State<HomeScreen> {
           };
         }
 
-        // Handle keyboard data with proper fallbacks
-        if (_realKeyboardData?['real_data'] != true ||
-            (_realKeyboardData?['total_interactions'] ?? 0) == 0) {
-          _realKeyboardData = {
-            'real_data': false,
-            'total_interactions': 0,
-            'isNewUser': true,
-            'welcomeMessage': '🎉 Welcome to Unsaid!',
-            'subtitle':
-                'Your personalized insights will appear here as you start using the keyboard',
-            'actionPrompt':
-                'Enable the Unsaid keyboard to begin your communication journey',
-            'tone_distribution': {'positive': 0, 'neutral': 0, 'negative': 0},
-            'attachment_style': 'discovering',
-            'suggestion_acceptance_rate': 0,
-            'current_tone_status': 'ready',
-          };
-        }
+        // Handle keyboard data with enhanced analytics integration
+        _enhanceKeyboardDataWithAnalytics();
 
         loading = false;
       });
     } catch (e) {
+      print('❌ Error in bootstrap: $e');
       if (!mounted) return;
       setState(() {
         hasPartner = false;
@@ -209,6 +206,120 @@ class _HomeScreenState extends State<HomeScreen> {
         };
         loading = false;
       });
+    }
+  }
+
+  /// Enhance data with real keyboard insights from PersonalityDataManager
+  void _enhanceDataWithKeyboardInsights() {
+    if (_keyboardAnalytics == null) return;
+
+    final behaviorAnalysis = _keyboardAnalytics!['behavior_analysis'] as Map<String, dynamic>? ?? {};
+    final analysisMetadata = _keyboardAnalytics!['analysis_summary'] as Map<String, dynamic>? ?? {};
+    
+    print('📊 Enhancing home screen with keyboard insights:');
+    print('   - Engagement: ${analysisMetadata['engagement_level']}');
+    print('   - Tone Stability: ${analysisMetadata['tone_stability']}');
+    print('   - Communication Style: ${analysisMetadata['communication_style']}');
+  }
+
+  /// Enhance keyboard data with analytics insights for better user experience
+  void _enhanceKeyboardDataWithAnalytics() {
+    // Check if we have real keyboard analytics from PersonalityDataManager
+    if (_keyboardAnalytics != null) {
+      final analysisMetadata = _keyboardAnalytics!['analysis_summary'] as Map<String, dynamic>? ?? {};
+      final behaviorAnalysis = _keyboardAnalytics!['behavior_analysis'] as Map<String, dynamic>? ?? {};
+      final interactionPatterns = behaviorAnalysis['interaction_patterns'] as Map<String, dynamic>? ?? {};
+      final tonePatterns = behaviorAnalysis['tone_patterns'] as Map<String, dynamic>? ?? {};
+      final suggestionPatterns = behaviorAnalysis['suggestion_patterns'] as Map<String, dynamic>? ?? {};
+      
+      // Use real analytics data
+      _realKeyboardData = {
+        'real_data': true,
+        'enhanced_with_analytics': true,
+        'total_interactions': interactionPatterns['total_interactions'] ?? 0,
+        'engagement_level': analysisMetadata['engagement_level'] ?? 'unknown',
+        'tone_stability': analysisMetadata['tone_stability'] ?? 'unknown',
+        'communication_style': analysisMetadata['communication_style'] ?? 'unknown',
+        'suggestion_receptivity': analysisMetadata['suggestion_receptivity'] ?? 'unknown',
+        'most_common_tone': analysisMetadata['most_common_tone'] ?? 'neutral',
+        'suggestion_acceptance_rate': analysisMetadata['suggestion_acceptance_rate'] ?? 0.0,
+        'data_quality_score': analysisMetadata['data_quality_score'] ?? 0.0,
+        'tone_distribution': tonePatterns['tone_distribution'] ?? {'neutral': 1},
+        'welcomeMessage': _getPersonalizedWelcomeMessage(analysisMetadata),
+        'subtitle': _getPersonalizedSubtitle(analysisMetadata),
+        'actionPrompt': _getPersonalizedActionPrompt(analysisMetadata),
+        'current_tone_status': 'analyzing',
+        'isNewUser': false,
+      };
+    } else {
+      // Fallback when no analytics are available
+      final hasOldKeyboardData = (_realKeyboardData?['real_data'] == true) &&
+          ((_realKeyboardData?['total_interactions'] ?? 0) > 0);
+      
+      if (!hasOldKeyboardData) {
+        _realKeyboardData = {
+          'real_data': false,
+          'total_interactions': 0,
+          'isNewUser': true,
+          'welcomeMessage': '🎉 Welcome to Unsaid!',
+          'subtitle': 'Your personalized insights will appear here as you start using the keyboard',
+          'actionPrompt': 'Enable the Unsaid keyboard to begin your communication journey',
+          'tone_distribution': {'positive': 0, 'neutral': 1, 'negative': 0},
+          'attachment_style': 'discovering',
+          'suggestion_acceptance_rate': 0,
+          'current_tone_status': 'ready',
+          'engagement_level': 'minimal',
+          'communication_style': 'balanced',
+          'tone_stability': 'stable',
+        };
+      }
+    }
+  }
+
+  /// Generate personalized welcome message based on keyboard analytics
+  String _getPersonalizedWelcomeMessage(Map<String, dynamic> analytics) {
+    final engagementLevel = analytics['engagement_level'] as String? ?? 'unknown';
+    final communicationStyle = analytics['communication_style'] as String? ?? 'balanced';
+    
+    switch (engagementLevel) {
+      case 'high':
+        return '🚀 You\'re a communication superstar!';
+      case 'moderate':
+        return '📈 Great communication progress, $userName!';
+      case 'low':
+        return '🌱 Building your communication confidence!';
+      default:
+        return '✨ Welcome back, $userName!';
+    }
+  }
+
+  /// Generate personalized subtitle based on keyboard analytics
+  String _getPersonalizedSubtitle(Map<String, dynamic> analytics) {
+    final toneStability = analytics['tone_stability'] as String? ?? 'stable';
+    final suggestionReceptivity = analytics['suggestion_receptivity'] as String? ?? 'moderate';
+    
+    if (toneStability == 'stable' && suggestionReceptivity == 'high') {
+      return 'You maintain consistent emotional balance and embrace AI guidance effectively.';
+    } else if (toneStability == 'variable') {
+      return 'Your communication style shows natural emotional range—let\'s enhance consistency.';
+    } else if (suggestionReceptivity == 'low') {
+      return 'You prefer independent communication—we can respect that while offering subtle support.';
+    } else {
+      return 'Your communication patterns show thoughtful engagement and steady growth.';
+    }
+  }
+
+  /// Generate personalized action prompt based on keyboard analytics
+  String _getPersonalizedActionPrompt(Map<String, dynamic> analytics) {
+    final engagementLevel = analytics['engagement_level'] as String? ?? 'unknown';
+    final communicationStyle = analytics['communication_style'] as String? ?? 'balanced';
+    
+    if (engagementLevel == 'high') {
+      return 'Explore advanced relationship insights to maximize your communication potential.';
+    } else if (communicationStyle == 'deliberate') {
+      return 'Your thoughtful approach to communication deserves deeper insights—dive in!';
+    } else {
+      return 'Continue using the keyboard to unlock more personalized communication insights.';
     }
   }
 
