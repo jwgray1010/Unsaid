@@ -1,0 +1,202 @@
+{
+  "version": "1.3.0",
+  "notes": "Severity thresholds collaborating with tone detection, context, intensity, negation/sarcasm, guardrails, and user preferences. Includes hysteresis, decay, co-occurrence, and audit spec.",
+  "links": {
+    "contexts": "context_classifier.json",
+    "triggers": "tone_triggerwords.json",
+    "intensity": "intensity_modifiers.json",
+    "negation": "negation_patterns.json",
+    "sarcasm": "sarcasm_indicators.json",
+    "guardrails": "guardrail_config.json",
+    "attachments": "attachment_overrides.json",
+    "prefs": "user_preference.json",
+    "thesaurus": "semantic_thesaurus.json",
+    "profanity": "profanity_config.json",
+    "profiles": "multiplier.json"
+  },
+
+  "defaults": {
+    "aggregation": "weighted_mean",
+    "cooldown_ms": 300,
+    "hysteresis": { "upshift": 0.02, "downshift": 0.03 },
+    "decay": { "half_life_ms": 900000 },
+    "window_ms": 180000,
+    "minThreshold": 0.30,
+    "maxThreshold": 0.85,
+    "requireContentTriggers": true,
+    "blendWeights": {
+      "triggerScore": 0.45,
+      "contextScore": 0.20,
+      "intensityScore": 0.12,
+      "negationSarcasm": -0.08,
+      "attachmentAdj": 0.12,
+      "preferenceAdj": 0.07,
+      "cooccurrenceBoost": 0.12
+    }
+  },
+
+  "channels": {
+    "sms":   { "toneBias": { "alert": 0.00, "caution": 0.01, "clear": 0.00 } },
+    "im":    { "toneBias": { "alert": 0.01, "caution": 0.02, "clear": -0.01 } },
+    "email": { "toneBias": { "alert": -0.02, "caution": 0.00, "clear": 0.02 } },
+    "coparenting_app": { "toneBias": { "alert": 0.03, "caution": 0.03, "clear": -0.02 } }
+  },
+
+  "roles": {
+    "initiator": { "startBoost": 0.01 },
+    "responder": { "startBoost": -0.005 }
+  },
+
+  "profiles": {
+    "high_sensitivity": { "sarcasmPenalty": 1.3, "negationPenalty": 1.2, "intensityBoost": 1.1 },
+    "low_reactivity":   { "intensityBoost": 0.9, "alertClamp": -0.02 }
+  },
+
+  "tones": {
+    "alert": {
+      "base": 0.55,
+      "byContext": {
+        "CTX_CONFLICT":   { "threshold": 0.60, "sources": ["escalation","contempt","threat"] },
+        "CTX_JEALOUSY":   { "threshold": 0.65, "sources": ["jealousy","comparison"] },
+        "CTX_RUPTURE":    { "threshold": 0.62 },
+        "CTX_ESCALATION": { "threshold": 0.63 }
+      },
+      "attachmentAdjustments": { "anxious": 0.05, "avoidant": -0.02, "disorganized": 0.06, "secure": -0.03 },
+      "preferenceAdjustments": { "boundary": -0.02, "de-escalation": -0.03, "validation": -0.01 },
+      "dynamicRules": [
+        { "if": { "profanity":"strong" }, "delta": 0.06, "source": "profanity_config" },
+        { "if": { "triggerCategory":"threat" }, "delta": 0.08, "clampMax": 0.85 },
+        { "if": { "ultimatum": true }, "delta": 0.05 },
+        { "if": { "capsRepeat": true }, "delta": 0.03 }
+      ],
+      "negationSarcasm": { "negationPenalty": -0.04, "sarcasmPenalty": 0.05 },
+      "intensityCoupling": { "scale": 0.05, "ids": ["IM-A-001","IM-A-014","IM-A-020"] },
+      "cooccurrenceBoosts": [
+        { "with": "caution", "window_ms": 120000, "delta": 0.01 },
+        { "with": "alert",   "window_ms":  60000, "delta": 0.02 }
+      ],
+      "hysteresis": { "upshift": 0.015, "downshift": 0.025 }
+    },
+
+    "caution": {
+      "base": 0.40,
+      "byContext": {
+        "CTX_PLANNING":   { "threshold": 0.42, "sources": ["uncertainty","hedge"] },
+        "CTX_SAFETY":     { "threshold": 0.45 },
+        "CTX_BOUNDARY":   { "threshold": 0.46 }
+      },
+      "attachmentAdjustments": { "anxious": 0.04, "avoidant": 0.02, "disorganized": 0.03, "secure": 0.00 },
+      "preferenceAdjustments": { "structure": 0.01, "validation": 0.01 },
+      "dynamicRules": [
+        { "if": { "hedge": true }, "delta": 0.03 },
+        { "if": { "uncertainty": true }, "delta": 0.02 }
+      ],
+      "negationSarcasm": { "negationPenalty": -0.02, "sarcasmPenalty": 0.01 },
+      "intensityCoupling": { "scale": 0.03, "ids": ["IM-M-004","IM-M-007"] },
+      "cooccurrenceBoosts": [
+        { "with": "alert", "window_ms": 90000, "delta": 0.01 },
+        { "with": "clear", "window_ms": 90000, "delta": -0.01 }
+      ],
+      "hysteresis": { "upshift": 0.01, "downshift": 0.02 }
+    },
+
+    "clear": {
+      "base": 0.35,
+      "byContext": {
+        "CTX_REPAIR":      { "threshold": 0.38, "sources": ["repair","apology","solution"] },
+        "CTX_VALIDATION":  { "threshold": 0.40 },
+        "CTX_PLANNING":    { "threshold": 0.36 }
+      },
+      "attachmentAdjustments": { "anxious": -0.02, "avoidant": 0.05, "disorganized": -0.01, "secure": 0.06 },
+      "preferenceAdjustments": { "boundary": 0.02, "de-escalation": 0.03 },
+      "dynamicRules": [
+        { "if": { "solutionLanguage": true }, "delta": 0.03 },
+        { "if": { "structuredBulleting": true }, "delta": 0.02 }
+      ],
+      "negationSarcasm": { "negationPenalty": -0.03, "sarcasmPenalty": -0.02 },
+      "intensityCoupling": { "scale": 0.02, "ids": ["IM-S-002"] },
+      "cooccurrenceBoosts": [
+        { "with": "alert", "window_ms": 60000, "delta": -0.02 },
+        { "with": "caution", "window_ms": 60000, "delta": 0.01 }
+      ],
+      "hysteresis": { "upshift": 0.008, "downshift": 0.015 }
+    }
+  },
+
+  "byLength": [
+    { "lte_chars": 60,  "bias": { "alert": 0.01, "caution": 0.00, "clear": -0.01 } },
+    { "gt_chars": 200,  "bias": { "alert": -0.01, "caution": 0.01, "clear": 0.02 } }
+  ],
+
+  "byRecency": {
+    "repeatWithin_ms": 120000,
+    "stacking": { "alert": 0.02, "caution": 0.01, "clear": 0.00 },
+    "cap": 0.06
+  },
+
+  "cohortOverrides": {
+    "coparenting": { "alert": 0.02, "caution": 0.02, "clear": -0.01 },
+    "dating":      { "alert": 0.01, "caution": 0.00, "clear": 0.00 }
+  },
+
+  "guardrailIntegration": {
+    "minConfidence": 0.25,
+    "fallbackThreshold": 0.30,
+    "toxicityPassThrough": {
+      "highThreshold": 0.80,
+      "allowedCategories": ["de-escalation","repair","apology","reflection","pause"]
+    },
+    "noRepeatMs": 90000
+  },
+
+  "pipeline": [
+    "compute.triggerScore from tone_triggerwords.json (weighted by typeMultipliers)",
+    "compute.contextScore from context_classifier.json (CTX_* mapping)",
+    "apply.intensity from intensity_modifiers.json (position/cooccurrence boosts)",
+    "apply.negationSarcasm from negation_patterns.json + sarcasm_indicators.json",
+    "blend.attachment from attachment_overrides.json",
+    "blend.preferences from user_preference.json categories",
+    "augment.thesaurus matches from semantic_thesaurus.json (mapped to trigger categories)",
+    "apply.channel/role/profile biases",
+    "apply.cooccurrenceBoosts within window_ms",
+    "aggregate with defaults.blendWeights",
+    "apply.hysteresis + cooldown + decay",
+    "clamp to [defaults.minThreshold, defaults.maxThreshold]",
+    "emit severity + audit"
+  ],
+
+  "severityBands": {
+    "alert":   { "low": [0.55, 0.62], "med": [0.62, 0.72], "high": [0.72, 1.00] },
+    "caution": { "low": [0.40, 0.45], "med": [0.45, 0.52], "high": [0.52, 0.65] },
+    "clear":   { "low": [0.35, 0.40], "med": [0.40, 0.48], "high": [0.48, 0.60] }
+  },
+
+  "actions": {
+    "alert": {
+      "low":  ["Show: Pause/Reflect", "Suggest: securefix RW*"],
+      "med":  ["Show: Repair suggestion TA*", "Offer: boundary option"],
+      "high": ["Block-sending soft guard", "Require acknowledgment"]
+    },
+    "caution": {
+      "low":  ["Suggest: clarify intent"],
+      "med":  ["Suggest: hedges → specifics", "Offer: validation snippet"],
+      "high": ["Prompt: structure proposal", "Offer: time/place ask"]
+    },
+    "clear": {
+      "low":  ["Encourage: keep tone"],
+      "med":  ["Suggest: add validation or boundary"],
+      "high": ["Greenlight badge", "Offer: send as is"]
+    }
+  },
+
+  "audit": {
+    "emit": [
+      "toneFinal", "score", "band",
+      "topContexts", "topTriggers",
+      "appliedModifiers", "attachmentProfile",
+      "prefsApplied", "channelRole", "profileUsed",
+      "hysteresisState", "cooldownActive"
+    ],
+    "piiSafe": true
+  }
+}

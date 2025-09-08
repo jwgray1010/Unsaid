@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  spacy:
+    build: .
+    environment:
+      - SPACY_INTERNAL_KEY=super-secret
+      - SPACY_MODEL=en_core_web_md
+    ports:
+      - "8080:8080"

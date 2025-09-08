@@ -1,0 +1,853 @@
+{
+    "version": "1.1",
+    "contexts": [
+        {
+            "id": "CTX_CONFLICT",
+            "context": "conflict",
+            "description": "Argument or tense exchange",
+            "toneCues": [
+                "argue",
+                "fight",
+                "mad",
+                "blame",
+                "yell",
+                "accuse",
+                "shout",
+                "threaten",
+                "disrespect"
+            ],
+            "confidenceBoosts": {
+                "alert": 0.25,
+                "caution": 0.05
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "alert": 0.10,
+                    "caution": 0.15
+                },
+                "avoidant": {
+                    "caution": 0.20,
+                    "clear": 0.05
+                },
+                "disorganized": {
+                    "alert": 0.20,
+                    "caution": 0.10
+                },
+                "secure": {
+                    "clear": 0.20
+                }
+            }
+        },
+        {
+            "id": "CTX_PLANNING",
+            "context": "planning",
+            "description": "Logistics and scheduling",
+            "toneCues": [
+                "schedule",
+                "when",
+                "where",
+                "plan",
+                "calendar",
+                "reschedule",
+                "availability",
+                "deadline"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.20
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.10,
+                    "clear": 0.05
+                },
+                "avoidant": {
+                    "clear": 0.10
+                },
+                "disorganized": {
+                    "caution": 0.10
+                },
+                "secure": {
+                    "clear": 0.15
+                }
+            }
+        },
+        {
+            "id": "CTX_REPAIR",
+            "context": "repair",
+            "description": "Attempt to reconcile or make peace",
+            "toneCues": [
+                "sorry",
+                "apologize",
+                "my fault",
+                "own up",
+                "forgive",
+                "make up"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.25,
+                "caution": 0.05
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "clear": 0.15
+                },
+                "avoidant": {
+                    "caution": 0.10
+                },
+                "disorganized": {
+                    "alert": 0.05,
+                    "caution": 0.05
+                },
+                "secure": {
+                    "clear": 0.20
+                }
+            }
+        },
+        {
+            "id": "CTX_BOUNDARY",
+            "context": "boundary",
+            "description": "Stating limits or rules",
+            "toneCues": [
+                "need space",
+                "stop",
+                "can’t",
+                "not okay",
+                "limit",
+                "boundary",
+                "respect"
+            ],
+            "confidenceBoosts": {
+                "alert": 0.15,
+                "caution": 0.20
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "alert": 0.10
+                },
+                "avoidant": {
+                    "clear": 0.15
+                },
+                "disorganized": {
+                    "alert": 0.15
+                },
+                "secure": {
+                    "clear": 0.20
+                }
+            }
+        },
+        {
+            "id": "CTX_SUPPORT",
+            "context": "support",
+            "description": "Offering care or encouragement",
+            "toneCues": [
+                "proud",
+                "cheer",
+                "encourage",
+                "you can",
+                "believe in you",
+                "back you up"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.25
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "clear": 0.15
+                },
+                "avoidant": {
+                    "caution": 0.10
+                },
+                "disorganized": {
+                    "caution": 0.10
+                },
+                "secure": {
+                    "clear": 0.20
+                }
+            }
+        },
+        {
+            "id": "CTX_DISCLOSURE",
+            "context": "disclosure",
+            "description": "Revealing personal or sensitive information",
+            "toneCues": [
+                "secret",
+                "share",
+                "honest",
+                "truth",
+                "confess",
+                "admit"
+            ],
+            "confidenceBoosts": {
+                "caution": 0.20,
+                "clear": 0.10
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.15
+                },
+                "avoidant": {
+                    "alert": 0.10
+                },
+                "disorganized": {
+                    "caution": 0.10
+                },
+                "secure": {
+                    "clear": 0.15
+                }
+            }
+        },
+        {
+            "id": "CTX_HUMOR",
+            "context": "humor",
+            "description": "Joking, teasing, or banter",
+            "toneCues": [
+                "lol",
+                "haha",
+                "funny",
+                "joke",
+                "tease",
+                "banter"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.20
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.10
+                },
+                "avoidant": {
+                    "clear": 0.10
+                },
+                "disorganized": {
+                    "caution": 0.10
+                },
+                "secure": {
+                    "clear": 0.15
+                }
+            }
+        },
+        {
+            "id": "CTX_INTIMACY",
+            "context": "intimacy",
+            "description": "Affectionate or close exchange",
+            "toneCues": [
+                "love",
+                "miss you",
+                "hug",
+                "kiss",
+                "affection",
+                "sweet"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.25
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "clear": 0.10
+                },
+                "avoidant": {
+                    "caution": 0.15
+                },
+                "disorganized": {
+                    "alert": 0.10
+                },
+                "secure": {
+                    "clear": 0.20
+                }
+            }
+        },
+        {
+            "id": "CTX_NEGOTIATION",
+            "context": "negotiation",
+            "description": "Trying to reach agreement",
+            "toneCues": [
+                "compromise",
+                "deal",
+                "agree",
+                "meet halfway",
+                "terms"
+            ],
+            "confidenceBoosts": {
+                "caution": 0.15,
+                "clear": 0.15
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.10
+                },
+                "avoidant": {
+                    "clear": 0.10
+                },
+                "disorganized": {
+                    "alert": 0.10
+                },
+                "secure": {
+                    "clear": 0.15
+                }
+            }
+        },
+        {
+            "id": "CTX_WORK",
+            "context": "work/school",
+            "description": "Task or duty-related discussion",
+            "toneCues": [
+                "assignment",
+                "project",
+                "work",
+                "school",
+                "due",
+                "grades"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.20
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.10
+                },
+                "avoidant": {
+                    "clear": 0.10
+                },
+                "disorganized": {
+                    "caution": 0.05
+                },
+                "secure": {
+                    "clear": 0.15
+                }
+            }
+        },
+        {
+            "id": "CTX_MISUNDERSTANDING",
+            "context": "misunderstanding",
+            "description": "Confusion or crossed signals in communication",
+            "toneCues": [
+                "misunderstood",
+                "mixed up",
+                "wrong impression",
+                "didn't mean",
+                "confuse"
+            ],
+            "confidenceBoosts": {
+                "caution": 0.25
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "alert": 0.05,
+                    "caution": 0.15
+                },
+                "avoidant": {
+                    "clear": 0.05
+                },
+                "disorganized": {
+                    "caution": 0.20
+                },
+                "secure": {
+                    "clear": 0.10
+                }
+            }
+        },
+        {
+            "id": "CTX_REQUEST",
+            "context": "request",
+            "description": "Asking for help or a favor",
+            "toneCues": [
+                "can you",
+                "please",
+                "favor",
+                "help",
+                "would you",
+                "could you"
+            ],
+            "confidenceBoosts": {
+                "caution": 0.15,
+                "clear": 0.10
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.15
+                },
+                "avoidant": {
+                    "alert": 0.05
+                },
+                "disorganized": {
+                    "caution": 0.10
+                },
+                "secure": {
+                    "clear": 0.15
+                }
+            }
+        },
+        {
+            "id": "CTX_CRITIQUE",
+            "context": "critique",
+            "description": "Providing feedback or criticism",
+            "toneCues": [
+                "feedback",
+                "improve",
+                "should have",
+                "mistake",
+                "wrong",
+                "issue"
+            ],
+            "confidenceBoosts": {
+                "alert": 0.20,
+                "caution": 0.10
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "alert": 0.15
+                },
+                "avoidant": {
+                    "caution": 0.15
+                },
+                "disorganized": {
+                    "alert": 0.10
+                },
+                "secure": {
+                    "clear": 0.10
+                }
+            }
+        },
+        {
+            "id": "CTX_GRATITUDE",
+            "context": "gratitude",
+            "description": "Expressing thanks or appreciation",
+            "toneCues": [
+                "thank you",
+                "grateful",
+                "appreciate",
+                "means a lot",
+                "thanks"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.25
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "clear": 0.10
+                },
+                "avoidant": {
+                    "caution": 0.05
+                },
+                "disorganized": {
+                    "clear": 0.10
+                },
+                "secure": {
+                    "clear": 0.20
+                }
+            }
+        },
+        {
+            "id": "CTX_DECISION",
+            "context": "decision",
+            "description": "Choosing between options or resolving uncertainty",
+            "toneCues": [
+                "decide",
+                "choice",
+                "option",
+                "pick",
+                "resolve",
+                "final"
+            ],
+            "confidenceBoosts": {
+                "caution": 0.20,
+                "clear": 0.10
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.20
+                },
+                "avoidant": {
+                    "clear": 0.15
+                },
+                "disorganized": {
+                    "alert": 0.05
+                },
+                "secure": {
+                    "clear": 0.15
+                }
+            }
+        },
+        {
+            "id": "CTX_ESCALATION",
+            "context": "escalation",
+            "description": "Rising tension or worsening disagreement",
+            "toneCues": [
+                "always",
+                "never",
+                "done with this",
+                "fed up",
+                "sick of",
+                "can’t stand"
+            ],
+            "confidenceBoosts": {
+                "alert": 0.30
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "alert": 0.20
+                },
+                "avoidant": {
+                    "caution": 0.10
+                },
+                "disorganized": {
+                    "alert": 0.20
+                },
+                "secure": {
+                    "caution": 0.10
+                }
+            }
+        },
+        {
+            "id": "CTX_MEMORY",
+            "context": "memory",
+            "description": "Referencing past events or nostalgia",
+            "toneCues": [
+                "remember",
+                "back then",
+                "used to",
+                "last time",
+                "nostalgic"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.15,
+                "caution": 0.05
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.10
+                },
+                "avoidant": {
+                    "alert": 0.05
+                },
+                "disorganized": {
+                    "caution": 0.10
+                },
+                "secure": {
+                    "clear": 0.10
+                }
+            }
+        },
+        {
+            "id": "CTX_PRAISE",
+            "context": "praise",
+            "description": "Giving compliments or positive recognition",
+            "toneCues": [
+                "great job",
+                "amazing",
+                "so proud",
+                "awesome",
+                "impressed"
+            ],
+            "confidenceBoosts": {
+                "clear": 0.25
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "clear": 0.15
+                },
+                "avoidant": {
+                    "caution": 0.10
+                },
+                "disorganized": {
+                    "clear": 0.10
+                },
+                "secure": {
+                    "clear": 0.20
+                }
+            }
+        },
+        {
+            "id": "CTX_RUPTURE",
+            "context": "rupture",
+            "description": "Breakdown or distancing in the relationship",
+            "toneCues": [
+                "over",
+                "ending",
+                "space",
+                "leave me alone",
+                "don’t care",
+                "done"
+            ],
+            "confidenceBoosts": {
+                "alert": 0.25,
+                "caution": 0.10
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "alert": 0.20
+                },
+                "avoidant": {
+                    "clear": 0.15
+                },
+                "disorganized": {
+                    "alert": 0.20
+                },
+                "secure": {
+                    "caution": 0.10
+                }
+            }
+        },
+        {
+            "id": "CTX_REASSURANCE",
+            "context": "reassurance",
+            "description": "Seeking or giving emotional confirmation",
+            "toneCues": [
+                "okay?",
+                "still love",
+                "with me",
+                "right?",
+                "promise",
+                "safe"
+            ],
+            "confidenceBoosts": {
+                "caution": 0.15,
+                "clear": 0.10
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "caution": 0.20
+                },
+                "avoidant": {
+                    "alert": 0.05
+                },
+                "disorganized": {
+                    "caution": 0.15
+                },
+                "secure": {
+                    "clear": 0.15
+                }
+            }
+        },
+        {
+            "id": "CTX_DEFENSE",
+            "context": "defense",
+            "description": "Protecting oneself from criticism or attack",
+            "toneCues": [
+                "not true",
+                "that’s unfair",
+                "you’re wrong",
+                "defend",
+                "justify"
+            ],
+            "confidenceBoosts": {
+                "alert": 0.20,
+                "caution": 0.15
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "alert": 0.15
+                },
+                "avoidant": {
+                    "caution": 0.15
+                },
+                "disorganized": {
+                    "alert": 0.20
+                },
+                "secure": {
+                    "caution": 0.10
+                }
+            }
+        },
+        {
+            "id": "CTX_WITHDRAWAL",
+            "context": "withdrawal",
+            "description": "Pulling away emotionally or physically",
+            "toneCues": [
+                "leave me",
+                "don’t talk",
+                "alone",
+                "space",
+                "done talking",
+                "not now"
+            ],
+            "confidenceBoosts": {
+                "alert": 0.25,
+                "caution": 0.10
+            },
+            "attachmentAdjustments": {
+                "anxious": {
+                    "alert": 0.20
+                },
+                "avoidant": {
+                    "clear": 0.20
+                },
+                "disorganized": {
+                    "alert": 0.20
+                },
+                "secure": {
+                    "caution": 0.10
+                }
+            }
+        },
+{
+  "id": "CTX_CO_PARENTING",
+  "context": "co-parenting",
+  "description": "Discussions about children, parenting, or shared responsibilities",
+  "toneCues": ["kids","child","custody","drop off","pick up","school","parenting","bedtime","visitation"],
+  "confidenceBoosts": { "caution": 0.20, "clear": 0.10 },
+  "attachmentAdjustments": {
+    "anxious": { "caution": 0.20 },
+    "avoidant": { "clear": 0.15 },
+    "disorganized": { "alert": 0.15, "caution": 0.10 },
+    "secure": { "clear": 0.15 }
+  }
+},
+{
+  "id": "CTX_DATING",
+  "context": "dating",
+  "description": "Romantic or relationship-building exchanges",
+  "toneCues": ["date","dinner","go out","crush","flirt","romantic","ask out","see you"],
+  "confidenceBoosts": { "clear": 0.20 },
+  "attachmentAdjustments": {
+    "anxious": { "caution": 0.15, "clear": 0.10 },
+    "avoidant": { "caution": 0.10 },
+    "disorganized": { "alert": 0.10 },
+    "secure": { "clear": 0.15 }
+  }
+},
+{
+  "id": "CTX_FINANCIAL",
+  "context": "financial",
+  "description": "Money, spending, or budgeting matters",
+  "toneCues": ["bill","money","budget","pay","rent","cost","spend","save"],
+  "confidenceBoosts": { "caution": 0.20 },
+  "attachmentAdjustments": {
+    "anxious": { "alert": 0.10, "caution": 0.15 },
+    "avoidant": { "clear": 0.10 },
+    "disorganized": { "caution": 0.10 },
+    "secure": { "clear": 0.15 }
+  }
+},
+{
+  "id": "CTX_SOCIAL",
+  "context": "social",
+  "description": "Friends, social life, or outside relationships",
+  "toneCues": ["party","friends","hang out","social","invite","group","night out"],
+  "confidenceBoosts": { "clear": 0.15, "caution": 0.05 },
+  "attachmentAdjustments": {
+    "anxious": { "caution": 0.15 },
+    "avoidant": { "alert": 0.05 },
+    "disorganized": { "caution": 0.10 },
+    "secure": { "clear": 0.15 }
+  }
+},
+{
+  "id": "CTX_VULNERABILITY",
+  "context": "vulnerability",
+  "description": "Expressions of fear, insecurity, or emotional exposure",
+  "toneCues": ["scared","worried","ashamed","embarrassed","lonely","guilty","afraid"],
+  "confidenceBoosts": { "caution": 0.25, "clear": 0.05 },
+  "attachmentAdjustments": {
+    "anxious": { "caution": 0.20 },
+    "avoidant": { "alert": 0.10 },
+    "disorganized": { "alert": 0.15, "caution": 0.15 },
+    "secure": { "clear": 0.15 }
+  }
+},
+{
+  "id": "CTX_PRESENCE",
+  "context": "presence",
+  "description": "Attention, distraction, or availability in the moment",
+  "toneCues": ["listening","pay attention","with me","focused","ignore","distracted"],
+  "confidenceBoosts": { "caution": 0.20 },
+  "attachmentAdjustments": {
+    "anxious": { "alert": 0.15, "caution": 0.15 },
+    "avoidant": { "clear": 0.10 },
+    "disorganized": { "alert": 0.10 },
+    "secure": { "clear": 0.10 }
+  }
+},
+{
+  "id": "CTX_JEALOUSY",
+  "context": "jealousy",
+  "description": "Comparison, insecurity, or emotional threat",
+  "toneCues": ["jealous","other guy","other girl","better than me","attention","flirt with","competition"],
+  "confidenceBoosts": { "alert": 0.25, "caution": 0.15 },
+  "attachmentAdjustments": {
+    "anxious": { "alert": 0.20 },
+    "avoidant": { "caution": 0.15 },
+    "disorganized": { "alert": 0.20 },
+    "secure": { "caution": 0.10 }
+  }
+},
+{
+  "id": "CTX_META",
+  "context": "meta",
+  "description": "Talking about the relationship itself",
+  "toneCues": ["our relationship","we need to talk","us","how we are","between us"],
+  "confidenceBoosts": { "caution": 0.20, "clear": 0.10 },
+  "attachmentAdjustments": {
+    "anxious": { "caution": 0.15 },
+    "avoidant": { "alert": 0.15 },
+    "disorganized": { "alert": 0.10 },
+    "secure": { "clear": 0.15 }
+  }
+},
+{
+  "id": "CTX_ROUTINE",
+  "context": "routine",
+  "description": "Everyday check-ins and daily life updates",
+  "toneCues": ["morning","night","breakfast","home","heading out","daily","routine"],
+  "confidenceBoosts": { "clear": 0.20 },
+  "attachmentAdjustments": {
+    "anxious": { "clear": 0.10 },
+    "avoidant": { "clear": 0.05 },
+    "disorganized": { "caution": 0.05 },
+    "secure": { "clear": 0.15 }
+  }
+},
+{
+  "id": "CTX_SAFETY",
+  "context": "safety",
+  "description": "Expressions of physical or emotional safety concerns",
+  "toneCues": ["safe","danger","scared","threat","afraid","not okay","protect"],
+  "confidenceBoosts": { "alert": 0.30, "caution": 0.10 },
+  "attachmentAdjustments": {
+    "anxious": { "alert": 0.20 },
+    "avoidant": { "caution": 0.10 },
+    "disorganized": { "alert": 0.20, "caution": 0.15 },
+    "secure": { "clear": 0.10 }
+  }
+},
+{
+  "id": "CTX_EMPATHY",
+  "context": "empathy",
+  "description": "Recognizing or validating another’s feelings",
+  "toneCues": ["I understand","that must feel","sorry you feel","I get it","empathize"],
+  "confidenceBoosts": { "clear": 0.25 },
+  "attachmentAdjustments": {
+    "anxious": { "clear": 0.15 },
+    "avoidant": { "caution": 0.10 },
+    "disorganized": { "caution": 0.10 },
+    "secure": { "clear": 0.20 }
+  }
+},
+{
+  "id": "CTX_BLAME",
+  "context": "blame",
+  "description": "Assigning fault or responsibility",
+  "toneCues": ["your fault","because of you","blame","caused this","responsible for"],
+  "confidenceBoosts": { "alert": 0.25, "caution": 0.10 },
+  "attachmentAdjustments": {
+    "anxious": { "alert": 0.20 },
+    "avoidant": { "caution": 0.15 },
+    "disorganized": { "alert": 0.20 },
+    "secure": { "caution": 0.10 }
+  }
+},
+{
+  "id": "CTX_PRACTICAL",
+  "context": "practical",
+  "description": "Household, chores, or logistics of daily tasks",
+  "toneCues": ["groceries","laundry","clean","dishes","fix","house","chores"],
+  "confidenceBoosts": { "clear": 0.20 },
+  "attachmentAdjustments": {
+    "anxious": { "caution": 0.10 },
+    "avoidant": { "clear": 0.10 },
+    "disorganized": { "caution": 0.05 },
+    "secure": { "clear": 0.15 }
+  }
+}
+    ]
+}

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsaid API - Advanced Communication Analysis Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6; color: #333; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; margin: 0 auto; padding: 2rem;
+            background: rgba(255,255,255,0.95); margin-top: 2rem; border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header { text-align: center; margin-bottom: 3rem; }
+        .header h1 { font-size: 3rem; margin-bottom: 0.5rem; color: #2c3e50; }
+        .header p { font-size: 1.2rem; color: #7f8c8d; }
+        .api-section { margin-bottom: 2rem; }
+        .api-section h2 { color: #2c3e50; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem; }
+        .endpoint { 
+            background: #f8f9fa; border-left: 4px solid #3498db; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;
+        }
+        .endpoint h3 { color: #2980b9; margin-bottom: 0.5rem; }
+        .endpoint .method { 
+            display: inline-block; background: #27ae60; color: white; padding: 0.2rem 0.5rem; 
+            border-radius: 3px; font-size: 0.8rem; margin-right: 0.5rem;
+        }
+        .endpoint .method.post { background: #e74c3c; }
+        .endpoint .url { font-family: monospace; background: #ecf0f1; padding: 0.3rem; border-radius: 3px; }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem; }
+        .feature { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .feature h3 { color: #2c3e50; margin-bottom: 1rem; }
+        .status { text-align: center; margin-top: 2rem; padding: 1rem; background: #d4edda; border-radius: 6px; }
+        .status .dot { width: 12px; height: 12px; background: #28a745; border-radius: 50%; display: inline-block; margin-right: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗣️ Unsaid API</h1>
+            <p>Advanced Communication Analysis & Therapeutic Suggestion Platform</p>
+            <p><strong>Production API:</strong> <code>https://api.myunsaidapp.com</code></p>
+        </div>
+
+        <div class="api-section">
+            <h2>🔗 Core Endpoints</h2>
+            
+            <div class="endpoint">
+                <h3>Health & Status Monitoring</h3>
+                <div><span class="method">GET</span><span class="url">/api/v1/health</span></div>
+                <p>Comprehensive health checks with dependency validation, data integrity verification, and system metrics.</p>
+            </div>
+
+            <div class="endpoint">
+                <h3>Tone Analysis Engine</h3>
+                <div><span class="method post">POST</span><span class="url">/api/v1/tone</span></div>
+                <p>Advanced sentiment analysis with attachment style detection, emotional state mapping, and contextual tone evaluation.</p>
+            </div>
+
+            <div class="endpoint">
+                <h3>Therapeutic Suggestions</h3>
+                <div><span class="method post">POST</span><span class="url">/api/v1/suggestions</span></div>
+                <p>AI-powered communication suggestions based on attachment theory, relationship context, and therapeutic best practices.</p>
+            </div>
+
+            <div class="endpoint">
+                <h3>Secure Communication Fixes</h3>
+                <div><span class="method post">POST</span><span class="url">/api/v1/secure-fix</span></div>
+                <p>Premium OpenAI-powered message rewriting with daily usage limits (10/day) for cost control.</p>
+            </div>
+
+            <div class="endpoint">
+                <h3>Enhanced Communicator</h3>
+                <div><span class="method post">POST</span><span class="url">/api/v1/communicator</span></div>
+                <p>Comprehensive communication analysis with personality integration and multi-dimensional feedback.</p>
+            </div>
+
+            <div class="endpoint">
+                <h3>Trial Status & Authentication</h3>
+                <div><span class="method">GET</span><span class="url">/api/v1/trial-status</span></div>
+                <p>User trial status verification, subscription management, and feature access control.</p>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>🧠 AI-Powered Analysis</h3>
+                <p>Advanced machine learning models for tone detection, emotional intelligence coaching, and communication pattern analysis.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>💰 Cost Management</h3>
+                <p>Built-in OpenAI usage limits (10 daily secure fixes per user) with automatic reset and usage tracking.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>🔒 Enterprise Security</h3>
+                <p>JWT authentication, rate limiting, CORS protection, and comprehensive error handling.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>📊 Real-time Monitoring</h3>
+                <p>Health checks, metrics collection, dependency validation, and system status reporting.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>🎯 Context-Aware</h3>
+                <p>Relationship-specific suggestions for romantic, professional, family, and conflict resolution scenarios.</p>
+            </div>
+            
+            <div class="feature">
+                <h3>⚡ Serverless Architecture</h3>
+                <p>Vercel-powered serverless functions with automatic scaling and global CDN distribution.</p>
+            </div>
+        </div>
+
+        <div class="status">
+            <span class="dot"></span>
+            <strong>API Status: Operational</strong> | 
+            <span id="timestamp"></span> | 
+            Environment: Production | 
+            Version: v1.0.0
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        
+        // Test API connectivity
+        fetch('/api/v1/test')
+            .then(r => r.json())
+            .then(data => {
+                console.log('API Test:', data);
+            })
+            .catch(e => {
+                console.warn('API connectivity check failed:', e);
+            });
+    </script>
+</body>
+</html>

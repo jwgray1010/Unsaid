@@ -1,0 +1,179 @@
+{
+    "version": "1.3.0",
+    "notes": "Profanity sensitivity with mild/moderate/strong tiers, escalation + de-escalation rules, and profile-aware adjustments for habitual use.",
+    "settings": {
+        "defaultSensitivity": "medium",
+        "weightMap": {
+            "low": { "mild": 0.20, "moderate": 0.40, "strong": 0.60 },
+            "medium": { "mild": 0.40, "moderate": 0.70, "strong": 1.00 },
+            "high": { "mild": 0.60, "moderate": 1.00, "strong": 1.40 }
+        }
+    },
+    "profiles": {
+        "high_sensitivity": {
+            "weightMultiplier": 1.15,
+            "negationPenalty": 1.10,
+            "sarcasmPenalty": 1.10
+        },
+        "low_reactivity": {
+            "weightMultiplier": 0.90
+        },
+        "habitual_swearer": {
+            "weightMultiplier": 0.70,
+            "deescalationBias": 0.10,
+            "repeatTolerance": 2,
+            "notes": "For users whose baseline includes casual profanity; reduces over-flagging."
+        }
+    },
+    "categories": [
+        {
+            "id": "PROF_MILD",
+            "severity": "mild",
+            "tone": "caution",
+            "triggerWords": ["crap", "hell", "damn"],
+            "attachmentStyles": ["anxious", "avoidant", "disorganized", "secure"],
+            "styleWeight": { "anxious": 0.05, "avoidant": 0.03, "disorganized": 0.04, "secure": 0.00 },
+            "toneWeight": { "alert": 0.10, "caution": 0.15, "clear": 0.00 },
+            "spacyPatterns": [
+                [{ "LOWER": "crap" }],
+                [{ "LOWER": "hell" }],
+                [{ "LOWER": "damn" }]
+            ]
+        },
+        {
+            "id": "PROF_MODERATE",
+            "severity": "moderate",
+            "tone": "caution",
+            "triggerWords": ["jerk", "idiot", "stupid", "dumb", "moron", "loser", "clown", "trash", "screw off", "shut up"],
+            "semanticVariants": ["act your age", "grow up", "what a joke", "you’re ridiculous"],
+            "attachmentStyles": ["anxious", "avoidant", "disorganized", "secure"],
+            "styleWeight": { "anxious": 0.10, "avoidant": 0.07, "disorganized": 0.09, "secure": 0.03 },
+            "toneWeight": { "alert": 0.15, "caution": 0.12, "clear": -0.02 },
+            "spacyPatterns": [
+                [{ "LOWER": "jerk" }],
+                [{ "LOWER": "idiot" }],
+                [{ "LOWER": "stupid" }],
+                [{ "LOWER": "dumb" }],
+                [{ "LOWER": "moron" }],
+                [{ "LOWER": "loser" }],
+                [{ "LOWER": "clown" }],
+                [{ "LOWER": "trash" }],
+                [{ "LOWER": "screw" }, { "LOWER": "off" }],
+                [{ "LOWER": "shut" }, { "LOWER": "up" }]
+            ],
+            "escalationHints": {
+                "intensityBoostThreshold": 0.20,
+                "positionBoost": { "start": 0.02, "caps": 0.03, "repeat": 0.04 },
+                "cooccursToAlert": ["always", "never", "you", "every", "done", "fed up"]
+            }
+        },
+        {
+            "id": "PROF_STRONG",
+            "severity": "strong",
+            "tone": "alert",
+            "triggerWords": ["fuck", "f*ck", "f**k", "shit", "bitch", "asshole", "dick", "piss off"],
+            "semanticVariants": ["screw you", "get lost", "eat shit"],
+            "attachmentStyles": ["anxious", "avoidant", "disorganized", "secure"],
+            "styleWeight": { "anxious": 0.15, "avoidant": 0.10, "disorganized": 0.12, "secure": 0.08 },
+            "toneWeight": { "alert": 0.25, "caution": 0.05, "clear": -0.05 },
+            "spacyPatterns": [
+                [{ "LOWER": "fuck" }],
+                [{ "LOWER": "shit" }],
+                [{ "LOWER": "bitch" }],
+                [{ "LOWER": "asshole" }],
+                [{ "LOWER": "dick" }],
+                [{ "LOWER": "piss" }, { "LOWER": "off" }]
+            ],
+            "normalization": {
+                "map": { "f*ck": "fuck", "f**k": "fuck" }
+            }
+        }
+    ],
+    "exemptions": {
+        "quotedText": true,
+        "selfDirected": true,
+        "exampleMode": true,
+        "notes": "If profanity is inside quotes, aimed at self (\"I’m such an idiot\"), or clearly instructional/example text, downweight or ignore."
+    },
+    "softeners": {
+        "hedges": ["jk", "j/k", "lol", "lmao", "haha", "kidding", "just kidding", "playin", "no offense", "my bad", "sorry"],
+        "emojis": ["😊", "😅", "😂", "🥲", "🙏", "✌️", "💛"],
+        "positiveValence": ["thank you", "appreciate", "love this", "so proud", "nice work", "good job"],
+        "relationshipContext": ["bff", "bestie", "bro", "sis", "fam"],
+        "notes": "Presence of these cues reduces perceived aggression unless overridden by explicit-target or threat patterns."
+    },
+    "rules": [
+        {
+            "id": "RULE_PROF_ESCALATE_MODERATE",
+            "description": "Escalate moderate profanity to alert if intensity boost crosses threshold.",
+            "applyTo": ["PROF_MODERATE"],
+            "conditions": {
+                "minIntensityScore": 0.20,
+                "repeatCount": 2,
+                "positionBoost": ["start", "caps", "repeat"],
+                "cooccurrence": ["always", "never", "you"]
+            },
+            "action": {
+                "flipTone": "alert",
+                "boostWeight": 0.15
+            }
+        },
+        {
+            "id": "RULE_PROF_DEESCALATE_MODERATE",
+            "description": "De-escalate moderate profanity when softened by hedges/emojis/positive valence or informal relational context.",
+            "applyTo": ["PROF_MODERATE"],
+            "conditions": {
+                "maxIntensityScore": 0.18,
+                "softeners": {
+                    "minCount": 1,
+                    "lists": ["hedges", "emojis", "positiveValence", "relationshipContext"]
+                },
+                "targeting": {
+                    "explicitSecondPerson": false,
+                    "threatDetected": false
+                },
+                "exemptionsAllowed": ["selfDirected", "quotedText", "exampleMode"]
+            },
+            "action": {
+                "flipTone": "caution",
+                "reduceWeight": 0.10
+            }
+        },
+        {
+            "id": "RULE_PROF_PROFILE_HABITUAL",
+            "description": "Adjust thresholds and weights for habitual-swearer profile to avoid over-flagging casual profanity.",
+            "applyTo": ["PROF_MILD", "PROF_MODERATE", "PROF_STRONG"],
+            "conditions": {
+                "profile": "habitual_swearer"
+            },
+            "action": {
+                "weightMultiplier": 0.70,
+                "intensityThresholdShift": 0.05,
+                "deescalationBias": 0.10,
+                "repeatTolerance": 2
+            }
+        },
+        {
+            "id": "RULE_PROF_DEESCALATE_STRONG_SOFTENED",
+            "description": "If strong profanity appears but is clearly non-targeted and softened (humor, camaraderie, self-directed), reduce weight without fully flipping tone.",
+            "applyTo": ["PROF_STRONG"],
+            "conditions": {
+                "targeting": {
+                    "explicitSecondPerson": false,
+                    "threatDetected": false
+                },
+                "softeners": {
+                    "minCount": 2,
+                    "lists": ["hedges", "emojis", "relationshipContext"]
+                },
+                "context": {
+                    "selfDirected": true,
+                    "orQuoted": true
+                }
+            },
+            "action": {
+                "reduceWeight": 0.15
+            }
+        }
+    ]
+}
