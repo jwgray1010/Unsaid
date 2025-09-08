@@ -3,11 +3,7 @@
   "functions": {
     "api/**/*.ts": {
       "runtime": "@vercel/node@3.0.21",
-      "includeFiles": [
-        "api/{_lib,services,schemas,types,utils,cron,v1}/**/*",
-        "lib/data/**/*",
-        "spacy-service/**/*"
-      ]
+      "includeFiles": "api/{_lib,services,schemas,types,utils,cron,v1}/**/*,lib/data/**/*,spacy-service/**/*"
     }
   },
   "routes": [
