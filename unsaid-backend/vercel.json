@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "regions": ["iad1"],
+
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs20.x",
+      "memory": 1024,
+      "maxDuration": 10,
+      "includeFiles": [
+        "data/**",
+        "config/**",
+        "middleware/**",
+        "routes/**",
+        "services/**"
+      ],
+      "excludeFiles": [
+        "**/*.test.*",
+        "**/__tests__/**",
+        "backups/**",
+        "reports/**"
+      ]
+    }
+  },
+
+  "routes": [
+    {
+      "src": "/(.*)",
+      "headers": {
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "no-referrer",
+        "Permissions-Policy": "geolocation=(), camera=(), microphone=()"
+      },
+      "continue": true
+    },
+
+    { "src": "/(.*)", "dest": "/api/index.js" }
+  ]
+}

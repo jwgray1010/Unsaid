@@ -1,0 +1,52 @@
+{
+  "name": "SuggestionRequest",
+  "version": "1.0.0",
+  "lastUpdated": "2025-08-28",
+  "description": "Schema for generating secure suggestions and rewrites. Validates input text and optional tone/style overrides and feature flags.",
+  "fields": {
+    "text": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "The message to improve with secure rewrites and/or therapy advice.",
+      "example": "You never listen to me.",
+      "error": "A valid message text (1–2000 characters) is required."
+    },
+    "toneOverride": {
+      "type": "enum",
+      "values": ["alert", "caution", "clear"],
+      "required": false,
+      "description": "Optional override for detected tone. Useful for testing or manual control.",
+      "example": "alert",
+      "error": "toneOverride must be one of: alert, caution, clear."
+    },
+    "attachmentStyle": {
+      "type": "enum",
+      "values": ["anxious", "avoidant", "disorganized", "secure"],
+      "required": false,
+      "description": "Optional user attachment-style override, if already known.",
+      "example": "secure",
+      "error": "attachmentStyle must be one of: anxious, avoidant, disorganized, secure."
+    },
+    "features": {
+      "type": "array",
+      "items": "string",
+      "required": false,
+      "maxItems": 8,
+      "description": "Feature flags to include in the response. Common values: rewrite, advice, quick_fixes, evidence.",
+      "example": ["rewrite", "advice", "evidence"]
+    },
+    "meta": {
+      "type": "object",
+      "required": false,
+      "description": "Optional metadata for tracing and UX decisions.",
+      "example": {
+        "platform": "ios_keyboard",
+        "timestamp": "2025-08-28T19:50:00Z",
+        "user": "user123",
+        "locale": "en-US"
+      }
+    }
+  }
+}

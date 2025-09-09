@@ -1,0 +1,382 @@
+{
+  "version": "2.3",
+  "mode": "therapy_onboarding_v2",
+  "notes": "Production-ready superset: i18n, rate limits, safety flags, adaptive progression, telemetry, and rotation constraints. Backward-compatible with 2.0.",
+  "schema": {
+    "strict": true,
+    "minAppVersion": "1.0.0",
+    "contentIdPrefix": "ONB2_",
+    "validators": {
+      "idFormat": "^[A-Z0-9_-]{3,64}$",
+      "refIntegrity": true,
+      "noDanglingRefs": true
+    }
+  },
+
+  "globals": {
+    "showScores": false,
+    "showAttachmentLabels": false,
+    "rewritesPreviewFromDay": 6,
+    "toneWatchlistMax": 1,
+    "dailySupplementalShowCount": 3,
+    "maxSupplementalPerDayPool": 8,
+
+    "rotation": {
+      "strategy": "weighted_random_without_repeat",
+      "reseedDaily": true,
+      "contextAware": true,
+      "weights": {
+        "conflict": 1.1,
+        "planning": 1.0,
+        "repair": 1.05,
+        "validation": 1.1,
+        "boundaries": 1.1
+      },
+      "constraints": {
+        "minCoreLessonsPerDay": 1,
+        "maxCoreLessonsPerDay": 2,
+        "avoidShowingSameTagConsecutively": true,
+        "cooldownsMsByTag": {
+          "conflict": 7200000,
+          "boundaries": 3600000,
+          "validation": 1800000
+        }
+      }
+    },
+
+    "abTesting": {
+      "enabled": true,
+      "split": { "A": 0.5, "B": 0.5 },
+      "cohorts": [
+        { "id": "A", "previewCopy": "See a gentle rewrite preview." },
+        { "id": "B", "previewCopy": "Watch how one soft swap changes your tone." }
+      ],
+      "guardrails": {
+        "lockCohortPerUser": true,
+        "ttlDays": 30
+      }
+    },
+
+    "i18n": {
+      "defaultLocale": "en-US",
+      "supported": ["en-US"],
+      "pluralRules": "cardinal",
+      "stringsRef": "onboarding_strings.json",
+      "fallbacks": { "en": "en-US" }
+    },
+
+    "ui": {
+      "tutorial": { "enabled": true, "oncePerInstall": true, "nudgeAfterHours": 24 },
+      "microInteractions": { "haptics": true, "confettiOnWin": true, "accessibilityMotionReduce": true },
+      "previewCTA": { "style": "subtle_glow", "maxImpressionsPerDay": 3 }
+    },
+
+    "rateLimits": {
+      "maxDailyLessons": 6,
+      "maxDailyTeasers": 4,
+      "maxDailyPreviews": 3,
+      "minSecondsBetweenCards": 10,
+      "minSecondsBetweenPreviews": 30
+    },
+
+    "safety": {
+      "contentFilters": {
+        "disallowMedicalOrDiagnosticClaims": true,
+        "toneLabelsHiddenDuringTrial": true
+      },
+      "escalation": {
+        "crisisKeywordsRef": "safety/crisis_keywords.json",
+        "handoffCopyRef": "safety/handoff_copy.json",
+        "suppressPreviewsDuringEscalation": true
+      }
+    },
+
+    "telemetry": {
+      "enabled": true,
+      "events": [
+        "onboarding_day_open",
+        "core_lesson_view",
+        "supplemental_view",
+        "reflection_submit",
+        "preview_rewrite_view",
+        "preview_rewrite_accept",
+        "premium_teaser_view",
+        "premium_cta_click"
+      ],
+      "privacy": { "pseudonymous": true, "noRawTextLogging": true }
+    },
+
+    "progression": {
+      "unlockRules": [
+        {
+          "id": "EARLY_PREVIEW_IF_ENGAGED",
+          "when": { "dayGTE": 4, "engagementScoreGTE": 0.6 },
+          "action": { "set": { "rewritesPreviewFromDay": 5 } }
+        },
+        {
+          "id": "DELAY_PREVIEW_IF_OVERWHELM",
+          "when": { "dayLTE": 6, "overwhelmSignalsGTE": 2 },
+          "action": { "set": { "rewritesPreviewFromDay": 7 } }
+        }
+      ],
+      "signalsRef": "learning_signals.json"
+    },
+
+    "references": {
+      "learningSignals": "learning_signals.json",
+      "therapyAdvice": "therapy_advice.json",
+      "reflectionPrompts": "reflection_prompts.json",
+      "premiumTeasers": "premium_teasers.json",
+      "previewTemplates": "preview_templates.json"
+    }
+  },
+
+  "runtime": {
+    "determinism": { "seedFromUserIdHash": true, "dailyRolloverAtLocalHour": 4 },
+    "conflictResolution": {
+      "maxNoticingsPerDay": 3,
+      "preferLowerIntensityEarlyWeek": true
+    },
+    "fallbacks": {
+      "ifMissingSupplementals": "use:general",
+      "ifMissingCopy": "use:stringsRef.default"
+    }
+  },
+
+  "days": {
+    "1": {
+      "key": "Grounding & Safety",
+      "coreLessons": [
+        {
+          "id": "D1-L1",
+          "message": "Texting can stir up anxiety, hope, and uncertainty. This week, we’ll build awareness before making changes.",
+          "advice": "Scan your body first (breath, chest, stomach). Awareness is the first step.",
+          "therapyCue": "Pause, breathe, then type.",
+          "microPractice": "Take 3 slow breaths before your next text.",
+          "reflectionRef": "RP_DAY1_AWARENESS_01"
+        },
+        {
+          "id": "D1-L2",
+          "message": "When emotions rise, clarity drops. Slowing down protects connection.",
+          "advice": "Write the first draft, then cut it in half.",
+          "therapyCue": "Shorter can be softer.",
+          "microPractice": "Set a 2-minute timer before sending.",
+          "reflectionRef": "RP_DAY1_AWARENESS_02"
+        },
+        {
+          "id": "D1-L3",
+          "message": "Safety first: you can always take time to respond well.",
+          "advice": "If flooded, say you’ll reply later—and name a time.",
+          "therapyCue": "Time-bound pauses build trust.",
+          "microPractice": "Draft: ‘I’ll reply after 6 pm.’",
+          "reflectionRef": "RP_DAY1_AWARENESS_03"
+        }
+      ],
+      "supplementalPools": [
+        { "tag": "general", "pool": [
+          { "id": "TA001", "advice": "Name the moment: ‘I’m feeling a lot right now, so I’m slowing down my reply.’" },
+          { "id": "TA019", "advice": "Shorten first drafts. Fewer words often land softer when emotions are high." },
+          { "id": "TA044", "advice": "If you’re flooded, set a gentle timer (10–20 min) before replying." },
+          { "id": "TA053", "advice": "Remove stacked questions—send one clear ask." }
+        ]}
+      ],
+      "premiumTeaserRef": "PT_DAY1_BASE"
+    },
+
+    "2": {
+      "key": "Validation as a Core Skill",
+      "coreLessons": [
+        {
+          "id": "D2-L1",
+          "message": "Healthy communication starts with helping the other person feel seen.",
+          "advice": "Validate first: ‘I know you’re busy…’ then add your request.",
+          "therapyCue": "Validation lowers defenses.",
+          "microPractice": "Open your next text with one validation line.",
+          "reflectionRef": "RP_DAY2_VALIDATION_01"
+        },
+        {
+          "id": "D2-L2",
+          "message": "Validation ≠ agreement. It’s simply accurate acknowledgment.",
+          "advice": "Try ‘I can see why…’ even if you view it differently.",
+          "therapyCue": "Acknowledge before persuade.",
+          "microPractice": "Mirror one word they used (e.g., ‘overwhelmed’).",
+          "reflectionRef": "RP_DAY2_VALIDATION_02"
+        }
+      ],
+      "supplementalPools": [
+        { "tag": "validation", "pool": [
+          { "id": "TA072", "advice": "Use ‘I can see why…’ to acknowledge their perspective." },
+          { "id": "TA091", "advice": "Reflect key language once to show you heard it." },
+          { "id": "TA108", "advice": "Make one concrete request instead of several." },
+          { "id": "TA118", "advice": "If emotions run high, validate the impact: ‘That sounded stressful.’" }
+        ]}
+      ],
+      "premiumTeaserRef": "PT_DAY2_VALIDATION"
+    },
+
+    "3": {
+      "key": "Curiosity Instead of Assumption",
+      "coreLessons": [
+        {
+          "id": "D3-L1",
+          "message": "Many conflicts start because we assume instead of asking.",
+          "advice": "Swap ‘Why didn’t you…’ with ‘Can you help me understand…’",
+          "therapyCue": "Curiosity opens dialogue.",
+          "microPractice": "Ask one open question before your view.",
+          "reflectionRef": "RP_DAY3_CURIOSITY_01"
+        },
+        {
+          "id": "D3-L2",
+          "message": "Assumptions escalate; questions de-escalate.",
+          "advice": "Try ‘What would make this easier?’ to shift into solutions.",
+          "therapyCue": "Questions invite collaboration.",
+          "microPractice": "Start with ‘What’ or ‘How’.",
+          "reflectionRef": "RP_DAY3_CURIOSITY_02"
+        }
+      ],
+      "supplementalPools": [
+        { "tag": "curiosity", "pool": [
+          { "id": "TA112", "advice": "Use ‘I noticed…’ instead of ‘You always…’." },
+          { "id": "TA132", "advice": "Ask one open question before sharing your stance." },
+          { "id": "TA215", "advice": "Name uncertainty: ‘I might be off—can I check something?’" },
+          { "id": "TA219", "advice": "If confused, request specifics rather than motives." }
+        ]}
+      ],
+      "premiumTeaserRef": "PT_DAY3_CURIOSITY"
+    },
+
+    "4": {
+      "key": "Secure Boundaries",
+      "coreLessons": [
+        {
+          "id": "D4-L1",
+          "message": "Boundaries keep communication respectful and clear.",
+          "advice": "Instead of withdrawing, try: ‘I need a little space, and I’ll get back to you.’",
+          "therapyCue": "Boundaries create safety, not distance.",
+          "microPractice": "If you pause, include a return time.",
+          "reflectionRef": "RP_DAY4_BOUNDARIES_01"
+        },
+        {
+          "id": "D4-L2",
+          "message": "A good boundary pairs clarity with care.",
+          "advice": "State the need, the why, and the next touchpoint.",
+          "therapyCue": "Clarity + care = trust.",
+          "microPractice": "Draft: ‘I’ll follow up by noon.’",
+          "reflectionRef": "RP_DAY4_BOUNDARIES_02"
+        }
+      ],
+      "supplementalPools": [
+        { "tag": "boundaries", "pool": [
+          { "id": "TA166", "advice": "Pair a boundary with care: ‘I’m stepping away to be clear, not to punish.’" },
+          { "id": "TA174", "advice": "Use ‘I need…’ rather than ‘You should…’." },
+          { "id": "TA188", "advice": "If pushed, repeat once and restate next contact point." },
+          { "id": "TA194", "advice": "If plans slip, renegotiate a time instead of disappearing." }
+        ]}
+      ],
+      "premiumTeaserRef": "PT_DAY4_BOUNDARIES"
+    },
+
+    "5": {
+      "key": "Naming Feelings",
+      "coreLessons": [
+        {
+          "id": "D5-L1",
+          "message": "Unsaid feelings often leak out as tone.",
+          "advice": "Use one sentence: ‘I felt [emotion] when [event].’",
+          "therapyCue": "Name the feeling, reduce the blame.",
+          "microPractice": "Add a feeling word (worried, disappointed, relieved).",
+          "reflectionRef": "RP_DAY5_FEELINGS_01"
+        },
+        {
+          "id": "D5-L2",
+          "message": "If you can’t name the feeling, name the need.",
+          "advice": "‘I need clarity on plans’ works even if you’re unsure of the emotion.",
+          "therapyCue": "Needs are clearer than accusations.",
+          "microPractice": "Try ‘I need…’ once today.",
+          "reflectionRef": "RP_DAY5_FEELINGS_02"
+        }
+      ],
+      "supplementalPools": [
+        { "tag": "feelings", "pool": [
+          { "id": "TA204", "advice": "Keep it short: feeling + brief context." },
+          { "id": "TA209", "advice": "Ask clearly for reassurance when needed." },
+          { "id": "TA221", "advice": "If not ready to share, say when you’ll revisit it." },
+          { "id": "TA228", "advice": "If hurt, name the impact first, intent second." }
+        ]}
+      ],
+      "premiumTeaserRef": "PT_DAY5_FEELINGS"
+    },
+
+    "6": {
+      "key": "Secure Language Patterns",
+      "coreLessons": [
+        {
+          "id": "D6-L1",
+          "message": "Some words increase anxiety, others calm it.",
+          "advice": "Swap ‘always/never’ → ‘sometimes/this time’.",
+          "therapyCue": "Language shifts tone from attack → collaboration.",
+          "microPractice": "Pick one softener (sometimes, might, could we).",
+          "reflectionRef": "RP_DAY6_LANGUAGE_01"
+        },
+        {
+          "id": "D6-L2",
+          "message": "Clarity beats intensity.",
+          "advice": "Replace stacked questions with one clear ask.",
+          "therapyCue": "One ask lands cleaner.",
+          "microPractice": "Send one-sentence requests today.",
+          "reflectionRef": "RP_DAY6_LANGUAGE_02"
+        }
+      ],
+      "supplementalPools": [
+        { "tag": "language", "pool": [
+          { "id": "TA233", "advice": "Swap stacked questions for one clear ask." },
+          { "id": "TA241", "advice": "Try ‘From my side…’ instead of ‘You’re wrong…’." },
+          { "id": "TA247", "advice": "Replace ‘You made me…’ with ‘I felt… when…’." },
+          { "id": "TA249", "advice": "If tempted to lecture, send the headline first." }
+        ]}
+      ],
+      "previewRewrite": {
+        "enabled": true,
+        "copyRefs": ["PT_PREVIEW_COPY_A", "PT_PREVIEW_COPY_B"],
+        "gate": "premium_after_preview"
+      },
+      "premiumTeaserRef": "PT_DAY6_LANGUAGE"
+    },
+
+    "7": {
+      "key": "Reflection & Gentle Reveal",
+      "coreLessons": [
+        {
+          "id": "D7-L1",
+          "message": "You’ve practiced awareness for a week. Here’s a general summary of common patterns.",
+          "advice": "Many people notice reassurance-seeking, absolutes, or urgency spikes—normal and workable.",
+          "therapyCue": "Awareness → choice → change.",
+          "microPractice": "Pick one habit to practice next week (curiosity opener, time-bound boundary, softener).",
+          "reflectionRef": "RP_DAY7_SUMMARY_01"
+        },
+        {
+          "id": "D7-L2",
+          "message": "Keep what worked; adjust one thing at a time.",
+          "advice": "Choose the smallest change with the biggest payoff for you.",
+          "therapyCue": "Small wins compound.",
+          "microPractice": "Set a 7-day intention you can measure (1 sentence/day).",
+          "reflectionRef": "RP_DAY7_SUMMARY_02"
+        }
+      ],
+      "supplementalPools": [
+        { "tag": "summary", "pool": [
+          { "id": "TA256", "advice": "In repair, lead with impact: ‘I see that landed hard—here’s what I meant.’" },
+          { "id": "TA263", "advice": "If texts get tense, switch channels: voice note or quick call." },
+          { "id": "TA275", "advice": "Celebrate a small win to reinforce change." },
+          { "id": "TA281", "advice": "Name one boundary you’ll keep using next week." }
+        ]}
+      ],
+      "generalStyleReveal": {
+        "enabled": true,
+        "copy": "Here are general noticings people often see after Week 1 (no labels, no scores).",
+        "mapsFrom": "learning_signals.json:noticingsMap"
+      },
+      "premiumTeaserRef": "PT_DAY7_SUMMARY"
+    }
+  }
+}

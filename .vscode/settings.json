@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "/Users/john.gray/Unsaid/Unsaid/my_flutter_app/linux",
+    "cmake.ignoreCMakeListsMissing": true,
+    "cmake.cmakePath": "/opt/homebrew/bin/cmake",
+    "files.associations": {
+        "iosfwd": "cpp"
+    }
+}

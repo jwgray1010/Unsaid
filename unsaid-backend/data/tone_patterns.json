@@ -1,0 +1,3070 @@
+[
+  {
+    "id": "A001",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bfuck you\\b",
+    "confidence": 0.98,
+    "category": "profanity-direct",
+    "attachmentStyles": ["avoidant", "anxious", "disorganized", "secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.95 },
+    "spacyPattern": [{ "LOWER": "fuck" }, { "LOWER": "you" }],
+    "semanticVariants": ["screw you", "to hell with you"]
+  },
+  {
+    "id": "A002",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\b(stfu|shut the f+ up)\\b",
+    "confidence": 0.97,
+    "category": "profanity-direct",
+    "attachmentStyles": ["avoidant", "anxious", "disorganized"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.85 },
+    "spacyPattern": [{ "LEMMA": "shut" }, { "LOWER": "up" }],
+    "semanticVariants": ["zip it", "stop talking now"]
+  },
+  {
+    "id": "A003",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\b(bastard|son of a b+tch)\\b",
+    "confidence": 0.96,
+    "category": "profanity-direct",
+    "attachmentStyles": ["anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [{ "LOWER": { "IN": ["bastard", "son", "bitch"] } }],
+    "semanticVariants": ["scumbag", "low-life"]
+  },
+  {
+    "id": "A004",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\b(go to hell)\\b",
+    "confidence": 0.95,
+    "category": "profanity-direct",
+    "attachmentStyles": ["avoidant", "anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 0.95, "disorganized": 0.95, "secure": 0.85 },
+    "spacyPattern": [{ "LOWER": "go" }, { "LOWER": "to" }, { "LOWER": "hell" }],
+    "semanticVariants": ["burn in hell", "rot in hell"]
+  },
+  {
+    "id": "A005",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\b(asshole|dumbass|jackass)\\b",
+    "confidence": 0.95,
+    "category": "profanity-insult",
+    "attachmentStyles": ["anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 1.0, "secure": 0.75 },
+    "spacyPattern": [{ "LOWER": { "IN": ["asshole", "dumbass", "jackass"] } }],
+    "semanticVariants": ["jerk", "tool", "clown"]
+  },
+
+  {
+    "id": "A011",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bidiot\\b",
+    "confidence": 0.94,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [{ "LOWER": "idiot" }],
+    "semanticVariants": ["moron", "imbecile", "dummy", "airhead", "simpleton"]
+  },
+  {
+    "id": "A012",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bmoron\\b",
+    "confidence": 0.94,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [{ "LOWER": "moron" }],
+    "semanticVariants": ["blockhead", "meathead", "halfwit"]
+  },
+  {
+    "id": "A013",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re stupid\\b",
+    "confidence": 0.94,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [{ "LOWER": "you" }, { "LEMMA": "be" }, { "LOWER": "stupid" }],
+    "semanticVariants": ["you have no brains", "you’re not smart"]
+  },
+
+  {
+    "id": "A021",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou (never|don'?t|do not) listen\\b",
+    "confidence": 0.9,
+    "category": "blame",
+    "attachmentStyles": ["anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.7, "anxious": 1.0, "disorganized": 0.95, "secure": 0.6 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LOWER": { "IN": ["never","don't","do","not"] } },
+      { "LEMMA": "listen" }
+    ],
+    "semanticVariants": ["you fail to hear me", "you ignore what I say"]
+  },
+  {
+    "id": "A022",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou always\\b",
+    "confidence": 0.88,
+    "category": "blame",
+    "attachmentStyles": ["anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.7, "anxious": 1.0, "disorganized": 0.9, "secure": 0.6 },
+    "spacyPattern": [{ "LOWER": "you" }, { "LOWER": "always" }],
+    "semanticVariants": ["you keep doing this", "you constantly"]
+  },
+  {
+    "id": "A023",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bthis is your fault\\b",
+    "confidence": 0.9,
+    "category": "blame",
+    "attachmentStyles": ["anxious", "disorganized"],
+    "styleWeight": { "avoidant": 0.75, "anxious": 1.0, "disorganized": 0.95, "secure": 0.65 },
+    "spacyPattern": [{ "LOWER": "this" }, { "LEMMA": "be" }, { "LOWER": "your" }, { "LOWER": "fault" }],
+    "semanticVariants": ["you caused this", "this is because of you"]
+  },
+{
+    "id": "A024",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bdumb\\b",
+    "confidence": 0.9,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [ { "LOWER": "dumb" } ],
+    "semanticVariants": ["slow", "dim", "dense", "not bright", "lamebrain"]
+  },
+  {
+    "id": "A025",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bbrainless\\b",
+    "confidence": 0.9,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [ { "LOWER": "brainless" } ],
+    "semanticVariants": ["mindless", "witless", "vacant", "empty-headed", "no-brain"]
+  },
+  {
+    "id": "A026",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bpea brain\\b",
+    "confidence": 0.9,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [ { "LOWER": "pea" }, { "LOWER": "brain" } ],
+    "semanticVariants": ["small brain", "tiny brain", "micro brain", "puny brain", "little brain"]
+  },
+  {
+    "id": "A027",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bblockhead\\b",
+    "confidence": 0.9,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [ { "LOWER": "blockhead" } ],
+    "semanticVariants": ["bonehead", "numbskull", "thickhead", "meathead", "chowderhead"]
+  },
+  {
+    "id": "A028",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bclueless\\b",
+    "confidence": 0.9,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [ { "LOWER": "clueless" } ],
+    "semanticVariants": ["unaware", "ignorant", "oblivious", "blind", "in the dark"]
+  },
+  {
+    "id": "A029",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bthick(-| )skull\\b",
+    "confidence": 0.9,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [ { "LOWER": "thick" }, { "LOWER": "skull" } ],
+    "semanticVariants": ["dense", "hard-headed", "stone head", "rock head", "wooden head"]
+  },
+  {
+    "id": "A030",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bsimpleton\\b",
+    "confidence": 0.9,
+    "category": "insult-intellect",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 0.95, "secure": 0.7 },
+    "spacyPattern": [ { "LOWER": "simpleton" } ],
+    "semanticVariants": ["nincompoop", "dunderhead", "oaf", "blockhead", "fool"]
+  },
+  {
+    "id": "A031",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (a )?liar\\b",
+    "confidence": 0.92,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 1.0, "secure": 0.65 },
+    "spacyPattern": [ { "LOWER": "you" }, { "LOWER": { "IN": ["are", "you're"] } }, { "LEMMA": "liar" } ],
+    "semanticVariants": ["dishonest", "fibber", "deceiver", "con artist", "untruthful"]
+  },
+  {
+    "id": "A032",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (a )?cheater\\b",
+    "confidence": 0.92,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 1.0, "secure": 0.65 },
+    "spacyPattern": [ { "LOWER": "you" }, { "LOWER": { "IN": ["are", "you're"] } }, { "LEMMA": "cheater" } ],
+    "semanticVariants": ["unfaithful", "two-timer", "betrayer", "philanderer", "adulterer"]
+  },
+  {
+    "id": "A033",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (a )?fake\\b",
+    "confidence": 0.9,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 1.0, "secure": 0.65 },
+    "spacyPattern": [ { "LOWER": "you" }, { "LOWER": { "IN": ["are", "you're"] } }, { "LEMMA": "fake" } ],
+    "semanticVariants": ["phony", "fraud", "poser", "pretender", "sham"]
+  },
+{
+    "id": "A034",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (a )?hypocrite\\b",
+    "confidence": 0.90,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 1.0, "secure": 0.65 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "be", "OP": "?" },
+      { "LOWER": { "IN": ["a","an"], "OP": "?" } },
+      { "LOWER": "hypocrite" }
+    ],
+    "semanticVariants": ["two-faced", "double standard", "says one thing does another", "phony moralist"]
+  },
+  {
+    "id": "A035",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (a )?coward\\b",
+    "confidence": 0.90,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 1.0, "secure": 0.65 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "be", "OP": "?" },
+      { "LOWER": { "IN": ["a","an"], "OP": "?" } },
+      { "LOWER": "coward" }
+    ],
+    "semanticVariants": ["spineless", "gutless", "no backbone", "scaredy-cat"]
+  },
+  {
+    "id": "A036",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (a )?loser\\b",
+    "confidence": 0.90,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 1.0, "secure": 0.65 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "be", "OP": "?" },
+      { "LOWER": { "IN": ["a","an"], "OP": "?" } },
+      { "LOWER": "loser" }
+    ],
+    "semanticVariants": ["failure", "deadbeat", "good for nothing", "washout"]
+  },
+  {
+    "id": "A037",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (so )?pathetic\\b",
+    "confidence": 0.94,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 1.0, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "you", "OP": "?" },
+      { "LEMMA": "be", "OP": "?" },
+      { "LOWER": "so", "OP": "?" },
+      { "LOWER": "pathetic" }
+    ],
+    "semanticVariants": ["pitiful", "sad", "sorry excuse", "lamentable"]
+  },
+  {
+    "id": "A038",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (so )?worthless\\b",
+    "confidence": 0.94,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 1.0, "disorganized": 1.0, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "you", "OP": "?" },
+      { "LEMMA": "be", "OP": "?" },
+      { "LOWER": "so", "OP": "?" },
+      { "LOWER": "worthless" }
+    ],
+    "semanticVariants": ["useless", "no value", "good for nothing", "waste of space"]
+  },
+  {
+    "id": "A039",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? (a )?creep\\b",
+    "confidence": 0.92,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 1.0, "secure": 0.65 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "be", "OP": "?" },
+      { "LOWER": { "IN": ["a","an"], "OP": "?" } },
+      { "LOWER": "creep" }
+    ],
+    "semanticVariants": ["weirdo", "creepy", "sketchy", "gross person"]
+  },
+  {
+    "id": "A040",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou('?re| are)? disgusting\\b",
+    "confidence": 0.92,
+    "category": "character-attack",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.8, "anxious": 1.0, "disorganized": 1.0, "secure": 0.65 },
+    "spacyPattern": [
+      { "LOWER": "you", "OP": "?" },
+      { "LEMMA": "be", "OP": "?" },
+      { "LOWER": "disgusting" }
+    ],
+    "semanticVariants": ["gross", "repulsive", "nasty", "sickening"]
+  },
+  {
+    "id": "A041",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou (never|don'?t|do not) listen\\b",
+    "confidence": 0.90,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.7, "anxious": 1.0, "disorganized": 0.95, "secure": 0.6 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LOWER": { "IN": ["never","don't","do","not"] } },
+      { "LEMMA": "listen" }
+    ],
+    "semanticVariants": ["you ignore me", "you fail to hear me", "you never hear me"]
+  },
+  {
+    "id": "A042",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou always (lie|cheat|mess up)\\b",
+    "confidence": 0.90,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.7, "anxious": 1.0, "disorganized": 0.95, "secure": 0.6 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LOWER": "always" },
+      { "LEMMA": { "IN": ["lie","cheat","mess"] } }
+    ],
+    "semanticVariants": ["you constantly lie", "you’re always cheating", "you always screw up"]
+  },
+  {
+    "id": "A043",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bthis is your fault\\b",
+    "confidence": 0.90,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.75, "anxious": 1.0, "disorganized": 0.95, "secure": 0.65 },
+    "spacyPattern": [
+      { "LOWER": "this" },
+      { "LEMMA": "be" },
+      { "LOWER": "your" },
+      { "LOWER": "fault" }
+    ],
+    "semanticVariants": ["you caused this", "this is because of you", "you’re to blame"]
+  },
+  {
+    "id": "A044",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou ruined (everything|this|us)\\b",
+    "confidence": 0.90,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.75, "anxious": 1.0, "disorganized": 0.95, "secure": 0.65 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "ruin" },
+      { "LOWER": { "IN": ["everything","this","us"] } }
+    ],
+    "semanticVariants": ["you broke us", "you messed this up", "you destroyed everything"]
+  },
+  {
+    "id": "A045",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou made me (angry|mad|do this)\\b",
+    "confidence": 0.86,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.72, "anxious": 1.0, "disorganized": 0.95, "secure": 0.62 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "make" },
+      { "LOWER": "me" },
+      { "LOWER": { "IN": ["angry","mad"] }, "OP": "?" }
+    ],
+    "semanticVariants": ["this is because of you", "you pushed me to this", "you caused this reaction"]
+  },
+  {
+    "id": "A046",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou started this\\b",
+    "confidence": 0.85,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.72, "anxious": 1.0, "disorganized": 0.95, "secure": 0.62 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "start" },
+      { "LOWER": "this" }
+    ],
+    "semanticVariants": ["this is on you", "you began this", "you kicked this off"]
+  },
+  {
+    "id": "A047",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou bring this on (me|us)\\b",
+    "confidence": 0.85,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.72, "anxious": 1.0, "disorganized": 0.95, "secure": 0.62 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "bring" },
+      { "LOWER": "this" },
+      { "LOWER": "on" },
+      { "LOWER": { "IN": ["me","us"] } }
+    ],
+    "semanticVariants": ["you did this to us", "you bring it on yourself", "this is your doing"]
+  },
+  {
+    "id": "A048",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou never change\\b",
+    "confidence": 0.86,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.74, "anxious": 1.0, "disorganized": 0.95, "secure": 0.64 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LOWER": "never" },
+      { "LEMMA": "change" }
+    ],
+    "semanticVariants": ["you won’t change", "you’re always the same", "nothing about you changes"]
+  },
+  {
+    "id": "A049",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou can'?t do anything right\\b",
+    "confidence": 0.90,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.75, "anxious": 1.0, "disorganized": 0.95, "secure": 0.65 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "can" },
+      { "LOWER": "not", "OP": "?" },
+      { "LOWER": "do" },
+      { "LOWER": "anything" },
+      { "LOWER": "right" }
+    ],
+    "semanticVariants": ["you always get it wrong", "you never do it right", "you mess up everything"]
+  },
+  {
+    "id": "A050",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou always make it about you\\b",
+    "confidence": 0.88,
+    "category": "blame",
+    "attachmentStyles": ["anxious","disorganized"],
+    "styleWeight": { "avoidant": 0.73, "anxious": 1.0, "disorganized": 0.95, "secure": 0.63 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LOWER": "always" },
+      { "LEMMA": "make" },
+      { "LOWER": "it" },
+      { "LOWER": "about" },
+      { "LOWER": "you" }
+    ],
+    "semanticVariants": ["you’re so selfish", "you center yourself", "it’s always about you"]
+  },
+  {
+    "id": "A051",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bshut up\\b",
+    "confidence": 0.98,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LEMMA": "shut" },
+      { "LOWER": "up" }
+    ],
+    "semanticVariants": ["be quiet", "zip it", "stop talking"]
+  },
+  {
+    "id": "A052",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bleave me alone\\b",
+    "confidence": 0.90,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LOWER": "leave" },
+      { "LOWER": "me" },
+      { "LOWER": "alone" }
+    ],
+    "semanticVariants": ["stop bothering me", "get away from me", "don’t interact with me"]
+  },
+  {
+    "id": "A053",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bdon'?t talk to me\\b",
+    "confidence": 0.90,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["don't","do","doe","dont"] } },
+      { "LEMMA": "talk" },
+      { "LOWER": "to" },
+      { "LOWER": "me" }
+    ],
+    "semanticVariants": ["stop talking to me", "don’t speak to me", "no more talking to me"]
+  },
+  {
+    "id": "A054",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bget out\\b",
+    "confidence": 0.92,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LOWER": "get" },
+      { "LOWER": "out" }
+    ],
+    "semanticVariants": ["leave now", "get out of here", "out, now"]
+  },
+  {
+    "id": "A055",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bback off\\b",
+    "confidence": 0.90,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LOWER": "back" },
+      { "LOWER": "off" }
+    ],
+    "semanticVariants": ["step back", "give me space", "keep your distance"]
+  },
+  {
+    "id": "A056",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bstop texting me\\b",
+    "confidence": 0.90,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LEMMA": "stop" },
+      { "LEMMA": "text" },
+      { "LOWER": "me" }
+    ],
+    "semanticVariants": ["don’t text me", "quit texting me", "no more texts"]
+  },
+  {
+    "id": "A057",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bstop bothering me\\b",
+    "confidence": 0.88,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LEMMA": "stop" },
+      { "LEMMA": "bother" },
+      { "LOWER": "me" }
+    ],
+    "semanticVariants": ["quit bothering me", "don’t bug me", "stop harassing me"]
+  },
+  {
+    "id": "A058",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bgo away\\b",
+    "confidence": 0.90,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LOWER": "go" },
+      { "LOWER": "away" }
+    ],
+    "semanticVariants": ["leave", "scram", "beat it"]
+  },
+  {
+    "id": "A059",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bstay away\\b",
+    "confidence": 0.90,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LOWER": "stay" },
+      { "LOWER": "away" }
+    ],
+    "semanticVariants": ["keep away", "don’t come near me", "stay back"]
+  },
+  {
+    "id": "A060",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bdisappear\\b",
+    "confidence": 0.90,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.95, "secure": 0.80 },
+    "spacyPattern": [
+      { "LEMMA": "disappear" }
+    ],
+    "semanticVariants": ["vanish", "be gone", "out of my sight"]
+  },
+  {
+    "id": "A061",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bor else\\b",
+    "confidence": 0.92,
+    "category": "ultimatum",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "or" },
+      { "LOWER": "else" }
+    ],
+    "semanticVariants": ["or this happens", "otherwise", "or suffer the consequences"]
+  },
+  {
+    "id": "A062",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\blast chance\\b",
+    "confidence": 0.92,
+    "category": "ultimatum",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "last" },
+      { "LOWER": "chance" }
+    ],
+    "semanticVariants": ["final chance", "one more chance only", "this is it"]
+  },
+  {
+    "id": "A063",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bfinal warning\\b",
+    "confidence": 0.92,
+    "category": "ultimatum",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "final" },
+      { "LOWER": "warning" }
+    ],
+    "semanticVariants": ["last warning", "this is your last warning", "no more warnings after this"]
+  },
+  {
+    "id": "A064",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bthis is the end\\b",
+    "confidence": 0.91,
+    "category": "ultimatum",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "this" },
+      { "LEMMA": "be" },
+      { "LOWER": "the" },
+      { "LOWER": "end" }
+    ],
+    "semanticVariants": ["it’s over", "we’re done", "this is it"]
+  },
+  {
+    "id": "A065",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bi'?m done\\b",
+    "confidence": 0.92,
+    "category": "finality",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["i","i’m","i'm"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "done" }
+    ],
+    "semanticVariants": ["I’m finished", "that’s it for me", "I’m through"]
+  },
+  {
+    "id": "A066",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bi'?m leaving\\b",
+    "confidence": 0.90,
+    "category": "finality",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["i","i’m","i'm"] } },
+      { "LEMMA": "leave" }
+    ],
+    "semanticVariants": ["I’m going", "I’m out of here", "I’m gone"]
+  },
+  {
+    "id": "A067",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bwe'?re through\\b",
+    "confidence": 0.91,
+    "category": "finality",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["we","we’re","we're"] } },
+      { "LOWER": "through" }
+    ],
+    "semanticVariants": ["we’re over", "this is the end for us", "we’re finished"]
+  },
+  {
+    "id": "A068",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bi quit\\b",
+    "confidence": 0.90,
+    "category": "finality",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "quit" }
+    ],
+    "semanticVariants": ["I resign", "I’m quitting", "I’m done with this"]
+  },
+  {
+    "id": "A069",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bno more chances\\b",
+    "confidence": 0.92,
+    "category": "ultimatum",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "no" },
+      { "LOWER": "more" },
+      { "LOWER": "chances" }
+    ],
+    "semanticVariants": ["that’s your last chance", "you had your chance", "no second chances"]
+  },
+  {
+    "id": "A070",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bpack your things\\b",
+    "confidence": 0.91,
+    "category": "ultimatum",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "pack" },
+      { "LOWER": "your" },
+      { "LOWER": "things" }
+    ],
+    "semanticVariants": ["get your stuff", "grab your belongings", "collect your things"]
+  },
+  {
+    "id": "A071",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bget lost\\b",
+    "confidence": 0.92,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "get" },
+      { "LOWER": "lost" }
+    ],
+    "semanticVariants": ["beat it", "buzz off", "scram"]
+  },
+  {
+    "id": "A072",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bthis conversation is over\\b",
+    "confidence": 0.91,
+    "category": "finality",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "this" },
+      { "LOWER": "conversation" },
+      { "LEMMA": "be" },
+      { "LOWER": "over" }
+    ],
+    "semanticVariants": ["we’re done talking", "no more discussion", "that’s the end of this talk"]
+  },
+  {
+    "id": "A073",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bI don'?t care anymore\\b",
+    "confidence": 0.90,
+    "category": "withdrawal",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 1.0, "disorganized": 0.95, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": { "IN": ["don't","dont","do","doe"] } },
+      { "LEMMA": "care" },
+      { "LOWER": "anymore" }
+    ],
+    "semanticVariants": ["I’m indifferent now", "I’ve stopped caring", "it doesn’t matter to me anymore"]
+  },
+    {
+    "id": "A074",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re pathetic\\b",
+    "confidence": 0.94,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "pathetic" }
+    ],
+    "semanticVariants": ["you’re pitiful", "you’re worthless", "such a loser"]
+  },
+  {
+    "id": "A075",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re useless\\b",
+    "confidence": 0.94,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "useless" }
+    ],
+    "semanticVariants": ["you’re good for nothing", "worthless", "can’t do anything right"]
+  },
+  {
+    "id": "A076",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re disgusting\\b",
+    "confidence": 0.94,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "disgusting" }
+    ],
+    "semanticVariants": ["you make me sick", "gross", "you’re vile"]
+  },
+  {
+    "id": "A077",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou make me sick\\b",
+    "confidence": 0.94,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "make" },
+      { "LOWER": "me" },
+      { "LOWER": "sick" }
+    ],
+    "semanticVariants": ["you disgust me", "you’re revolting", "you’re nauseating"]
+  },
+  {
+    "id": "A078",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re a joke\\b",
+    "confidence": 0.93,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "a" },
+      { "LOWER": "joke" }
+    ],
+    "semanticVariants": ["you’re laughable", "you’re ridiculous", "you’re a clown"]
+  },
+  {
+    "id": "A079",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re pathetic excuse of a (man|woman|person)\\b",
+    "confidence": 0.95,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "pathetic" },
+      { "LOWER": "excuse" },
+      { "LOWER": "of" },
+      { "LOWER": { "IN": ["man","woman","person"] } }
+    ],
+    "semanticVariants": ["you’re a sad excuse for a human", "worthless excuse of a man", "shame of a person"]
+  },
+  {
+    "id": "A080",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re an embarrassment\\b",
+    "confidence": 0.94,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "an" },
+      { "LOWER": "embarrassment" }
+    ],
+    "semanticVariants": ["you’re shameful", "you’re humiliating", "you disgrace yourself"]
+  },
+  {
+    "id": "A081",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re trash\\b",
+    "confidence": 0.94,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "trash" }
+    ],
+    "semanticVariants": ["you’re garbage", "you’re worthless", "you’re filth"]
+  },
+  {
+    "id": "A082",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re nothing\\b",
+    "confidence": 0.94,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "nothing" }
+    ],
+    "semanticVariants": ["you amount to nothing", "you’re a nobody", "you’re insignificant"]
+  },
+  {
+    "id": "A083",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou deserve nothing\\b",
+    "confidence": 0.93,
+    "category": "insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "deserve" },
+      { "LOWER": "nothing" }
+    ],
+    "semanticVariants": ["you’re worthy of nothing", "you merit nothing", "you earn nothing"]
+  },
+  {
+    "id": "A084",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bi hate you\\b",
+    "confidence": 0.98,
+    "category": "hostility",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LEMMA": "hate" },
+      { "LOWER": "you" }
+    ],
+    "semanticVariants": ["I despise you", "I loathe you", "I can’t stand you"]
+  },
+  {
+    "id": "A085",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou ruin everything\\b",
+    "confidence": 0.95,
+    "category": "blame",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "ruin" },
+      { "LOWER": "everything" }
+    ],
+    "semanticVariants": ["you destroy everything", "you mess everything up", "you wreck everything"]
+  },
+  {
+    "id": "A086",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re the problem\\b",
+    "confidence": 0.95,
+    "category": "blame",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "the" },
+      { "LOWER": "problem" }
+    ],
+    "semanticVariants": ["you cause all the trouble", "you’re the issue", "it’s all your fault"]
+  },
+  {
+    "id": "A087",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou always mess things up\\b",
+    "confidence": 0.94,
+    "category": "blame",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LOWER": "always" },
+      { "LEMMA": "mess" },
+      { "LOWER": "things" },
+      { "LOWER": "up" }
+    ],
+    "semanticVariants": ["you screw things up every time", "you always ruin things", "you never get it right"]
+  },
+  {
+    "id": "A088",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bi wish you were dead\\b",
+    "confidence": 0.99,
+    "category": "extreme-hostility",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LEMMA": "wish" },
+      { "LOWER": "you" },
+      { "LEMMA": "be" },
+      { "LOWER": "dead" }
+    ],
+    "semanticVariants": ["I hope you die", "you should be dead", "I’d rather you didn’t exist"]
+  },
+  {
+    "id": "A089",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re dead to me\\b",
+    "confidence": 0.96,
+    "category": "extreme-hostility",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "dead" },
+      { "LOWER": "to" },
+      { "LOWER": "me" }
+    ],
+    "semanticVariants": ["you no longer exist to me", "I’m done with you forever", "you’re out of my life"]
+  },
+  {
+    "id": "A090",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bgo to hell\\b",
+    "confidence": 0.98,
+    "category": "profanity-direct",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": "go" },
+      { "LOWER": "to" },
+      { "LOWER": "hell" }
+    ],
+    "semanticVariants": ["burn in hell", "rot in hell", "you belong in hell"]
+  },
+  {
+    "id": "A091",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bdrop dead\\b",
+    "confidence": 0.98,
+    "category": "extreme-hostility",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": "drop" },
+      { "LOWER": "dead" }
+    ],
+    "semanticVariants": ["fall down dead", "I wish you’d die", "perish now"]
+  },
+  {
+    "id": "A092",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bshut your mouth\\b",
+    "confidence": 0.96,
+    "category": "hostile-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": "shut" },
+      { "LOWER": "your" },
+      { "LOWER": "mouth" }
+    ],
+    "semanticVariants": ["close your mouth", "zip it", "keep quiet"]
+  },
+  {
+    "id": "A093",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bI can'?t stand you\\b",
+    "confidence": 0.95,
+    "category": "hostility",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": { "IN": ["can't","cant","cannot"] } },
+      { "LEMMA": "stand" },
+      { "LOWER": "you" }
+    ],
+    "semanticVariants": ["I can’t bear you", "you irritate me endlessly", "I have no tolerance for you"]
+  },
+  {
+    "id": "A094",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bshut the hell up\\b",
+    "confidence": 0.98,
+    "category": "profanity-command",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": "shut" },
+      { "LOWER": "the" },
+      { "LOWER": "hell" },
+      { "LOWER": "up" }
+    ],
+    "semanticVariants": ["shut up now", "keep your mouth shut", "be quiet immediately"]
+  },
+  {
+    "id": "A095",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bwho the hell do you think you are\\b",
+    "confidence": 0.97,
+    "category": "confrontation",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": "who" },
+      { "LOWER": "the" },
+      { "LOWER": "hell" },
+      { "LOWER": "do" },
+      { "LOWER": "you" },
+      { "LEMMA": "think" },
+      { "LOWER": "you" },
+      { "LEMMA": "be" }
+    ],
+    "semanticVariants": ["who do you think you’re talking to", "who do you think you are", "what gives you the right"]
+  },
+  {
+    "id": "A096",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bI'?ll never forgive you\\b",
+    "confidence": 0.96,
+    "category": "withdrawal-finality",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["i'll","ill","i"] } },
+      { "LEMMA": "never" },
+      { "LEMMA": "forgive" },
+      { "LOWER": "you" }
+    ],
+    "semanticVariants": ["I won’t forgive you", "you’ll never be forgiven", "I can’t forgive you"]
+  },
+  {
+    "id": "A097",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re pathetic liar\\b",
+    "confidence": 0.95,
+    "category": "insult-deception",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "pathetic" },
+      { "LOWER": "liar" }
+    ],
+    "semanticVariants": ["you’re a disgusting liar", "lying coward", "worthless liar"]
+  },
+  {
+    "id": "A098",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou lie about everything\\b",
+    "confidence": 0.94,
+    "category": "blame-deception",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 1.0, "disorganized": 1.0, "secure": 0.85 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LEMMA": "lie" },
+      { "LOWER": "about" },
+      { "LOWER": "everything" }
+    ],
+    "semanticVariants": ["everything you say is a lie", "you’re dishonest about everything", "you never tell the truth"]
+  },
+  {
+    "id": "A099",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\byou'?re so full of (shit|crap)\\b",
+    "confidence": 0.96,
+    "category": "profanity-insult",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 1.0, "secure": 0.8 },
+    "spacyPattern": [
+      { "LOWER": { "IN": ["you're","you’re","you"] } },
+      { "LEMMA": "be" },
+      { "LOWER": "so" },
+      { "LOWER": "full" },
+      { "LOWER": "of" },
+      { "LOWER": { "IN": ["shit","crap"] } }
+    ],
+    "semanticVariants": ["you’re lying", "you’re dishonest", "that’s nonsense coming from you"]
+  },
+  {
+    "id": "A100",
+    "tone": "alert",
+    "type": "regex",
+    "pattern": "\\bgo f(uck|***|\\*\\*\\*) yourself\\b",
+    "confidence": 0.99,
+    "category": "extreme-profanity",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.9, "disorganized": 1.0, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "go" },
+      { "LOWER": { "REGEX": "f(uck|\\*\\*\\*).*" } },
+      { "LOWER": "yourself" }
+    ],
+    "semanticVariants": ["go screw yourself", "go to hell", "get lost forever"]
+  },
+  {
+    "id": "C001",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi guess\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "guess" }
+    ],
+    "semanticVariants": ["I suppose", "I think so", "probably"]
+  },
+  {
+    "id": "C002",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bkind of\\b",
+    "confidence": 0.78,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "kind" },
+      { "LOWER": "of" }
+    ],
+    "semanticVariants": ["sort of", "a little", "somewhat"]
+  },
+  {
+    "id": "C003",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bmaybe\\b",
+    "confidence": 0.82,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "maybe" }
+    ],
+    "semanticVariants": ["possibly", "might be", "could be"]
+  },
+  {
+    "id": "C004",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bwhatever you want\\b",
+    "confidence": 0.85,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "whatever" },
+      { "LOWER": "you" },
+      { "LOWER": "want" }
+    ],
+    "semanticVariants": ["do what you want", "suit yourself", "it’s your choice"]
+  },
+  {
+    "id": "C005",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bfine,? do what you want\\b",
+    "confidence": 0.86,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "fine" },
+      { "LOWER": "do" },
+      { "LOWER": "what" },
+      { "LOWER": "you" },
+      { "LOWER": "want" }
+    ],
+    "semanticVariants": ["fine, have it your way", "alright, do as you wish", "sure, go ahead"]
+  },
+  {
+    "id": "C006",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bnot really sure\\b",
+    "confidence": 0.8,
+    "category": "vague",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "not" },
+      { "LOWER": "really" },
+      { "LOWER": "sure" }
+    ],
+    "semanticVariants": ["I’m uncertain", "can’t say", "not exactly sure"]
+  },
+  {
+    "id": "C007",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bdoesn'?t matter\\b",
+    "confidence": 0.83,
+    "category": "minimizing",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "doesn't" },
+      { "LOWER": "matter" }
+    ],
+    "semanticVariants": ["it’s irrelevant", "no difference", "whatever"]
+  },
+  {
+    "id": "C008",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bdon'?t take this the wrong way\\b",
+    "confidence": 0.88,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "don't" },
+      { "LOWER": "take" },
+      { "LOWER": "this" },
+      { "LOWER": "the" },
+      { "LOWER": "wrong" },
+      { "LOWER": "way" }
+    ],
+    "semanticVariants": ["don’t misunderstand", "don’t get me wrong", "this isn’t meant badly"]
+  },
+  {
+    "id": "C009",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi just thought\\b",
+    "confidence": 0.82,
+    "category": "indirect-blame",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.95, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "just" },
+      { "LOWER": "thought" }
+    ],
+    "semanticVariants": ["I only assumed", "I believed", "I figured"]
+  },
+  {
+    "id": "C010",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you'?d told me earlier\\b",
+    "confidence": 0.85,
+    "category": "indirect-blame",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.95, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you'd" },
+      { "LOWER": "told" },
+      { "LOWER": "me" },
+      { "LOWER": "earlier" }
+    ],
+    "semanticVariants": ["if only you told me sooner", "you could’ve mentioned earlier", "you should’ve said before"]
+  },
+  {
+    "id": "C011",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi suppose\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "suppose" }
+    ],
+    "semanticVariants": ["I guess so", "I think so", "I believe so"]
+  },
+  {
+    "id": "C012",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you say so\\b",
+    "confidence": 0.83,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "say" },
+      { "LOWER": "so" }
+    ],
+    "semanticVariants": ["whatever you say", "if that’s what you think", "sure, if you believe that"]
+  },
+  {
+    "id": "C013",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bit'?s fine\\b",
+    "confidence": 0.8,
+    "category": "minimizing",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "it's" },
+      { "LOWER": "fine" }
+    ],
+    "semanticVariants": ["it’s okay", "no problem", "don’t worry about it"]
+  },
+  {
+    "id": "C014",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\byou could have\\b",
+    "confidence": 0.85,
+    "category": "indirect-blame",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.95, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "you" },
+      { "LOWER": "could" },
+      { "LOWER": "have" }
+    ],
+    "semanticVariants": ["you should have", "you might have", "you had the chance to"]
+  },
+  {
+    "id": "C015",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bdon'?t worry about it\\b",
+    "confidence": 0.82,
+    "category": "minimizing",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.92, "disorganized": 0.88, "secure": 0.78 },
+    "spacyPattern": [
+      { "LOWER": "don't" },
+      { "LOWER": "worry" },
+      { "LOWER": "about" },
+      { "LOWER": "it" }
+    ],
+    "semanticVariants": ["forget it", "never mind", "leave it be"]
+  },
+  {
+    "id": "C016",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi thought you\\b",
+    "confidence": 0.85,
+    "category": "questioning-reliability",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.95, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "thought" },
+      { "LOWER": "you" }
+    ],
+    "semanticVariants": ["I assumed you", "I figured you", "I expected you to"]
+  },
+  {
+    "id": "C017",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi guess you could say\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "guess" },
+      { "LOWER": "you" },
+      { "LOWER": "could" },
+      { "LOWER": "say" }
+    ],
+    "semanticVariants": ["you could say that", "I suppose you could say", "maybe you’d say"]
+  },
+  {
+    "id": "C018",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you want\\b",
+    "confidence": 0.82,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "want" }
+    ],
+    "semanticVariants": ["if that’s what you want", "if you prefer", "if you feel like it"]
+  },
+  {
+    "id": "C019",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi was just saying\\b",
+    "confidence": 0.82,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.92, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "was" },
+      { "LOWER": "just" },
+      { "LOWER": "saying" }
+    ],
+    "semanticVariants": ["I only meant", "I was only saying", "I was just pointing out"]
+  },
+  {
+    "id": "C020",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi don'?t know,? maybe\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "don't" },
+      { "LOWER": "know" },
+      { "LOWER": "maybe" }
+    ],
+    "semanticVariants": ["I’m not sure, maybe", "possibly, I guess", "I can’t say for sure"]
+  },
+  {
+    "id": "C021",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bup to you\\b",
+    "confidence": 0.82,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "up" },
+      { "LOWER": "to" },
+      { "LOWER": "you" }
+    ],
+    "semanticVariants": ["your choice", "whatever you decide", "it’s on you"]
+  },
+  {
+    "id": "C022",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi'?m not sure\\b",
+    "confidence": 0.8,
+    "category": "vague",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i'm" },
+      { "LOWER": "not" },
+      { "LOWER": "sure" }
+    ],
+    "semanticVariants": ["I don’t know", "not certain", "I can’t say"]
+  },
+  {
+    "id": "C023",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif that'?s what you think\\b",
+    "confidence": 0.83,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "that's" },
+      { "LOWER": "what" },
+      { "LOWER": "you" },
+      { "LOWER": "think" }
+    ],
+    "semanticVariants": ["if you believe that", "if that’s your opinion", "if that’s what you feel"]
+  },
+  {
+    "id": "C024",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi suppose so\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "suppose" },
+      { "LOWER": "so" }
+    ],
+    "semanticVariants": ["I guess so", "probably so", "I think so"]
+  },
+  {
+    "id": "C025",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bno big deal\\b",
+    "confidence": 0.82,
+    "category": "minimizing",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "no" },
+      { "LOWER": "big" },
+      { "LOWER": "deal" }
+    ],
+    "semanticVariants": ["it’s nothing", "not important", "don’t worry about it"]
+  },
+  {
+    "id": "C026",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bjust saying\\b",
+    "confidence": 0.84,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.92, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "just" },
+      { "LOWER": "saying" }
+    ],
+    "semanticVariants": ["just pointing it out", "only saying", "just mentioning"]
+  },
+  {
+    "id": "C027",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi'?m fine\\b",
+    "confidence": 0.82,
+    "category": "minimizing",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "i'm" },
+      { "LOWER": "fine" }
+    ],
+    "semanticVariants": ["I’m okay", "no problem", "I’m alright"]
+  },
+  {
+    "id": "C028",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you say so\\b",
+    "confidence": 0.83,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "say" },
+      { "LOWER": "so" }
+    ],
+    "semanticVariants": ["if that’s what you think", "whatever you say", "sure, if you believe that"]
+  },
+  {
+    "id": "C029",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bnot exactly\\b",
+    "confidence": 0.8,
+    "category": "vague",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "not" },
+      { "LOWER": "exactly" }
+    ],
+    "semanticVariants": ["not quite", "not really", "close but not exactly"]
+  },
+  {
+    "id": "C030",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you must\\b",
+    "confidence": 0.82,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "must" }
+    ],
+    "semanticVariants": ["if you really have to", "if you feel like you need to", "go ahead if you must"]
+  },
+  {
+    "id": "C031",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you insist\\b",
+    "confidence": 0.82,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "insist" }
+    ],
+    "semanticVariants": ["if you really want to", "if you have to", "fine, if you insist"]
+  },
+  {
+    "id": "C032",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bkind of\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "kind" },
+      { "LOWER": "of" }
+    ],
+    "semanticVariants": ["sort of", "a bit", "somewhat"]
+  },
+  {
+    "id": "C033",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bdo whatever you want\\b",
+    "confidence": 0.84,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.9, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "do" },
+      { "LOWER": "whatever" },
+      { "LOWER": "you" },
+      { "LOWER": "want" }
+    ],
+    "semanticVariants": ["do what you want", "your call", "it’s your decision"]
+  },
+  {
+    "id": "C034",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bnot that it matters\\b",
+    "confidence": 0.82,
+    "category": "minimizing",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "not" },
+      { "LOWER": "that" },
+      { "LOWER": "it" },
+      { "LOWER": "matters" }
+    ],
+    "semanticVariants": ["not important", "doesn’t make a difference", "it’s irrelevant"]
+  },
+  {
+    "id": "C035",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi guess so\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "guess" },
+      { "LOWER": "so" }
+    ],
+    "semanticVariants": ["I suppose so", "probably", "I think so"]
+  },
+  {
+    "id": "C036",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bjust trying to help\\b",
+    "confidence": 0.84,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.92, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "just" },
+      { "LOWER": "trying" },
+      { "LOWER": "to" },
+      { "LOWER": "help" }
+    ],
+    "semanticVariants": ["only trying to help", "just wanted to help", "trying to be helpful"]
+  },
+  {
+    "id": "C037",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bit doesn'?t matter\\b",
+    "confidence": 0.82,
+    "category": "minimizing",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "it" },
+      { "LOWER": "doesn't" },
+      { "LOWER": "matter" }
+    ],
+    "semanticVariants": ["no big deal", "doesn’t make a difference", "not important"]
+  },
+  {
+    "id": "C038",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi suppose you'?re right\\b",
+    "confidence": 0.81,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "suppose" },
+      { "LOWER": "you're" },
+      { "LOWER": "right" }
+    ],
+    "semanticVariants": ["I guess you’re right", "you might be right", "I think you’re right"]
+  },
+  {
+    "id": "C039",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bwell, maybe\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "well" },
+      { "LOWER": "maybe" }
+    ],
+    "semanticVariants": ["perhaps", "possibly", "could be"]
+  },
+  {
+    "id": "C040",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bnot really\\b",
+    "confidence": 0.8,
+    "category": "vague",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "not" },
+      { "LOWER": "really" }
+    ],
+    "semanticVariants": ["not exactly", "not particularly", "not especially"]
+  },
+  {
+    "id": "C041",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi mean, if you want\\b",
+    "confidence": 0.82,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "mean" },
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "want" }
+    ],
+    "semanticVariants": ["if that’s what you want", "if you feel like it", "if you’d like to"]
+  },
+  {
+    "id": "C042",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi guess that'?s fine\\b",
+    "confidence": 0.81,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i" },
+      { "LOWER": "guess" },
+      { "LOWER": "that's" },
+      { "LOWER": "fine" }
+    ],
+    "semanticVariants": ["I suppose that’s fine", "I guess that works", "that’s okay I guess"]
+  },
+  {
+    "id": "C043",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you really think so\\b",
+    "confidence": 0.83,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "really" },
+      { "LOWER": "think" },
+      { "LOWER": "so" }
+    ],
+    "semanticVariants": ["if you truly believe that", "if that’s your honest opinion", "if you’re sure"]
+  },
+  {
+    "id": "C044",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bno worries\\b",
+    "confidence": 0.8,
+    "category": "minimizing",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "no" },
+      { "LOWER": "worries" }
+    ],
+    "semanticVariants": ["it’s fine", "don’t worry about it", "not a problem"]
+  },
+  {
+    "id": "C045",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bthat works, i guess\\b",
+    "confidence": 0.81,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "that" },
+      { "LOWER": "works" },
+      { "LOWER": "i" },
+      { "LOWER": "guess" }
+    ],
+    "semanticVariants": ["that’s fine I guess", "I guess that’s okay", "works for me I suppose"]
+  },
+  {
+    "id": "C046",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you feel like it\\b",
+    "confidence": 0.82,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "feel" },
+      { "LOWER": "like" },
+      { "LOWER": "it" }
+    ],
+    "semanticVariants": ["if you want to", "if you’d like to", "if you’re up for it"]
+  },
+  {
+    "id": "C047",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi'?m not saying you should\\b",
+    "confidence": 0.83,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.92, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "i'm" },
+      { "LOWER": "not" },
+      { "LOWER": "saying" },
+      { "LOWER": "you" },
+      { "LOWER": "should" }
+    ],
+    "semanticVariants": ["not telling you to", "not suggesting you should", "I’m not recommending it"]
+  },
+  {
+    "id": "C048",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif it helps\\b",
+    "confidence": 0.8,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "it" },
+      { "LOWER": "helps" }
+    ],
+    "semanticVariants": ["if that’s helpful", "if you think it helps", "in case it helps"]
+  },
+  {
+    "id": "C049",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bnot trying to be rude\\b",
+    "confidence": 0.84,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.92, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "not" },
+      { "LOWER": "trying" },
+      { "LOWER": "to" },
+      { "LOWER": "be" },
+      { "LOWER": "rude" }
+    ],
+    "semanticVariants": ["no offense", "not meaning to be rude", "I don’t mean to be rude"]
+  },
+  {
+    "id": "C050",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif that makes sense\\b",
+    "confidence": 0.82,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "that" },
+      { "LOWER": "makes" },
+      { "LOWER": "sense" }
+    ],
+    "semanticVariants": ["if you understand", "if you get what I mean", "if that’s clear"]
+  },
+  {
+    "id": "C051",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bjust saying\\b",
+    "confidence": 0.82,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.92, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "just" },
+      { "LOWER": "saying" }
+    ],
+    "semanticVariants": ["I’m just saying", "just pointing it out", "only saying"]
+  },
+  {
+    "id": "C052",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif that'?s what you want\\b",
+    "confidence": 0.83,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "that's" },
+      { "LOWER": "what" },
+      { "LOWER": "you" },
+      { "LOWER": "want" }
+    ],
+    "semanticVariants": ["if that’s what you’d like", "if you prefer", "if that’s your choice"]
+  },
+  {
+    "id": "C053",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bwe'?ll see\\b",
+    "confidence": 0.8,
+    "category": "vague",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "we'll" },
+      { "LOWER": "see" }
+    ],
+    "semanticVariants": ["we might", "maybe we will", "let’s see what happens"]
+  },
+  {
+    "id": "C054",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bi'?m not sure that'?s right\\b",
+    "confidence": 0.82,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "i'm" },
+      { "LOWER": "not" },
+      { "LOWER": "sure" },
+      { "LOWER": "that's" },
+      { "LOWER": "right" }
+    ],
+    "semanticVariants": ["I don’t know if that’s right", "not sure that’s correct", "I’m uncertain about that"]
+  },
+  {
+    "id": "C055",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bif you say so\\b",
+    "confidence": 0.83,
+    "category": "passive-aggression",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.94, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "if" },
+      { "LOWER": "you" },
+      { "LOWER": "say" },
+      { "LOWER": "so" }
+    ],
+    "semanticVariants": ["if that’s what you think", "if you believe that", "sure, if you say so"]
+  },
+  {
+    "id": "C056",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bno offense\\b",
+    "confidence": 0.84,
+    "category": "defensive-disclaimer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.92, "disorganized": 0.88, "secure": 0.75 },
+    "spacyPattern": [
+      { "LOWER": "no" },
+      { "LOWER": "offense" }
+    ],
+    "semanticVariants": ["not to offend", "don’t take offense", "I mean no offense"]
+  },
+  {
+    "id": "C057",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bnot exactly\\b",
+    "confidence": 0.8,
+    "category": "vague",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "not" },
+      { "LOWER": "exactly" }
+    ],
+    "semanticVariants": ["not precisely", "not quite", "not really"]
+  },
+  {
+    "id": "C058",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bjust a thought\\b",
+    "confidence": 0.82,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "just" },
+      { "LOWER": "a" },
+      { "LOWER": "thought" }
+    ],
+    "semanticVariants": ["just an idea", "only a thought", "just thinking"]
+  },
+  {
+    "id": "C059",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bkind of like\\b",
+    "confidence": 0.8,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "kind" },
+      { "LOWER": "of" },
+      { "LOWER": "like" }
+    ],
+    "semanticVariants": ["sort of like", "a bit like", "similar to"]
+  },
+  {
+    "id": "C060",
+    "tone": "caution",
+    "type": "regex",
+    "pattern": "\\bas far as i know\\b",
+    "confidence": 0.82,
+    "category": "hedging",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.85, "anxious": 0.9, "disorganized": 0.85, "secure": 0.7 },
+    "spacyPattern": [
+      { "LOWER": "as" },
+      { "LOWER": "far" },
+      { "LOWER": "as" },
+      { "LOWER": "i" },
+      { "LOWER": "know" }
+    ],
+    "semanticVariants": ["to my knowledge", "from what I know", "as best as I know"]
+  },
+  {
+    "id": "CL001",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bto be clear\\b",
+    "confidence": 0.9,
+    "category": "clarification-preface",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.88, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "to" }, { "LOWER": "be" }, { "LOWER": "clear" }],
+    "semanticVariants": ["just to be clear", "for clarity", "to clarify"]
+  },
+  {
+    "id": "CL002",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bhere'?s what i need\\b",
+    "confidence": 0.9,
+    "category": "needs-assertion",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.88, "anxious": 0.95, "disorganized": 0.88, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "here's" }, { "LOWER": "what" }, { "LOWER": "i" }, { "LOWER": "need" }],
+    "semanticVariants": ["what I need is", "I need the following", "my need is"]
+  },
+  {
+    "id": "CL003",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bmy request is\\b",
+    "confidence": 0.9,
+    "category": "request-explicit",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "my" }, { "LOWER": "request" }, { "LOWER": "is" }],
+    "semanticVariants": ["I’m requesting", "I request that", "I have a request"]
+  },
+  {
+    "id": "CL004",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi feel\\b",
+    "confidence": 0.85,
+    "category": "owning-experience",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i" }, { "LOWER": "feel" }],
+    "semanticVariants": ["my feeling is", "emotionally I feel", "I’m feeling"]
+  },
+  {
+    "id": "CL005",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhen you .*?, i feel\\b",
+    "confidence": 0.86,
+    "category": "i-statement",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "when" }, { "LOWER": "you" }, { "LOWER": "i" }, { "LOWER": "feel" }],
+    "semanticVariants": ["when X happens I feel", "in response to X I feel", "I feel … when …"]
+  },
+  {
+    "id": "CL006",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi need us to\\b",
+    "confidence": 0.9,
+    "category": "joint-action-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i" }, { "LOWER": "need" }, { "LOWER": "us" }, { "LOWER": "to" }],
+    "semanticVariants": ["let’s make sure to", "can we please", "I’d like us to"]
+  },
+  {
+    "id": "CL007",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease (respond|confirm|clarify)\\b",
+    "confidence": 0.9,
+    "category": "polite-directive",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LEMMA": { "IN": ["respond","confirm","clarify"] } }],
+    "semanticVariants": ["please reply", "please let me know", "please verify"]
+  },
+  {
+    "id": "CL008",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat i'?m asking is\\b",
+    "confidence": 0.88,
+    "category": "clarify-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.95, "disorganized": 0.88, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "i'm" }, { "LOWER": "asking" }, { "LOWER": "is" }],
+    "semanticVariants": ["to clarify my ask", "the ask is", "what I need from you is"]
+  },
+  {
+    "id": "CL009",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bthe next step is\\b",
+    "confidence": 0.9,
+    "category": "next-step-orientation",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "the" }, { "LOWER": "next" }, { "LOWER": "step" }, { "LOWER": "is" }],
+    "semanticVariants": ["here’s what comes next", "our next step is", "next we should"]
+  },
+  {
+    "id": "CL010",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bcan we agree on\\b",
+    "confidence": 0.9,
+    "category": "agreement-seeking",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "can" }, { "LOWER": "we" }, { "LOWER": "agree" }, { "LOWER": "on" }],
+    "semanticVariants": ["let’s agree on", "can we align on", "do we agree on"]
+  },
+
+  {
+    "id": "CL011",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat i hear you saying is\\b",
+    "confidence": 0.85,
+    "category": "reflective-listening",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.94, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "i" }, { "LOWER": "hear" }, { "LOWER": "you" }, { "LOWER": "saying" }],
+    "semanticVariants": ["so you’re saying", "I’m hearing that", "my understanding is"]
+  },
+  {
+    "id": "CL012",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bhelp me understand\\b",
+    "confidence": 0.88,
+    "category": "curious-clarification",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.94, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "help" }, { "LOWER": "me" }, { "LOWER": "understand" }],
+    "semanticVariants": ["can you clarify", "walk me through", "could you explain"]
+  },
+  {
+    "id": "CL013",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat outcome are we aiming for\\b",
+    "confidence": 0.86,
+    "category": "goal-orientation",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "outcome" }, { "LOWER": "are" }, { "LOWER": "we" }, { "LOWER": "aiming" }],
+    "semanticVariants": ["what’s the goal", "what outcome do we want", "what are we trying to achieve"]
+  },
+  {
+    "id": "CL014",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease be specific\\b",
+    "confidence": 0.9,
+    "category": "specificity-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.9, "anxious": 0.96, "disorganized": 0.88, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "be" }, { "LOWER": "specific" }],
+    "semanticVariants": ["please provide specifics", "be more specific please", "details please"]
+  },
+  {
+    "id": "CL015",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat time works for you\\b",
+    "confidence": 0.9,
+    "category": "scheduling-direct",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "time" }, { "LOWER": "works" }, { "LOWER": "for" }, { "LOWER": "you" }],
+    "semanticVariants": ["which time works", "what time suits you", "when can you meet"]
+  },
+  {
+    "id": "CL016",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\blet'?s pick a time\\b",
+    "confidence": 0.9,
+    "category": "scheduling-proposal",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "let's" }, { "LOWER": "pick" }, { "LOWER": "a" }, { "LOWER": "time" }],
+    "semanticVariants": ["let’s schedule", "let’s set a time", "let’s choose a time"]
+  },
+  {
+    "id": "CL017",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bcan we schedule\\b",
+    "confidence": 0.9,
+    "category": "scheduling-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "can" }, { "LOWER": "we" }, { "LOWER": "schedule" }],
+    "semanticVariants": ["shall we schedule", "can we set up", "schedule a time to"]
+  },
+  {
+    "id": "CL018",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease use \\w+ instead\\b",
+    "confidence": 0.88,
+    "category": "boundary-preference",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.95, "disorganized": 0.88, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "use" }, { "LOWER": "instead" }],
+    "semanticVariants": ["prefer that you use", "please choose X instead", "use X rather than Y"]
+  },
+  {
+    "id": "CL019",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi prefer\\b",
+    "confidence": 0.86,
+    "category": "preference-assertion",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.92, "anxious": 0.95, "disorganized": 0.88, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i" }, { "LOWER": "prefer" }],
+    "semanticVariants": ["my preference is", "I would rather", "I’d prefer"]
+  },
+  {
+    "id": "CL020",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bthat doesn'?t work for me\\b",
+    "confidence": 0.88,
+    "category": "boundary-decline",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.94, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "that" }, { "LOWER": "doesn't" }, { "LOWER": "work" }, { "LOWER": "for" }, { "LOWER": "me" }],
+    "semanticVariants": ["that won’t work for me", "that doesn't suit me", "I can’t do that"]
+  },
+
+  {
+    "id": "CL021",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi'?m available (?:on|at)\\b",
+    "confidence": 0.9,
+    "category": "availability-statement",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i'm" }, { "LOWER": "available" }],
+    "semanticVariants": ["my availability is", "I’m free on", "I can do"]
+  },
+  {
+    "id": "CL022",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease keep it to\\b",
+    "confidence": 0.88,
+    "category": "scope-boundary",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.94, "anxious": 0.95, "disorganized": 0.88, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "keep" }, { "LOWER": "it" }, { "LOWER": "to" }],
+    "semanticVariants": ["limit it to", "keep it within", "let’s keep it to"]
+  },
+  {
+    "id": "CL023",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\blet'?s focus on\\b",
+    "confidence": 0.9,
+    "category": "focus-directive",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "let's" }, { "LOWER": "focus" }, { "LOWER": "on" }],
+    "semanticVariants": ["can we focus on", "let’s concentrate on", "keep the focus on"]
+  },
+  {
+    "id": "CL024",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat would be a good solution\\b",
+    "confidence": 0.86,
+    "category": "solution-seeking",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.94, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "would" }, { "LOWER": "be" }, { "LOWER": "a" }, { "LOWER": "good" }, { "LOWER": "solution" }],
+    "semanticVariants": ["what solution works", "what’s a workable fix", "how do we resolve this"]
+  },
+  {
+    "id": "CL025",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bhow can we move forward\\b",
+    "confidence": 0.86,
+    "category": "forward-momentum",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.94, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "how" }, { "LOWER": "can" }, { "LOWER": "we" }, { "LOWER": "move" }, { "LOWER": "forward" }],
+    "semanticVariants": ["next steps to move forward", "path to move forward", "how do we proceed"]
+  },
+  {
+    "id": "CL026",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi'?d like to understand\\b",
+    "confidence": 0.86,
+    "category": "curious-clarification",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.94, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i'd" }, { "LOWER": "like" }, { "LOWER": "to" }, { "LOWER": "understand" }],
+    "semanticVariants": ["I want to understand", "I’d like clarity on", "help me understand"]
+  },
+  {
+    "id": "CL027",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat do you need from me\\b",
+    "confidence": 0.86,
+    "category": "collaborative-ask",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.96, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "do" }, { "LOWER": "you" }, { "LOWER": "need" }, { "LOWER": "from" }, { "LOWER": "me" }],
+    "semanticVariants": ["what do you need", "how can I help", "what would be helpful from me"]
+  },
+  {
+    "id": "CL028",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease keep me updated\\b",
+    "confidence": 0.9,
+    "category": "follow-up-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "keep" }, { "LOWER": "me" }, { "LOWER": "updated" }],
+    "semanticVariants": ["please update me", "keep me posted", "let me know progress"]
+  },
+  {
+    "id": "CL029",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bhere'?s my understanding\\b",
+    "confidence": 0.85,
+    "category": "recap-clarification",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.95, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "here's" }, { "LOWER": "my" }, { "LOWER": "understanding" }],
+    "semanticVariants": ["my understanding is", "as I understand it", "what I understand is"]
+  },
+  {
+    "id": "CL030",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bcan you confirm\\b",
+    "confidence": 0.9,
+    "category": "confirmation-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.96, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "can" }, { "LOWER": "you" }, { "LOWER": "confirm" }],
+    "semanticVariants": ["please confirm", "can you verify", "please validate"]
+  },
+
+  {
+    "id": "CL031",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat result are you expecting\\b",
+    "confidence": 0.84,
+    "category": "expectations-clarity",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.96, "anxious": 0.95, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "result" }, { "LOWER": "are" }, { "LOWER": "you" }, { "LOWER": "expecting" }],
+    "semanticVariants": ["what outcome do you expect", "what are you expecting", "what result do you want"]
+  },
+  {
+    "id": "CL032",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bmy boundary is\\b",
+    "confidence": 0.9,
+    "category": "boundary-statement",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.98, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "my" }, { "LOWER": "boundary" }, { "LOWER": "is" }],
+    "semanticVariants": ["I’m setting a boundary", "I have a boundary", "my limit is"]
+  },
+  {
+    "id": "CL033",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease don'?t\\b",
+    "confidence": 0.88,
+    "category": "polite-prohibition",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.98, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "don't" }],
+    "semanticVariants": ["I’d like you not to", "please avoid", "please refrain from"]
+  },
+  {
+    "id": "CL034",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi'?m willing to\\b",
+    "confidence": 0.86,
+    "category": "ownership-offer",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.98, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i'm" }, { "LOWER": "willing" }, { "LOWER": "to" }],
+    "semanticVariants": ["I’m open to", "I can do", "I’m prepared to"]
+  },
+  {
+    "id": "CL035",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi need a direct answer\\b",
+    "confidence": 0.88,
+    "category": "directness-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i" }, { "LOWER": "need" }, { "LOWER": "a" }, { "LOWER": "direct" }, { "LOWER": "answer" }],
+    "semanticVariants": ["please answer directly", "give me a straight answer", "answer yes or no"]
+  },
+  {
+    "id": "CL036",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat does success look like\\b",
+    "confidence": 0.84,
+    "category": "success-criteria",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "does" }, { "LOWER": "success" }, { "LOWER": "look" }, { "LOWER": "like" }],
+    "semanticVariants": ["define success", "success criteria are", "how we’ll know we’re done"]
+  },
+  {
+    "id": "CL037",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease be specific about\\b",
+    "confidence": 0.88,
+    "category": "specificity-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "be" }, { "LOWER": "specific" }, { "LOWER": "about" }],
+    "semanticVariants": ["give specifics on", "specify details about", "be precise about"]
+  },
+  {
+    "id": "CL038",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi want to make sure\\b",
+    "confidence": 0.86,
+    "category": "clarification-preface",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i" }, { "LOWER": "want" }, { "LOWER": "to" }, { "LOWER": "make" }, { "LOWER": "sure" }],
+    "semanticVariants": ["to ensure", "I’d like to confirm", "I want to verify"]
+  },
+  {
+    "id": "CL039",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bin the future, please\\b",
+    "confidence": 0.88,
+    "category": "forward-looking-boundary",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "in" }, { "LOWER": "the" }, { "LOWER": "future" }, { "LOWER": "please" }],
+    "semanticVariants": ["going forward, please", "from now on, please", "in future, please"]
+  },
+  {
+    "id": "CL040",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bthat'?s not acceptable to me\\b",
+    "confidence": 0.88,
+    "category": "boundary-enforcement",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "that's" }, { "LOWER": "not" }, { "LOWER": "acceptable" }, { "LOWER": "to" }, { "LOWER": "me" }],
+    "semanticVariants": ["I can’t accept that", "that’s not okay for me", "that doesn’t work for me"]
+  },
+
+  {
+    "id": "CL041",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease use \\b",
+    "confidence": 0.85,
+    "category": "preference-instruction",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "use" }],
+    "semanticVariants": ["prefer you use", "use X please", "please utilize"]
+  },
+  {
+    "id": "CL042",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bcan you be more specific\\b",
+    "confidence": 0.88,
+    "category": "specificity-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "can" }, { "LOWER": "you" }, { "LOWER": "be" }, { "LOWER": "more" }, { "LOWER": "specific" }],
+    "semanticVariants": ["more details please", "be specific please", "can you specify"]
+  },
+  {
+    "id": "CL043",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\blet'?s make a plan\\b",
+    "confidence": 0.88,
+    "category": "planning-direct",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "let's" }, { "LOWER": "make" }, { "LOWER": "a" }, { "LOWER": "plan" }],
+    "semanticVariants": ["let’s plan it", "create a plan", "set a plan"]
+  },
+  {
+    "id": "CL044",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat would help is\\b",
+    "confidence": 0.86,
+    "category": "need-specification",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "would" }, { "LOWER": "help" }, { "LOWER": "is" }],
+    "semanticVariants": ["it would help if", "what helps is", "helpful would be"]
+  },
+  {
+    "id": "CL045",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease be on time\\b",
+    "confidence": 0.9,
+    "category": "punctuality-boundary",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "be" }, { "LOWER": "on" }, { "LOWER": "time" }],
+    "semanticVariants": ["arrive on time please", "be punctual please", "please don’t be late"]
+  },
+  {
+    "id": "CL046",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bby (?:\\w+day|\\d{1,2}(:?[:.]\\d{2})? ?(?:am|pm)?) would work\\b",
+    "confidence": 0.84,
+    "category": "deadline-proposal",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "by" }, { "LOWER": "would" }, { "LOWER": "work" }],
+    "semanticVariants": ["by Friday works", "by 3pm works", "deadline of X works"]
+  },
+  {
+    "id": "CL047",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat i can do is\\b",
+    "confidence": 0.86,
+    "category": "ownership-scope",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "i" }, { "LOWER": "can" }, { "LOWER": "do" }, { "LOWER": "is" }],
+    "semanticVariants": ["here’s what I can do", "I can commit to", "what I’m able to do is"]
+  },
+  {
+    "id": "CL048",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi'?m not available then\\b",
+    "confidence": 0.88,
+    "category": "availability-boundary",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i'm" }, { "LOWER": "not" }, { "LOWER": "available" }, { "LOWER": "then" }],
+    "semanticVariants": ["I’m unavailable then", "I can’t at that time", "that time doesn’t work"]
+  },
+  {
+    "id": "CL049",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bcan we try \\w+ instead\\b",
+    "confidence": 0.84,
+    "category": "alternative-proposal",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "can" }, { "LOWER": "we" }, { "LOWER": "try" }, { "LOWER": "instead" }],
+    "semanticVariants": ["could we do X instead", "let’s try X instead", "alternative X instead"]
+  },
+  {
+    "id": "CL050",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease summarize\\b",
+    "confidence": 0.86,
+    "category": "summary-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "summarize" }],
+    "semanticVariants": ["give me a summary", "summary please", "summarize the points"]
+  },
+
+  {
+    "id": "CL051",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat i hear is\\b",
+    "confidence": 0.84,
+    "category": "reflective-listening",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.95, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "i" }, { "LOWER": "hear" }, { "LOWER": "is" }],
+    "semanticVariants": ["I’m hearing", "sounds like", "my read is"]
+  },
+  {
+    "id": "CL052",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease correct me if i'?m wrong\\b",
+    "confidence": 0.86,
+    "category": "accuracy-check",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "correct" }, { "LOWER": "me" }, { "LOWER": "if" }, { "LOWER": "i'm" }, { "LOWER": "wrong" }],
+    "semanticVariants": ["let me know if I’m off", "tell me if that’s wrong", "correct me if needed"]
+  },
+  {
+    "id": "CL053",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bi need a clear yes or no\\b",
+    "confidence": 0.88,
+    "category": "binary-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "i" }, { "LOWER": "need" }, { "LOWER": "a" }, { "LOWER": "clear" }, { "LOWER": "yes" }, { "LOWER": "or" }, { "LOWER": "no" }],
+    "semanticVariants": ["answer yes or no", "I need yes/no", "give me a clear yes/no"]
+  },
+  {
+    "id": "CL054",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bcan we document this\\b",
+    "confidence": 0.84,
+    "category": "record-keeping",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.98, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "can" }, { "LOWER": "we" }, { "LOWER": "document" }, { "LOWER": "this" }],
+    "semanticVariants": ["let’s write it down", "capture this in writing", "document the agreement"]
+  },
+  {
+    "id": "CL055",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease state your concern\\b",
+    "confidence": 0.86,
+    "category": "concern-elicitation",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.98, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "state" }, { "LOWER": "your" }, { "LOWER": "concern" }],
+    "semanticVariants": ["what’s your concern", "name the concern", "spell out your concern"]
+  },
+  {
+    "id": "CL056",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease keep feedback actionable\\b",
+    "confidence": 0.84,
+    "category": "feedback-scope",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.98, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "keep" }, { "LOWER": "feedback" }, { "LOWER": "actionable" }],
+    "semanticVariants": ["actionable feedback please", "keep feedback specific", "concrete feedback only"]
+  },
+  {
+    "id": "CL057",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat you can expect from me\\b",
+    "confidence": 0.84,
+    "category": "expectations-setting",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.98, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "you" }, { "LOWER": "can" }, { "LOWER": "expect" }, { "LOWER": "from" }, { "LOWER": "me" }],
+    "semanticVariants": ["here’s what I’ll do", "what I will deliver", "what you can count on from me"]
+  },
+  {
+    "id": "CL058",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bwhat i expect from you\\b",
+    "confidence": 0.86,
+    "category": "expectations-setting",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 0.98, "anxious": 0.96, "disorganized": 0.9, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "what" }, { "LOWER": "i" }, { "LOWER": "expect" }, { "LOWER": "from" }, { "LOWER": "you" }],
+    "semanticVariants": ["my expectations are", "I expect that you", "what I need you to do is"]
+  },
+  {
+    "id": "CL059",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\blet'?s agree on a time\\b",
+    "confidence": 0.9,
+    "category": "scheduling-agreement",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "let's" }, { "LOWER": "agree" }, { "LOWER": "on" }, { "LOWER": "a" }, { "LOWER": "time" }],
+    "semanticVariants": ["agree on time", "lock a time", "choose a meeting time"]
+  },
+  {
+    "id": "CL060",
+    "tone": "clear",
+    "type": "regex",
+    "pattern": "\\bplease confirm receipt\\b",
+    "confidence": 0.9,
+    "category": "acknowledgment-request",
+    "attachmentStyles": ["avoidant","anxious","disorganized","secure"],
+    "styleWeight": { "avoidant": 1.0, "anxious": 0.96, "disorganized": 0.92, "secure": 1.0 },
+    "spacyPattern": [{ "LOWER": "please" }, { "LOWER": "confirm" }, { "LOWER": "receipt" }],
+    "semanticVariants": ["confirm you got this", "please acknowledge", "let me know you received this"]
+  }
+]

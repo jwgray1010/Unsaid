@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "sarcasm_indicators": [
+	{
+	  "id": "SARC_AIR_QUOTES",
+	  "pattern": "\".*\"",
+	  "impact": -0.3,
+	  "description": "sarcasm signaled with air quotes in text",
+	  "scopeTokens": 12,
+	  "applyTo": ["patterns", "triggers"],
+	  "toneAdjustments": {
+		"alert": 0.1,
+		"caution": 0.05
+	  },
+	  "contextAdjustments": {
+		"conflict": 0.15,
+		"repair": -0.05
+	  },
+	  "attachmentAdjustments": {
+		"avoidant": 0.1,
+		"disorganized": 0.1
+	  },
+	  "exceptions": [
+		"direct quotations",
+		"titles",
+		"nicknames"
+	  ]
+	},
+	{
+	  "id": "SARC_YEAH_RIGHT",
+	  "pattern": "\\byeah right\\b|\\bas if\\b|\\bsure thing\\b",
+	  "impact": -0.4,
+	  "description": "dismissive sarcasm phrases",
+	  "scopeTokens": 8,
+	  "applyTo": ["patterns", "triggers"],
+	  "toneAdjustments": {
+		"alert": 0.15,
+		"caution": 0.05
+	  },
+	  "contextAdjustments": {
+		"conflict": 0.2,
+		"validation": -0.1
+	  },
+	  "attachmentAdjustments": {
+		"anxious": 0.05,
+		"avoidant": 0.15
+	  },
+	  "exceptions": []
+	}
+  ]
+}

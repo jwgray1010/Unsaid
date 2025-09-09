@@ -24,6 +24,7 @@
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.0",
     "jwks-rsa": "^3.2.0",
+    "node-fetch": "^2.7.0",
     "pino": "^9.9.0",
     "pino-http": "^10.5.0",
     "prom-client": "^14.2.0",
@@ -39,7 +40,11 @@
     "vercel": "^32.5.0"
   },
   "keywords": [
+    "ai",
     "therapy",
+    "communication",
+    "attachment",
+    "serverless",
     "suggestions",
     "tone-analysis",
     "attachment-style",
@@ -50,6 +55,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jwgray1010/unsaid-backend"
+    "url": "https://github.com/jwgray1010/Unsaid"
   }
 }

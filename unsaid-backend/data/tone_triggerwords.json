@@ -1,0 +1,201 @@
+{
+  "weights": {
+    "default": {
+      "typeMultipliers": {
+        "profanity": 1.00,
+        "insult": 0.98,
+        "bullying": 1.00,
+        "threat": 1.10,
+        "ultimatum": 1.08,
+        "contempt": 1.05,
+        "escalation": 1.02,
+        "command": 1.02,
+        "gaslighting": 1.05,
+        "jealousy": 1.03,
+        "control": 1.05,
+
+        "uncertainty": 1.00,
+        "hedge": 0.95,
+        "discomfort": 1.00,
+        "concern": 1.02,
+        "avoidance": 1.02,
+        "safety": 1.03,
+
+        "structure": 1.00,
+        "plan": 1.00,
+        "agreement": 1.00,
+        "confirmation": 1.00,
+        "boundary": 1.03,
+        "solution": 1.05
+      }
+    },
+    "alert": {
+      "typeMultipliers": {
+        "profanity": 1.10,
+        "insult": 1.05,
+        "bullying": 1.08,
+        "threat": 1.25,
+        "ultimatum": 1.15,
+        "contempt": 1.12,
+        "escalation": 1.08,
+        "command": 1.06,
+        "gaslighting": 1.10,
+        "jealousy": 1.08,
+        "control": 1.10
+      }
+    },
+    "caution": {
+      "typeMultipliers": {
+        "uncertainty": 1.05,
+        "hedge": 1.02,
+        "discomfort": 1.05,
+        "concern": 1.08,
+        "avoidance": 1.05,
+        "safety": 1.08
+      }
+    },
+    "clear": {
+      "typeMultipliers": {
+        "structure": 1.08,
+        "plan": 1.08,
+        "agreement": 1.06,
+        "confirmation": 1.06,
+        "boundary": 1.08,
+        "solution": 1.10
+      }
+    }
+  },
+
+  "alert": {
+    "triggerwords": [
+      { "text": "fuck", "intensity": 1.00, "type": "profanity", "variants": ["fucking","fucked","fuck off","fuck you","stfu","f u"] },
+      { "text": "shit", "intensity": 0.85, "type": "profanity", "variants": ["bullshit","bs","shitty","holy shit","piece of shit"] },
+      { "text": "asshole", "intensity": 0.90, "type": "profanity", "variants": ["dumbass","jackass","smartass"] },
+      { "text": "bitch", "intensity": 0.95, "type": "profanity", "variants": ["son of a bitch","bitches"] },
+      { "text": "damn", "intensity": 0.70, "type": "profanity", "variants": ["dammit","goddamn","god damn"] },
+      { "text": "cunt", "intensity": 1.00, "type": "profanity", "variants": [] },
+      { "text": "prick", "intensity": 0.90, "type": "profanity" },
+      { "text": "dick", "intensity": 0.90, "type": "profanity", "variants": ["dickhead","cock","cocksucker"] },
+
+  {
+    "text": "idiot",
+    "intensity": 0.95,
+    "type": "insult",
+    "variants": [
+      "moron","stupid","dumb","imbecile","airhead","nitwit","numbskull","blockhead","bonehead",
+      "simpleton","dimwit","dummy","dope","halfwit","fool","losing your mind","out of your mind",
+      "knucklehead","pea brain","thick skull","brainless","mindless","thickheaded","scatterbrain",
+      "gullible","dense","lamebrain","dork","numpty","dipstick","goofball","clown","joke"
+    ]
+  },
+  {
+    "text": "loser",
+    "intensity": 0.90,
+    "type": "bullying",
+    "variants": [
+      "pathetic","worthless","useless","failure","nobody","reject","outcast","misfit","dropout",
+      "waste of space","has-been","deadbeat","flop","trainwreck","zero","nothings","small-time",
+      "washed up","good-for-nothing","lowlife","scum","bottom feeder","scrub","trash","garbage person"
+    ]
+  },
+  {
+    "text": "coward",
+    "intensity": 0.85,
+    "type": "insult",
+    "variants": [
+      "weak","crybaby","baby","snowflake","soft","spineless","gutless","chicken","yellow-belly",
+      "scaredy-cat","timid","pushover","milquetoast","fearful","wimp","pantywaist","softie",
+      "shrinking violet","namby-pamby","fragile","delicate","overreacting","overly dramatic"
+    ]
+  },
+  {
+    "text": "toxic",
+    "intensity": 0.85,
+    "type": "insult",
+    "variants": [
+      "manipulative","controlling","gaslighter","gaslighting","poisonous","destructive","soul-sucking",
+      "draining","abusive","vindictive","exploitative","deceitful","scheming","two-faced","fake friend",
+      "puppet master","emotional leech","user","predatory","harmful","malevolent","evil"
+    ]
+  },
+  {
+    "text": "fake",
+    "intensity": 0.75,
+    "type": "insult",
+    "variants": [
+      "two-faced","hypocrite","phony","liar","cheater","poser","fraud","fraudulent","deceiver",
+      "snake","wolf in sheep's clothing","double-dealer","backstabber","pretender","con artist",
+      "charlatan","counterfeit","false","insincere","plastic","sham","deceptive"
+    ]
+  },
+  {
+    "text": "creep",
+    "intensity": 0.85,
+    "type": "insult",
+    "variants": [
+      "creepy","predator","pervert","weirdo","lurker","stalker","skeezy","sleazy","gross","nasty",
+      "dirty old man","sexual harasser","sketchy","pest","degenerate","low-life","creeper",
+      "lecher","lech","voyeur","ogler"
+    ]
+  },
+  
+      { "text": "threaten", "intensity": 1.10, "type": "threat", "variants": ["threat","or else","you'll regret","watch yourself","watch your back"] },
+      { "text": "retaliate", "intensity": 1.10, "type": "threat", "variants": ["retaliation","revenge","payback"] },
+      { "text": "ultimatum", "intensity": 1.05, "type": "ultimatum", "variants": ["do this or we're done","last chance","final warning","last straw"] },
+
+      { "text": "yell", "intensity": 0.85, "type": "escalation", "variants": ["yelling","scream","screaming","shout","shouting","all caps"] },
+      { "text": "attack", "intensity": 0.95, "type": "escalation", "variants": ["attacked","assault","come at"] },
+      { "text": "accuse", "intensity": 0.85, "type": "escalation", "variants": ["accused","blame","blamed"] },
+
+      { "text": "pathetic", "intensity": 0.95, "type": "contempt", "variants": ["disgusting","gross","nasty","trash","garbage"] },
+      { "text": "shut up", "intensity": 0.95, "type": "contempt", "variants": ["shut the fuck up","stfu"] },
+      { "text": "get over it", "intensity": 0.80, "type": "contempt", "variants": ["whatever","obviously","as if","eye roll","🙄"] },
+
+      { "text": "you better", "intensity": 0.95, "type": "command", "variants": ["you should","do as i say","you have to","now"] },
+      { "text": "cut you off", "intensity": 0.90, "type": "command", "variants": ["cut off","block you","block","i'll block you"] },
+
+      { "text": "can't talk to", "intensity": 0.90, "type": "control", "variants": ["not allowed to see","stop seeing","remove them","delete them"] },
+      { "text": "share location", "intensity": 0.95, "type": "control", "variants": ["turn on location","send your location now"] },
+      { "text": "who is that", "intensity": 0.80, "type": "jealousy", "variants": ["why did you like","who were you with","who's that"] },
+
+      { "text": "always", "intensity": 0.65, "type": "escalation", "variants": ["never","every time","constant"] },
+      { "text": "furious", "intensity": 0.85, "type": "escalation", "variants": ["rage","raging","pissed","pissed off","fuming","🤬"] }
+    ]
+  },
+
+  "caution": {
+    "triggerwords": [
+      { "text": "unclear", "intensity": 0.70, "type": "uncertainty", "variants": ["not clear","hard to tell","not obvious","idk","i don't know"] },
+      { "text": "confuse", "intensity": 0.70, "type": "uncertainty", "variants": ["confused","confusing","misunderstand","misunderstood"] },
+      { "text": "unsure", "intensity": 0.65, "type": "uncertainty", "variants": ["not sure","can't tell","can't say","iffy","on the fence"] },
+      { "text": "maybe", "intensity": 0.50, "type": "hedge", "variants": ["perhaps","possibly","might","could","kinda","sort of","tbh"] },
+
+      { "text": "hesitate", "intensity": 0.60, "type": "hedge", "variants": ["hesitant","second guess","second thoughts"] },
+
+      { "text": "uncomfortable", "intensity": 0.70, "type": "discomfort", "variants": ["awkward","tension","uneasy","weird","off vibe","😬"] },
+      { "text": "worried", "intensity": 0.65, "type": "concern", "variants": ["worry","concern","concerns","nervous","anxious","anxiety","stressed","overwhelmed"] },
+
+      { "text": "red flag", "intensity": 0.75, "type": "concern", "variants": ["flags","watch out","look out","be careful","cautious","warning sign"] },
+      { "text": "safety", "intensity": 0.75, "type": "safety", "variants": ["not safe","sketchy","unsafe","risky"] },
+
+      { "text": "avoid", "intensity": 0.60, "type": "avoidance", "variants": ["avoiding","put it off","delay","later maybe","not now","another time"] }
+    ]
+  },
+
+  "clear": {
+    "triggerwords": [
+      { "text": "specific", "intensity": 0.70, "type": "structure", "variants": ["precise","exact","exactly","precisely"] },
+      { "text": "clarify", "intensity": 0.75, "type": "structure", "variants": ["clarity","to be clear","in other words","rephrase","explain"] },
+      { "text": "direct", "intensity": 0.70, "type": "structure", "variants": ["straightforward","no fluff"] },
+      { "text": "open", "intensity": 0.65, "type": "agreement", "variants": ["openly","honest","honestly","truthful"] },
+      { "text": "plan", "intensity": 0.70, "type": "plan", "variants": ["plans","planning","step by step"] },
+      { "text": "agree", "intensity": 0.65, "type": "agreement", "variants": ["agreed","agreement","deal"] },
+      { "text": "decide", "intensity": 0.65, "type": "plan", "variants": ["decision","choose"] },
+      { "text": "confirm", "intensity": 0.65, "type": "confirmation", "variants": ["confirmed","confirmation","make sure","ensure"] },
+      { "text": "schedule", "intensity": 0.65, "type": "plan", "variants": ["scheduled","set time","set date","calendar"] },
+      { "text": "resolved", "intensity": 0.75, "type": "solution", "variants": ["solution","solve","solved","settled"] },
+      { "text": "boundary", "intensity": 0.80, "type": "boundary", "variants": ["limit","line","what I can do","what I can’t do"] },
+      { "text": "understand", "intensity": 0.60, "type": "agreement", "variants": ["understood","got it","makes sense"] }
+    ]
+  }
+}

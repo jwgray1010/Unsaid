@@ -1,0 +1,210 @@
+{
+    "version": "1.1.0",
+    "notes": "Guardrail & safety configuration applied after base tone/context scoring and before rewrite selection. Integrates with attachment_overrides, intensity_modifiers, negation/sarcasm layers, and multiplier profiles.",
+    "defaults": {
+        "minConfidence": 0.25,
+        "fallbackThreshold": 0.30,
+        "requireContentTriggers": true,
+        "noRepeatMs": 90000
+    },
+    "toxicity": {
+        "highThreshold": 0.80,
+        "allowedCategories": [
+            "de-escalation",
+            "repair",
+            "apology",
+            "reflection",
+            "pause"
+        ],
+        "style_weight": {
+            "secure": 0.05,
+            "anxious": -0.05,
+            "avoidant": 0.00,
+            "disorganized": -0.02
+        },
+        "tone_weight": {
+            "alert": -0.10,
+            "caution": -0.05,
+            "clear": 0.10
+        },
+        "categoryTweaks": {
+            "de-escalation": { "boost": 0.06 },
+            "repair": { "boost": 0.05 },
+            "apology": { "boost": 0.04 },
+            "reflection": { "boost": 0.03 },
+            "pause": { "boost": 0.02 }
+        }
+    },
+    "contextBoosts": {
+        "conflict": { "alert": 0.10, "caution": 0.05 },
+        "repair": { "clear": 0.15, "caution": 0.05 },
+        "planning": { "clear": 0.08 },
+        "boundary": { "clear": 0.05, "alert": -0.05 }
+    },
+    "overrides": {
+        "attachment_overrides": true,
+        "intensity_modifiers": true,
+        "negation_patterns": true,
+        "sarcasm_indicators": true,
+        "context_classifier": true,
+        "profanity_rules": true
+    },
+    "channels": {
+        "liveKeyboard": {
+            "minConfidence": 0.27,
+            "fallbackThreshold": 0.32
+        },
+        "postCompose": {
+            "minConfidence": 0.25,
+            "fallbackThreshold": 0.30
+        },
+        "coachingOnly": {
+            "minConfidence": 0.22,
+            "fallbackThreshold": 0.28
+        }
+    },
+    "profiles": {
+        "high_sensitivity": {
+            "notes": "Stricter guardrails for users who prefer conservative suggestions.",
+            "deltas": {
+                "minConfidence": 0.05,
+                "fallbackThreshold": 0.05,
+                "toxicity.highThreshold": -0.05
+            },
+            "style_weight": {
+                "anxious": -0.06,
+                "disorganized": -0.03,
+                "secure": 0.02
+            },
+            "tone_weight": {
+                "clear": 0.08,
+                "caution": 0.03,
+                "alert": -0.10
+            },
+            "contextBoosts": {
+                "repair": { "clear": 0.05 },
+                "conflict": { "alert": -0.05 }
+            }
+        },
+        "low_reactivity": {
+            "notes": "More permissive; fewer false positives for edgy but non-harmful phrasing.",
+            "deltas": {
+                "minConfidence": -0.03,
+                "fallbackThreshold": -0.02,
+                "toxicity.highThreshold": 0.05
+            },
+            "style_weight": {
+                "avoidant": 0.02,
+                "secure": 0.01
+            },
+            "tone_weight": {
+                "clear": 0.04,
+                "alert": -0.04
+            },
+            "contextBoosts": {
+                "planning": { "clear": 0.04 }
+            }
+        },
+        "assertive_moderator": {
+            "notes": "Encourage clear boundaries without escalation.",
+            "deltas": {
+                "minConfidence": 0.02,
+                "fallbackThreshold": 0.01
+            },
+            "tone_weight": {
+                "clear": 0.10,
+                "alert": -0.06,
+                "caution": 0.02
+            },
+            "contextBoosts": {
+                "boundary": { "clear": 0.08, "alert": -0.06 }
+            }
+        },
+        "repair_mode": {
+            "notes": "Bias toward repair/apology/reflective suggestions after ruptures.",
+            "deltas": {
+                "fallbackThreshold": -0.02
+            },
+            "toxicityTweaks": {
+                "allowedCategories": [
+                    "repair",
+                    "apology",
+                    "reflection",
+                    "pause",
+                    "de-escalation"
+                ],
+                "categoryBoosts": {
+                    "repair": 0.08,
+                    "apology": 0.06
+                }
+            },
+            "contextBoosts": {
+                "repair": { "clear": 0.10, "caution": 0.06 }
+            }
+        },
+        "profanity_tolerant": {
+            "notes": "Accounts for users who naturally use strong language; leverages profanity rules' reverse tolerance.",
+            "deltas": {
+                "toxicity.highThreshold": 0.08
+            },
+            "profanity": {
+                "sensitivity": "low",
+                "toleranceWindowMs": 60000
+            },
+            "tone_weight": {
+                "alert": -0.04,
+                "clear": 0.03
+            }
+        }
+    },
+    "attachmentAdjustments": {
+        "inheritFrom": "attachment_overrides.json",
+        "merge": "additive",
+        "examples": {
+            "anxious": { "cautionBoost": 0.10, "alertDampen": 0.05 },
+            "avoidant": { "clearBoost": 0.10, "cautionBoost": 0.05 },
+            "disorganized": { "alertBoost": 0.10, "cautionBoost": 0.10 },
+            "secure": { "clearBoost": 0.15 }
+        }
+    },
+    "fallbacks": {
+        "whenBelowMinConfidence": {
+            "actions": [
+                "pause",
+                "reflective_prompt",
+                "show_secure_rewrite"
+            ],
+            "maxPerWindow": 2
+        },
+        "whenHighToxicity": {
+            "threshold": 0.80,
+            "actions": [
+                "de-escalation",
+                "repair",
+                "apology"
+            ],
+            "blockDirectSend": true
+        }
+    },
+    "telemetry": {
+        "logDecisions": true,
+        "fields": [
+            "selectedProfile",
+            "finalThresholds",
+            "appliedBoosts",
+            "blockedCategories"
+        ],
+        "privacy": {
+            "pii": "strip",
+            "rawUserText": "hash+windowed",
+            "retentionDays": 14
+        }
+    },
+    "rollout": {
+        "cohorting": "byUserStableHash",
+        "flags": {
+            "enableRepairModeAuto": false,
+            "enableProfanityToleranceAuto": true
+        }
+    }
+}
