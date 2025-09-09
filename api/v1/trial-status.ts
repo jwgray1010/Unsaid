@@ -3,6 +3,9 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { withCors, withMethods, withErrorHandling, withLogging } from '../_lib/wrappers';
 import { success } from '../_lib/http';
 import { logger } from '../_lib/logger';
+import { ensureBoot } from '../_lib/bootstrap';
+
+const bootPromise = ensureBoot();
 
 interface TrialStatus {
   status: 'trial_active' | 'trial_expired' | 'premium';
@@ -207,6 +210,7 @@ function getUserId(req: VercelRequest): string {
 const trialManager = new TrialManager();
 
 const handler = async (req: VercelRequest, res: VercelResponse) => {
+  await bootPromise;
   const userId = getUserId(req);
   
   try {
@@ -223,7 +227,7 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
         planType: status.planType
       });
       
-      success(res, status);
+      return success(res, status);
       
     } else if (req.method === 'POST') {
       // Check specific feature access or increment usage
@@ -233,7 +237,7 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
         const hasAccess = trialManager.checkFeatureAccess(userId, feature);
         const status = trialManager.getTrialStatus(userId);
         
-        success(res, { 
+        return success(res, { 
           userId,
           feature,
           hasAccess,
@@ -261,7 +265,7 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
         const success_increment = trialManager.incrementUsage(userId, feature);
         const updatedStatus = trialManager.getTrialStatus(userId);
         
-        success(res, { 
+        return success(res, { 
           userId,
           feature,
           success: success_increment,

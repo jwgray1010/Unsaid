@@ -24,6 +24,9 @@ import { spacyClient } from '../_lib/services/spacyClient';
 import { logger } from '../_lib/logger';
 import { metrics } from '../_lib/metrics';
 import { z } from 'zod';
+import { ensureBoot } from '../_lib/bootstrap';
+
+const bootPromise = ensureBoot();
 
 // -------------------- Validation Schemas --------------------
 const observeSchema = z.object({
@@ -59,6 +62,7 @@ function getUserId(req: VercelRequest): string {
 
 // GET /profile - Get user's communicator profile
 async function getProfile(req: VercelRequest, res: VercelResponse) {
+  await bootPromise;
   const userId = getUserId(req);
   
   try {
@@ -91,7 +95,7 @@ async function getProfile(req: VercelRequest, res: VercelResponse) {
       isNewUser
     });
     
-    success(res, {
+    return success(res, {
       userId,
       attachmentEstimate,
       isNewUser,
@@ -114,6 +118,7 @@ async function getProfile(req: VercelRequest, res: VercelResponse) {
 
 // POST /observe - Record communication observation
 async function observe(req: VercelRequest, res: VercelResponse) {
+  await bootPromise;
   const userId = getUserId(req);
   const validation = observeSchema.safeParse(req.body);
   
@@ -153,7 +158,7 @@ async function observe(req: VercelRequest, res: VercelResponse) {
     }
 
     // Analyze the communication
-    const toneResult = toneAnalysisService.analyzeAdvancedTone(text, {
+    const toneResult = await toneAnalysisService.analyzeAdvancedTone(text, {
       context: meta?.context || 'general',
       isNewUser: false // For observations, analyze fully to build profile
     });
@@ -174,7 +179,7 @@ async function observe(req: VercelRequest, res: VercelResponse) {
       isNewUser
     });
     
-    success(res, {
+    return success(res, {
       userId,
       observation: {
         text,
@@ -195,6 +200,7 @@ async function observe(req: VercelRequest, res: VercelResponse) {
 
 // POST /analysis/detailed - Enhanced analysis endpoint
 async function detailedAnalysis(req: VercelRequest, res: VercelResponse) {
+  await bootPromise;
   const userId = getUserId(req);
   const validation = detailedAnalysisSchema.safeParse(req.body);
   
@@ -267,7 +273,7 @@ async function detailedAnalysis(req: VercelRequest, res: VercelResponse) {
       isNewUser
     });
     
-    success(res, {
+    return success(res, {
       userId,
       text,
       context,
@@ -293,6 +299,7 @@ async function detailedAnalysis(req: VercelRequest, res: VercelResponse) {
 
 // GET /export - Export user profile data
 async function exportProfile(req: VercelRequest, res: VercelResponse) {
+  await bootPromise;
   const userId = getUserId(req);
   
   try {
@@ -303,7 +310,7 @@ async function exportProfile(req: VercelRequest, res: VercelResponse) {
     
     logger.info('Profile exported', { userId });
     
-    success(res, {
+    return success(res, {
       userId,
       exportData: {
         attachmentEstimate,
@@ -320,6 +327,7 @@ async function exportProfile(req: VercelRequest, res: VercelResponse) {
 
 // POST /reset - Reset user profile
 async function resetProfile(req: VercelRequest, res: VercelResponse) {
+  await bootPromise;
   const userId = getUserId(req);
   
   try {
@@ -331,7 +339,7 @@ async function resetProfile(req: VercelRequest, res: VercelResponse) {
     
     logger.info('Profile reset', { userId });
     
-    success(res, {
+    return success(res, {
       userId,
       reset: true,
       timestamp: new Date().toISOString(),
@@ -345,6 +353,7 @@ async function resetProfile(req: VercelRequest, res: VercelResponse) {
 
 // GET /status - Get profile status and health
 async function getStatus(req: VercelRequest, res: VercelResponse) {
+  await bootPromise;
   const userId = getUserId(req);
   
   try {
@@ -371,7 +380,7 @@ async function getStatus(req: VercelRequest, res: VercelResponse) {
     
     logger.info('Status retrieved', { userId, status: 'healthy' });
     
-    success(res, status);
+    return success(res, status);
   } catch (error) {
     logger.error('Status check failed:', error);
     throw error;

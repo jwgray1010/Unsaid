@@ -11,8 +11,7 @@
 
 import { logger } from '../logger';
 import { dataLoader } from './dataLoader';
-import { spacyClient } from './spacyClient';
-import { processWithSpacy } from './spacyBridge';
+import { processWithSpacy, processWithSpacySync } from './spacyBridge';
 
 // -----------------------------
 // Types
@@ -141,13 +140,7 @@ async function spacyLite(text: string, hintContext?: string): Promise<SpacyLite>
 }
 
 function spacyLiteSync(text: string, hintContext?: string): SpacyLite {
-  const r = spacyClient.process(text, {
-    wantTokens: true,
-    wantSents: true,
-    wantDeps: true,
-    contextClassifier: dataLoader.get('contextClassifier'),
-    sarcasmIndicators: dataLoader.get('sarcasmIndicators'),
-  });
+  const r = processWithSpacySync(text, 'finalize');
 
   // Extract tokens from the actual spaCy response structure
   const tokens = (r as any).tokens || [];

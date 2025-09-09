@@ -6,13 +6,17 @@ import { toneRequestSchema } from '../_lib/schemas/toneRequest';
 import { suggestionsService } from '../_lib/services/suggestions';
 import { CommunicatorProfile } from '../_lib/services/communicatorProfile';
 import { logger } from '../_lib/logger';
+import { ensureBoot } from '../_lib/bootstrap';
 import * as path from 'path';
+
+const bootPromise = ensureBoot();
 
 function getUserId(req: VercelRequest): string {
   return req.headers['x-user-id'] as string || 'anonymous';
 }
 
 const handler = async (req: VercelRequest, res: VercelResponse, data: any) => {
+  await bootPromise;
   const startTime = Date.now();
   const userId = getUserId(req);
   
@@ -93,7 +97,7 @@ const handler = async (req: VercelRequest, res: VercelResponse, data: any) => {
       }
     };
     
-    success(res, response);
+    return success(res, response);
   } catch (error) {
     logger.error('Advanced suggestions generation failed:', error);
     throw error;
