@@ -54,6 +54,25 @@ export default async function SettingsPage({ searchParams }: PageProps) {
       redirect("/app/billing");
     }
 
+    const [{ data: selectedPersona }, { data: selectedSetting }] = await Promise.all([
+      actionSupabase
+        .from("personas")
+        .select("id")
+        .eq("id", selectedPersonaId)
+        .eq("is_active", true)
+        .maybeSingle(),
+      actionSupabase
+        .from("settings")
+        .select("id")
+        .eq("id", selectedSettingId)
+        .eq("is_active", true)
+        .maybeSingle(),
+    ]);
+
+    if (!selectedPersona || !selectedSetting) {
+      throw new Error("Invalid persona or setting.");
+    }
+
     const { data: session, error } = await actionSupabase
       .from("sessions")
       .insert({
