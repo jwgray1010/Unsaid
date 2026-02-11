@@ -15,6 +15,16 @@ function toIso(unixSeconds: number | null | undefined) {
   return new Date(unixSeconds * 1000).toISOString();
 }
 
+function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): number | null {
+  const ends = subscription.items.data
+    .map((item) => item.current_period_end)
+    .filter((value): value is number => typeof value === "number");
+  if (ends.length === 0) {
+    return null;
+  }
+  return Math.max(...ends);
+}
+
 async function findUserIdByCustomer(customerId: string) {
   const supabase = createSupabaseAdminClient();
   const { data } = await supabase
@@ -78,7 +88,7 @@ export async function POST(request: Request) {
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           status = subscription.status;
-          currentPeriodEnd = subscription.current_period_end ?? null;
+          currentPeriodEnd = getSubscriptionPeriodEnd(subscription);
         }
 
         await upsertSubscription({
@@ -110,7 +120,7 @@ export async function POST(request: Request) {
           customerId,
           subscriptionId: subscription.id,
           status: subscription.status,
-          currentPeriodEnd: subscription.current_period_end ?? null,
+          currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
         });
         break;
       }
