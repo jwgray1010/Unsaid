@@ -1,4 +1,5 @@
 const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
+const billingEnforced = process.env.BILLING_ENFORCED === "true";
 
 type SubscriptionRow = {
   status: string | null;
@@ -34,11 +35,14 @@ export async function getUsageAccess(
   const isSubscribed = hasActiveSubscription(subscription);
   const sessionCount = sessionsResult.count ?? 0;
   const hasFreeSessionRemaining = sessionCount < 1;
+  const isPrototypeMode = !billingEnforced;
 
   return {
+    billingEnforced,
+    isPrototypeMode,
     isSubscribed,
     sessionCount,
     hasFreeSessionRemaining,
-    canStartSession: isSubscribed || hasFreeSessionRemaining,
+    canStartSession: isPrototypeMode || isSubscribed || hasFreeSessionRemaining,
   };
 }

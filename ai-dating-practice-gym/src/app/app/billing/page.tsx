@@ -33,10 +33,18 @@ export default async function BillingPage({ searchParams }: PageProps) {
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
         <p className="text-xs uppercase tracking-wide text-zinc-500">Current plan</p>
-        <p className="mt-1 text-xl font-semibold text-zinc-900">{usage.isSubscribed ? "Pro" : "Free"}</p>
+        <p className="mt-1 text-xl font-semibold text-zinc-900">
+          {usage.isPrototypeMode ? "Prototype" : usage.isSubscribed ? "Pro" : "Free"}
+        </p>
         <p className="mt-2 text-sm text-zinc-600">
           Free tier includes 1 total session. Pro gives unlimited sessions with fair-use rate limits.
         </p>
+        {usage.isPrototypeMode ? (
+          <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            Billing enforcement is currently disabled for prototype testing. Stripe checkout and portal remain available
+            for end-to-end billing tests.
+          </p>
+        ) : null}
         <div className="mt-4">
           <BillingActions subscribed={usage.isSubscribed} />
         </div>

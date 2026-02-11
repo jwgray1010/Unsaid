@@ -45,12 +45,19 @@ export default async function DashboardPage() {
             Edit profile
           </Link>
         </div>
+        {usage.isPrototypeMode ? (
+          <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            Prototype mode is active. Billing gate is disabled for testing.
+          </p>
+        ) : null}
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Plan</p>
-          <p className="mt-2 text-lg font-semibold text-zinc-900">{usage.isSubscribed ? "Pro" : "Free"}</p>
+          <p className="mt-2 text-lg font-semibold text-zinc-900">
+            {usage.isPrototypeMode ? "Prototype" : usage.isSubscribed ? "Pro" : "Free"}
+          </p>
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Sessions used</p>

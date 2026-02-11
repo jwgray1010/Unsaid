@@ -18,7 +18,9 @@ Production-ready MVP for realistic dating conversation practice with AI personas
 - Pre-date tips from local rules
 - Session chat simulation with transcript persistence
 - End-date coaching report with strengths, improvements, and rewrites
-- Free-tier gate: 1 total session unless subscribed
+- Billing gate with prototype toggle:
+  - `BILLING_ENFORCED=false` (default) allows unlimited testing
+  - `BILLING_ENFORCED=true` enforces free-tier + subscription gating
 - Stripe checkout + webhook + billing portal
 - Safety layer:
   - explicit-content boundary handling (PG-13 fade-to-black)
@@ -75,6 +77,7 @@ Optional:
 
 - `OPENAI_MODEL_SIMULATION` (default `gpt-4.1-mini`)
 - `OPENAI_MODEL_COACHING` (default `gpt-4.1-mini`)
+- `BILLING_ENFORCED` (default `false` for prototype testing)
 
 ### 3) Supabase setup
 
