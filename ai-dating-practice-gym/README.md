@@ -18,6 +18,9 @@ Production-ready MVP for realistic dating conversation practice with AI personas
 - Pre-date tips from local rules
 - Session chat simulation with transcript persistence
 - End-date coaching report with strengths, improvements, and rewrites
+- Live Practice Lab (experimental):
+  - browser camera + microphone analysis for voice pacing and body-language presence signals
+  - WebXR/VR starter scene for immersive rehearsal
 - Billing gate with prototype toggle:
   - `BILLING_ENFORCED=false` (default) allows unlimited testing
   - `BILLING_ENFORCED=true` enforces free-tier + subscription gating
@@ -37,6 +40,8 @@ Production-ready MVP for realistic dating conversation practice with AI personas
 - `/app/personas` Persona picker
 - `/app/settings` Setting picker
 - `/app/tips` Pre-date tips
+- `/app/live` Live camera + mic coaching lab (experimental)
+- `/app/live/vr` VR practice surface (experimental)
 - `/app/session/[id]` Simulation chat
 - `/app/session/[id]/coach` Coaching report
 - `/app/billing` Upgrade / subscription management
@@ -122,6 +127,7 @@ Open `http://localhost:3000`.
 - API endpoints enforce auth and ownership checks.
 - Chat and coaching endpoints have basic rate limiting.
 - Safety response interrupts normal flow on self-harm keywords and surfaces 988 resources.
+- Live Lab body-language features use browser APIs and may vary by device/browser support.
 
 ## Deploy (Vercel)
 

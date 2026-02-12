@@ -44,6 +44,12 @@ export default async function DashboardPage() {
           >
             Edit profile
           </Link>
+          <Link
+            href="/app/live"
+            className="rounded-xl border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-100"
+          >
+            Open Live Lab
+          </Link>
         </div>
         {usage.isPrototypeMode ? (
           <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">

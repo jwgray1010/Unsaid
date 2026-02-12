@@ -33,6 +33,9 @@ export default async function AppLayout({
             <Link href="/app/personas" className="rounded-lg px-3 py-1.5 text-zinc-700 hover:bg-zinc-100">
               Practice
             </Link>
+            <Link href="/app/live" className="rounded-lg px-3 py-1.5 text-zinc-700 hover:bg-zinc-100">
+              Live Lab
+            </Link>
             <Link href="/app/billing" className="rounded-lg px-3 py-1.5 text-zinc-700 hover:bg-zinc-100">
               Billing
             </Link>
