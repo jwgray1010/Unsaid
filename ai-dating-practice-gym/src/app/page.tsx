@@ -17,9 +17,9 @@ export default function Home() {
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Link
             href="/login"
-            className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-700"
+            className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-indigo-500/40 transition hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
-            Start Practice
+            Start Practice Free
           </Link>
           <Link
             href="/app/billing"
